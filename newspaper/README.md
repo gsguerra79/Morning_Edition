@@ -238,6 +238,15 @@ rumors, and new numeric facts are included once with an `afternoon_update_of`
 link and machine-readable change reason. If nothing changed, the edition stores
 an explicit `no_material_change` empty state instead of filler.
 
+### Controlled source pilots
+
+Candidate feeds are observed outside production with `scripts/run-source-pilot.py`.
+The public `pilot-sources.sample.json` defines the candidate slate and minimum
+window; the ignored `data/source-pilot.json` accumulates fetch reliability,
+volume, unique URLs, promotional leakage, and review samples. A verdict remains
+ineligible until the complete observation window has elapsed. Pilot success
+never promotes a feed automatically.
+
 
 | Method | Path | Purpose |
 |--------|------|---------|
