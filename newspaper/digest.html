@@ -690,6 +690,26 @@
        moves anything else. The layout only re-flows on the next visit. */
     .article-wrap.removed { opacity: 0; pointer-events: none; }
 
+    /* ── Source coverage ────────────────────────────────── */
+    .coverage-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin:18px 0 24px; }
+    .coverage-metric { border:1px solid var(--border); border-radius:10px; padding:15px; background:var(--surface); }
+    .coverage-metric strong { display:block; font-family:var(--font-head); font-size:25px; line-height:1; margin-bottom:5px; }
+    .coverage-metric span { color:var(--text3); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+    .coverage-alert { border:1px solid #b77a2c; background:color-mix(in srgb,#b77a2c 9%,var(--surface)); border-radius:9px; padding:12px 14px; margin:10px 0; color:var(--text2); font-size:13px; }
+    .coverage-ok { border-color:#639922; background:color-mix(in srgb,#639922 8%,var(--surface)); }
+    .coverage-page { margin:30px 0 40px; }
+    .coverage-page-title { font-family:var(--font-head); font-size:22px; padding-bottom:9px; border-bottom:2px solid var(--text); margin-bottom:0; }
+    .coverage-source { padding:18px 0; border-bottom:1px solid var(--border); }
+    .coverage-source-head { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:9px; }
+    .coverage-source-name { font-family:var(--font-head); font-size:17px; font-weight:700; margin-right:auto; }
+    .coverage-chip { display:inline-flex; padding:4px 8px; border-radius:999px; font-size:10px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; border:1px solid var(--border2); color:var(--text3); }
+    .coverage-chip.live { color:#639922; border-color:#639922; }
+    .coverage-chip.gap,.coverage-chip.warn { color:#b77a2c; border-color:#b77a2c; }
+    .coverage-guidance { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .coverage-guidance div { background:var(--surface2); border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.45; color:var(--text2); }
+    .coverage-guidance b { display:block; color:var(--text3); font-size:9px; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
+    @media (max-width:760px) { .coverage-guidance { grid-template-columns:1fr; } }
+
   </style>
 </head>
 <body>
@@ -719,6 +739,9 @@
     </button>
     <button class="viewnav-tab" onclick="switchView('editions')" id="vnav-editions">
       Previous Editions
+    </button>
+    <button class="viewnav-tab" onclick="switchView('coverage')" id="vnav-coverage">
+      Sources
     </button>
     <button class="viewnav-tab" onclick="switchView('settings')" id="vnav-settings">
       Settings
@@ -767,6 +790,10 @@
 
   <div class="view" id="view-editions">
     <div class="list-view" id="editions-content"></div>
+  </div>
+
+  <div class="view" id="view-coverage">
+    <div class="list-view" id="coverage-content"></div>
   </div>
 
   <!-- ── Settings view ── -->
@@ -1061,6 +1088,7 @@ function rerenderActiveView() {
   updateBadges();
   if (currentView === 'history') renderHistory();
   else if (currentView === 'editions') renderEditions();
+  else if (currentView === 'coverage') renderCoverage();
   else if (currentView === 'later') renderLater();
   else if (currentView === 'settings') renderSettings();
   else render();
@@ -1100,7 +1128,12 @@ function setActiveView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.viewnav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
-  document.getElementById('vnav-' + view).classList.add('active');
+  const activeTab = document.getElementById('vnav-' + view);
+  activeTab.classList.add('active');
+  requestAnimationFrame(() => {
+    const nav = activeTab.parentElement;
+    if (nav && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, activeTab.offsetLeft - nav.offsetLeft);
+  });
   // The search box rides the view-nav row but only applies to Home.
   const search = document.getElementById('digest-search');
   if (search) search.style.display = (view === 'digest') ? '' : 'none';
@@ -1115,6 +1148,7 @@ function switchView(view) {
   else currentCat = digestCat;
 
   currentView = view;
+  if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
   sharedState.viewState = { ...sharedState.viewState, currentView, currentCat, digestCat };
   saveSharedState().catch(() => {});
 
@@ -1124,6 +1158,7 @@ function switchView(view) {
   if (view === 'history')  renderHistory();
   if (view === 'later')    renderLater();
   if (view === 'editions') renderEditions();
+  if (view === 'coverage') renderCoverage();
   if (view === 'digest')   render();
   if (view === 'settings') renderSettings();
 }
@@ -1876,6 +1911,60 @@ async function renderEditions() {
       <button class="rail-more" style="display:block;width:100%;text-align:left;margin:8px 0"
         onclick="openEdition('${e.id}')">${e.preview ? 'Live Preview' : `${e.date} · ${e.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`} · ${e.article_count} stories${e.preview ? ' · updates automatically' : ''}</button>`).join('');
   } catch (e) { el.innerHTML = '<p class="empty">Could not load the archive.</p>'; }
+}
+
+function coverageText(value, fallback = 'Not specified') {
+  const text = String(value || '').trim();
+  return escapeAttr(text || fallback);
+}
+
+async function renderCoverage() {
+  const el = document.getElementById('coverage-content');
+  el.innerHTML = '<p class="empty">Loading the complete source inventory…</p>';
+  try {
+    const data = await (await fetch('/source-coverage', {cache:'no-store'})).json();
+    const s = data.summary || {};
+    const warnings = (data.warnings || []).map(w => `<div class="coverage-alert">${coverageText(w)}</div>`).join('');
+    const registryOk = data.registry && data.registry.status === 'loaded';
+    const rulesOk = data.rules && data.rules.status === 'loaded';
+    const health = `
+      <div class="coverage-alert ${registryOk ? 'coverage-ok' : ''}"><strong>Editorial registry:</strong> ${registryOk ? 'Loaded' : 'Missing'}${data.registry?.generated_at ? ` · synchronized ${coverageText(data.registry.generated_at)}` : ''}</div>
+      <div class="coverage-alert ${rulesOk ? 'coverage-ok' : ''}"><strong>Structured selection rules:</strong> ${rulesOk ? 'Loaded' : 'Not loaded — the reader must not silently claim owner-grounded filtering'}</div>`;
+    const pages = (data.pages || []).map(page => `
+      <section class="coverage-page">
+        <h2 class="coverage-page-title">${coverageText(page.page)} · ${(page.sources || []).length}</h2>
+        ${(page.sources || []).map(source => {
+          const live = source.adapter_state === 'active';
+          const loaded = source.ingestion_state === 'loaded';
+          return `<article class="coverage-source">
+            <div class="coverage-source-head">
+              <span class="coverage-source-name">${coverageText(source.source)}</span>
+              <span class="coverage-chip ${live ? 'live' : 'gap'}">${live ? 'Adapter active' : coverageText(source.adapter_state)}</span>
+              <span class="coverage-chip ${loaded ? 'live' : 'warn'}">${loaded ? 'Loaded in reader' : coverageText(source.ingestion_state)}</span>
+              <span class="coverage-chip ${source.health_state === 'healthy' || source.health_state === 'healthy-no-recent-items' ? 'live' : 'warn'}">${coverageText(source.health_state).replaceAll('-', ' ')}</span>
+              ${source.current_items ? `<span class="coverage-chip">${source.current_items} current items</span>` : ''}
+            </div>
+            <div class="coverage-guidance">
+              <div><b>What I read here</b>${coverageText(source.what_i_read)}</div>
+              <div><b>Must include</b>${coverageText(source.must_include)}</div>
+              <div><b>Avoid</b>${coverageText(source.avoid)}</div>
+            </div>
+          </article>`;
+        }).join('')}
+      </section>`).join('');
+    el.innerHTML = `<p class="sec-label">Source of Truth</p>
+      <h1 style="font-family:var(--font-head);font-size:30px;margin:6px 0 4px">Complete Source Coverage</h1>
+      <p style="color:var(--text2);font-size:14px;line-height:1.5">This is what The Forge Daily is actually configured to build from. Missing and incomplete sources are shown—not hidden.</p>
+      <div class="coverage-summary">
+        <div class="coverage-metric"><strong>${s.sources || 0}</strong><span>Notion sources</span></div>
+        <div class="coverage-metric"><strong>${s.pages || 0}</strong><span>Owner pages</span></div>
+        <div class="coverage-metric"><strong>${s.active || 0}</strong><span>Active adapters</span></div>
+        <div class="coverage-metric"><strong>${s.fully_loaded || 0}</strong><span>Loaded in reader</span></div>
+        <div class="coverage-metric"><strong>${s.connector_gaps || 0}</strong><span>Connector gaps</span></div>
+      </div>${health}${warnings}${pages}`;
+  } catch (error) {
+    el.innerHTML = '<div class="coverage-alert"><strong>Source Coverage failed to load.</strong> The reader cannot verify its editorial scope.</div>';
+  }
 }
 
 window.openEdition = async function(id) {
@@ -3462,6 +3551,11 @@ async function loadDigest() {
     // If the server is unreachable, fall back to local cache so the app
     // still renders something offline.
     applySharedState(remoteState || loadLocalState());
+    const requestedView = location.hash.replace(/^#/, '');
+    if (['digest', 'later', 'history', 'editions', 'coverage', 'settings'].includes(requestedView)) {
+      currentView = requestedView;
+      sharedState.viewState = { ...sharedState.viewState, currentView };
+    }
     // Apply any pending time-decay on the source-affinity counters once the
     // canonical state has landed; persists asynchronously if it ran.
     if (maybeDecayLearning()) saveSharedState().catch(() => {});
@@ -3473,6 +3567,8 @@ async function loadDigest() {
     updateBadges();
     if (currentView === 'history')       renderHistory();
     else if (currentView === 'later')    renderLater();
+    else if (currentView === 'editions') renderEditions();
+    else if (currentView === 'coverage') renderCoverage();
     else if (currentView === 'settings') renderSettings();
     else render();
 

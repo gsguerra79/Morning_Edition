@@ -13,6 +13,10 @@ authentication, transport security, and an explicit threat review.
 - The Editions view begins with a bounded **Live Preview** built from the
   current digest. It updates after ingestion and never writes or replaces an
   immutable edition file.
+- The **Sources** view is the owner-facing reconciliation surface for the live
+  Notion editorial registry. It groups the complete inventory by owner page and
+  shows reading intent, Must include, Avoid, adapter state, production loading,
+  per-source fetch health, connector gaps, and missing rule assets.
 
 ## Operations
 
@@ -33,6 +37,7 @@ volume; later in-app changes survive image rebuilds.
 - `/status` — ingestion health
 - `/editions` — archive index
 - `/editions/live-preview` — non-persistent bounded issue from the current digest
+- `/source-coverage` — reader-ready source-scope and ingestion reconciliation
 - `/editions/YYYY-MM-DD-morning` — immutable issue
 - `/editions/YYYY-MM-DD-afternoon` — immutable update
 - `/feeds` and `/categories` — active source/topic configuration

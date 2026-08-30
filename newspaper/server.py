@@ -34,6 +34,7 @@ from urllib.parse import urlparse, parse_qs
 import pipeline
 import editions
 import settings
+import source_coverage
 
 STATE_FILE  = os.environ.get('STATE_FILE', '/data/state.json')
 DIGEST_FILE = os.environ.get('DIGEST_FILE', '/data/digest.json')
@@ -42,6 +43,8 @@ STATIC_DIR  = os.environ.get('STATIC_DIR', '.')
 SEED_FEEDS  = os.environ.get('SEED_FEEDS', '')
 SEED_CATEGORIES = os.environ.get('SEED_CATEGORIES', '')
 PORT = int(os.environ.get('PORT', '8090'))
+EDITORIAL_REGISTRY_FILE = os.environ.get('EDITORIAL_REGISTRY_FILE', '/data/editorial-registry.json')
+SELECTION_RULES_FILE = os.environ.get('SELECTION_RULES_FILE', '/data/selection-rules.json')
 
 # History retention is a runtime-editable setting now (see settings.py); the env
 # var there remains the default. Read Later is curated and never aged out.
@@ -255,6 +258,24 @@ def load_feeds():
         # A malformed feeds.json shouldn't crash the server — surface an empty
         # list so the UI can at least show the add form.
         return []
+
+
+def _load_object(path):
+    try:
+        with open(path, encoding='utf-8') as fh:
+            value = json.load(fh)
+        return value if isinstance(value, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def source_coverage_payload():
+    return source_coverage.build(
+        _load_object(EDITORIAL_REGISTRY_FILE),
+        load_feeds(),
+        _load_object(DIGEST_FILE),
+        _load_object(SELECTION_RULES_FILE),
+    )
 
 
 def save_feeds(feeds):
@@ -603,6 +624,9 @@ class StateHandler(BaseHTTPRequestHandler):
             return
         if path == '/categories':
             self._json(200, settings.load_categories())
+            return
+        if path == '/source-coverage':
+            self._json(200, source_coverage_payload())
             return
         if path == '/search':
             qs = parse_qs(urlparse(self.path).query)

@@ -887,16 +887,23 @@ def run_once():
             return http_get_text(feed.get('url', ''), FEED_TIMEOUT), feed
 
         bodies = []
+        feed_health = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(16, len(feeds))) as ex:
             for body, feed in ex.map(fetch, feeds):
+                feed_health[feed.get('url', '')] = {
+                    'source': feed.get('source'), 'url': feed.get('url'),
+                    'status': 'fetched' if body else 'failed', 'items': 0,
+                }
                 if body:
                     bodies.append((body, feed))
 
         # Parse + dedup + blocklist.
         seen, fresh = set(), []
         for body, feed in bodies:
-            for art in parse_feed(body, feed.get('source', ''),
-                                  feed.get('category', 'tech'), cutoff):
+            parsed = parse_feed(body, feed.get('source', ''),
+                                feed.get('category', 'tech'), cutoff)
+            feed_health[feed.get('url', '')]['items'] = len(parsed)
+            for art in parsed:
                 if (art['url'] in seen
                         or TITLE_BLOCKLIST.search(art['title'])
                         or settings.is_blocked(art['title'], user_blocklist)):
@@ -1019,6 +1026,7 @@ def run_once():
             'generated_at': datetime.now(timezone.utc).isoformat(),
             'article_count': article_count,
             'articles': scored,
+            'feed_health': list(feed_health.values()),
         }
         _atomic_write_json(DIGEST_FILE, digest_payload)
         editions.maybe_publish(digest_payload)
