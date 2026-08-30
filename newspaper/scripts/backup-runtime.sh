@@ -48,7 +48,7 @@ sudo -n docker image inspect newspaper-cruxwire > "$backup_dir/image-inspect.jso
 sudo -n docker unpause "$container" >/dev/null
 paused=false
 
-sha256sum "$backup_dir/runtime-data.tar" > "$backup_dir/runtime-data.tar.sha256"
+(cd "$backup_dir" && sha256sum runtime-data.tar > runtime-data.tar.sha256)
 curl -fsS --max-time 5 http://127.0.0.1:8090/status > "$backup_dir/status.json"
 curl -fsS --max-time 5 http://127.0.0.1:8090/feeds > "$backup_dir/feeds.json"
 curl -fsS --max-time 5 http://127.0.0.1:8090/categories > "$backup_dir/categories.json"

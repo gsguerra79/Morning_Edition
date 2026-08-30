@@ -35,6 +35,8 @@ The backup script pauses the production container only while capturing a
 consistent archive and edition checksums. Verification checks the archive,
 restores into a disposable Docker volume, compares every edition checksum, and
 removes the disposable volume without mounting production state.
+The archive checksum manifest references `runtime-data.tar` by basename so a
+copied backup validates the copied archive, not its original location.
 
 The verifier defaults to the clean-clone image tag
 `morning-edition:recovery`. Set `RESTORE_IMAGE` only when deliberately

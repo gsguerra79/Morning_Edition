@@ -23,6 +23,11 @@ for name in runtime-data.tar runtime-data.tar.sha256 edition-sha256.txt; do
   }
 done
 
+manifest_target=$(awk 'NR == 1 {print $2}' "$backup_dir/runtime-data.tar.sha256")
+if [ "$manifest_target" != "runtime-data.tar" ]; then
+  echo "checksum manifest must reference runtime-data.tar by basename" >&2
+  exit 1
+fi
 (cd "$backup_dir" && sha256sum -c runtime-data.tar.sha256)
 
 volume="forge-daily-restore-check-$$"
