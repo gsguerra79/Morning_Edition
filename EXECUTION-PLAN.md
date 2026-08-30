@@ -269,7 +269,10 @@ Closure gate:
 
 ### Step 2 — Preserve and instrument the baseline
 
-Status: Awaiting owner closure
+Status: Closed
+
+Owner closure: accepted by Gabriel on 2026-08-29 after GitHub recovery,
+clean-clone restoration, and final `main` CI evidence.
 
 This step executes Phase 0 below. It cannot start until Step 1 is closed.
 
@@ -295,7 +298,7 @@ Additional closure gate:
 
 ### Step 3 — Build editorial registry and reconcile Notion
 
-Status: Not started
+Status: Awaiting owner closure
 
 This step executes Phase 1 below. It cannot start until Step 2 is closed.
 
@@ -337,7 +340,7 @@ This step executes Phase 7 below. It cannot start until Step 8 is closed.
 
 ### Phase 0 — Preserve and instrument the baseline
 
-Status: Awaiting owner closure
+Status: Gate passed
 
 Work:
 
@@ -357,7 +360,7 @@ Exit gate:
 
 ### Phase 1 — Editorial registry and Notion reconciliation
 
-Status: Not started
+Status: Awaiting owner closure
 
 Work:
 
@@ -588,6 +591,8 @@ helpful.
 | FD-013 | 2026-08-29 | Accepted | Runtime backups pause the production container only during archive/checksum capture and are verified through restoration into a disposable Docker volume. | Produces a consistent snapshot and proves recoverability without overwriting production. |
 | FD-014 | 2026-08-29 | Accepted | GitHub is canonical for public versioned code, tests, deployment definitions, sanitized examples, engineering documents, and execution history; private runtime backups remain a separate recovery layer. | A public repository must never contain reading state, editions, owner inventories, credentials, private endpoints, or operator evidence. |
 | FD-015 | 2026-08-29 | Accepted | Changes reach `main` through pull requests with passing checks and container builds, even during initial bootstrap. | Makes repository recovery evidence reviewable and prevents an untested bootstrap from becoming the canonical source. |
+| FD-016 | 2026-08-29 | Accepted | Notion reconciliation is read-only through the official CLI; a pure compiler merges private adapter mappings into an atomic, versioned local registry while a separate report records changes and faults. | Keeps owner intent separate from engineering plumbing, makes behavior testable without network access, and prevents API or validation failures from destroying the last known-good registry. |
+| FD-017 | 2026-08-29 | Accepted | Adapter status describes technical availability (`active`, `planned`, or `blocked`) and does not itself promote a source into production editions. | Inventory reconciliation and live-ingestion admission remain separate controlled gates. |
 
 ## Problem and resolution log
 
@@ -602,7 +607,7 @@ erase superseded conclusions.
 | FP-003 | 2026-08-29 | Baseline | Feed configuration permits only one category per source. | Open. Phase 1 registry supports multiple topic/pages with one canonical reading item. |
 | FP-004 | 2026-08-29 | Baseline | `why_selected` is generic and does not cite the owner rule that caused selection. | Open. Phase 2 adds reason codes and grounded explanations. |
 | FP-005 | 2026-08-29 | Baseline | Afternoon exclusion can fail when a story's URL, headline, or cluster identity changes. | Open. Phase 3 adds stable story fingerprints and material-change classification. |
-| FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
+| FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open and now machine-visible: Step 3 registry reconciliation reports exactly these six as planned connectors with no active adapter. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
 | FP-007 | 2026-08-29 | Source review | Globo Avoid guidance is linguistically ambiguous. | Waiting for owner confirmation; no durable filter should encode the ambiguous clause meanwhile. |
 | FP-008 | 2026-08-29 | Step 1 | Four TBD queues needed to become eleven agreed source records without losing the owner-selected pages or disturbing unrelated rows. | Technically resolved: reused the four original pages, created seven companion pages, populated source-specific guidance, and reconciled the complete table. Awaiting owner closure. |
 | FP-009 | 2026-08-29 | Step 2 | Initial backup invocation could resolve Docker's mount path but checked the root-owned directory as the ordinary user, then aborted before pausing or archiving. | Resolved by performing only the directory-existence check through non-interactive sudo. Removed the empty failed-attempt directory and completed a fresh backup. |
@@ -626,6 +631,8 @@ session to verify the claim.
 | 2026-08-29 | Step 2 | Added guarded runtime backup and disposable-volume restore verification scripts; recorded production identity and recovery procedure; added a standalone shadow Compose project; added byte-immutability and legacy-state regression tests; created and restored a production backup; ran shadow execution; performed a no-op production rebuild; reverified historical editions and service health. | A private ignored backup passed SHA-256 verification and restored into a disposable volume with all 12 edition checksums identical. Production editions remained byte-identical after shadow execution, rebuild, and the post-rebuild ingestion run. Six unit/regression tests passed. Final production status was successful with 19 feeds. Detailed host paths, image IDs, and runtime counts remain in the untracked operator evidence. | Await explicit owner confirmation that Step 2 is closed. Do not start Step 3. |
 | 2026-08-29 | Step 2 extension | Gabriel withheld Step 2 closure until the project also had recoverable GitHub source management, then authorized execution against public repository `gsguerra79/Morning_Edition`. Reopened Step 2 while leaving Step 3 locked. | Repository preflight: public, `main`, initial README only, authenticated GitHub access over SSH, secret scanning and push protection enabled. | Bootstrap safely, push, verify CI, and prove clean-clone recovery before returning Step 2 for closure. |
 | 2026-08-29 | Step 2 GitHub recovery | Initialized this project against `gsguerra79/Morning_Edition`; separated public source from ignored private runtime/operator material; moved CI to repository root; preserved the Cruxwire MIT license; added a repository overview, recovery boundary, sample-only image build, tests, Compose validation, container CI, and portable backup verification. Merged bootstrap PR #1 plus recovery fixes PR #2 and PR #3 after all checks passed. | Public preflight found no tracked backups, `.env`, live state, source OPML, live feed/category configuration, local runbooks, internal addresses, absolute operator paths, credentials, or private-key material. Final clean clone of `main` commit `84ae7a89cbe8b0ecc4360a2d7df2ff8ccdaeb488` passed six tests, both Compose validations, container build, copied-archive SHA-256 verification, and disposable-volume edition restoration. Temporary clones containing copied private backups were removed afterward. | Await explicit owner confirmation that Step 2 is closed. Do not start Step 3. |
+| 2026-08-29 | Step 2 closure | Gabriel explicitly accepted Step 2 as closed after the final GitHub recovery and CI evidence. Updated the canonical plan before advancing. | Owner message: “closed - lets move.” | Begin Step 3 only: editorial registry and read-only Notion reconciliation. |
+| 2026-08-29 | Step 3 | Added a pure editorial registry compiler, official-CLI read-only sync command with pagination, private adapter-map boundary, atomic last-known-good writes, explicit reconciliation reports, sample configuration, documentation, and five focused registry tests. Reconciled the complete live Notion source table. | Live reconciliation: 33 Notion rows → 33 registry sources; 27 sources with active adapters; six explicit planned connectors; zero missing adapter mappings; zero errors; all eleven formerly TBD replacements present. The Verge compiled once with both `Technology & Things` and `Ideas` and one adapter. A second identical sync reported 33 unchanged, wrote no registry, and retained SHA-256 `47b81d9e40d4c1f6da995fc81cc7a784959bc04762b8853f4299e401de3a7657`. A forced missing-CLI failure exited nonzero, reported `last_known_good_preserved: true`, and left that hash unchanged; the next live sync returned success. Eleven total unit/regression tests pass; private adapter and generated registry/report files are ignored. | Await explicit owner confirmation that Step 3 is closed. Do not start Step 4. |
 
 ## Session reconciliation checklist
 

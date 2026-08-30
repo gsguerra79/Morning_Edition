@@ -49,7 +49,7 @@ deployment name.
 ```sh
 git clone git@github.com:gsguerra79/Morning_Edition.git
 cd Morning_Edition/newspaper
-python -m unittest -v test_editions.py test_baseline.py
+python -m unittest -v
 docker compose config --quiet
 docker compose -f docker-compose.shadow.yaml config --quiet
 docker build -t morning-edition:recovery .
