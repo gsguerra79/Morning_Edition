@@ -91,7 +91,7 @@ Status vocabulary: `Not started`, `In progress`, `Owner inspection`, `Closed`,
 
 ### Stage 0 — Source scope and reader truth
 
-Status: Owner inspection
+Status: Closed — owner accepted 2026-08-30
 
 Deliver in the reader:
 
@@ -113,7 +113,7 @@ Owner inspection:
 
 ### Stage 1 — Editorial calibration and direct feedback
 
-Status: Not started
+Status: In progress
 
 Deliver in the reader:
 
@@ -949,6 +949,7 @@ session to verify the claim.
 | 2026-08-30 | Step 6 first editorial audit | Audited every visible Live Preview card against the compiled Notion intent and selection evidence after Gabriel reported widespread mismatch. Reframed Step 6 so immediate editorial calibration precedes further source expansion while the reliability pilot remains background-only. | 16 visible cards: 8 G1, 4 Formula 1, 2 The Verge, and 2 Order of the Stick. G1 included six regional TV-video indexes; F1 included betting-market, career-list, and music-marketing filler. Every base score was 6.0. Source cap was 8; same-source clusters produced maximum boost and false corroboration language. Production lacked both registry and private rule files. | Implement and live-verify the immediate editorial-repair acceptance criteria. Do not wait for the pilot and do not start Step 7. |
 | 2026-08-30 | Visual-stage rebaseline | Reconciled the live Notion inventory and replaced the engineering-step completion model with seven sequential owner-verifiable stages. Made ordinary browser inspection and Gabriel's explicit acceptance the only closure mechanism; code review is explicitly excluded from owner duties. Reset active work to Stage 0 Source scope and reader truth. | Live read-only reconciliation returned 33 unchanged sources, seven owner pages, 27 active adapters, six explicit connector gaps, zero errors, and no missing adapter mappings. The plan now names all 33 sources by page and defines the exact product surface Gabriel will inspect at every stage. | Implement Stage 0 only: browser Source Coverage, all 33 sources, seven pages, visible rules/health/gaps, and live registry/rule failure warnings. Present it for owner inspection; do not start Stage 1. |
 | 2026-08-30 | Stage 0 owner surface | Commissioned the browser Sources view and the complete registry-driven runtime scope. The page groups all 33 Notion sources under seven owner pages and displays What I read here, Must include, Avoid, adapter state, production loading, current content count, and actual fetch health. Six connector gaps and the missing structured rules are explicitly amber rather than hidden. Production now loads all 27 active sources through 30 feed endpoints and the seven owner page names. | Desktop and phone-width rendered inspection passed. The visible summary is 33 sources, seven pages, 27 active adapters, 27 loaded, and six connector gaps. The latest 30-feed run succeeded with no feed fetch failures; active sources are visibly healthy or healthy with no recent items. LAN and Tailscale serve the same surface. The pre-change runtime backup is recoverable and all historical edition checksums remain byte-identical. | Owner inspects the running Sources view. Keep Stage 0 at `Owner inspection` until Gabriel explicitly accepts closure. Do not start Stage 1. |
+| 2026-08-30 | Stage 0 owner acceptance | Gabriel explicitly instructed: “close step 0 and move on.” Closed Stage 0 and opened Stage 1 Editorial calibration and direct feedback. | The complete 33-source Source Coverage surface remains commissioned as the accepted scope baseline. | Deliver Stage 1 through the normal reader: credible seven-page selection, grounded reasons, immediate card rejection, persistent cross-device feedback, and visible undo. |
 
 ## Session reconciliation checklist
 
