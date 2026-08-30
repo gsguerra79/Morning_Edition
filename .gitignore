@@ -1,0 +1,22 @@
+# Private runtime and recovery artifacts
+backups/
+freshrss/*.opml
+newspaper/*.local.md
+newspaper/feeds.json
+newspaper/categories.json
+
+# Local configuration and generated state
+.env
+**/.env
+**/__pycache__/
+**/*.py[cod]
+**/.DS_Store
+**/.vscode/
+
+# Runtime files if a local process is pointed at the checkout
+**/state.json
+**/digest.json
+**/settings.json
+**/runs.json
+**/embeddings.json
+**/data/

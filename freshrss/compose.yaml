@@ -1,0 +1,27 @@
+services:
+  freshrss:
+    image: freshrss/freshrss:1.29.1
+    container_name: freshrss
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      # Bind once on IPv4 so Docker startup does not race Tailscale address
+      # assignment. The host has no public interface or port-forward for 8088.
+      - "0.0.0.0:8088:80"
+    environment:
+      TZ: America/Chicago
+      CRON_MIN: "7,37"
+    volumes:
+      - /srv/freshrss/data:/var/www/FreshRSS/data
+      - /srv/freshrss/extensions:/var/www/FreshRSS/extensions
+    healthcheck:
+      test: ["CMD", "cli/health.php"]
+      timeout: 10s
+      start_period: 60s
+      start_interval: 11s
+      interval: 75s
+      retries: 3
