@@ -16,7 +16,27 @@ presence alone: record the verification evidence that passed its exit gate.
 Durable governing decisions may also be promoted to the workspace `MEMORY.md`;
 detailed working state belongs here.
 
-Last reconciled: 2026-08-29
+Last reconciled: 2026-08-30
+
+## Delivery doctrine
+
+Engineering gates protect production quality; they are not the product. A
+safe, useful owner-facing slice must be delivered as soon as its own behavior
+is verified, while longer observations and connector investigations continue
+in the background. Internal pilots must never force the owner to wait for an
+otherwise independent usable reader.
+
+The owner must not be asked to operate the project through shell commands,
+raw JSON, logs, or project directories. Those are operator evidence. Normal
+use and progress visibility belong in the browser-facing product or in concise
+proactive reports. If no suitable owner-facing surface exists, creating it is
+unfinished product work and takes priority over further internal machinery.
+
+This doctrine does not weaken numbered-step closure, source-admission, archive
+immutability, or safety gates. It changes sequencing *within* the active step:
+deliver reversible usable capability first, then continue background evidence
+collection. A usable slice does not silently close the active step or unlock a
+later numbered step.
 
 ## Mission
 
@@ -85,6 +105,10 @@ operator configuration, not this public repository.
   operationally sound without depending on an LLM.
 - Source additions are controlled pilots, not bulk imports.
 - Historical editions must survive prototype upgrades unchanged.
+- Background source pilots do not block a bounded reader built from already
+  approved production inputs.
+- Owner-facing use and status are delivered through the reader and proactive
+  plain-language reports, never through developer plumbing by default.
 
 ## Agreed replacements for the TBD source rows
 
@@ -329,6 +353,24 @@ Status: In progress
 
 This step executes Phase 4 below. It cannot start until Step 5 is closed.
 
+Delivery correction, ordered within Step 6:
+
+1. Deliver a browser-facing bounded live preview from the current approved
+   production digest. It must not rewrite today's immutable edition or any
+   historical issue, and it must be verified over the owner's normal private
+   network path. **Delivered and verified 2026-08-30.**
+2. Keep the 72-hour eleven-source observation running independently in the
+   background. Present its progress proactively in plain language; do not ask
+   the owner to inspect files or run commands.
+3. Continue compliant Medium, Financial Times, Reuters, ATP Tour, Kickstarter,
+   and World Surf League adapter work without withholding the usable preview.
+4. After pilot evidence matures, prepare deliberate promote/hold/reject
+   recommendations. No source auto-promotes.
+
+The bounded live preview is the immediate delivery target. Step 6 remains open
+after that delivery until the source/adaptor exit gate is separately met and
+the owner explicitly closes it.
+
 ### Step 7 — Align navigation and special presentations
 
 Status: Not started
@@ -432,6 +474,8 @@ Status: In progress
 
 Work:
 
+- Ship the non-destructive bounded live preview before waiting for the pilot
+  observation window.
 - Add the eleven agreed inventory sources to shadow ingestion.
 - Investigate compliant adapters for missing named sources.
 - Observe at least 48–72 hours of candidate output.
@@ -441,6 +485,8 @@ Work:
 
 Exit gate:
 
+- The owner can use a finite browser-facing issue without waiting for the
+  pilot window, and no historical edition is changed by that preview.
 - Every named source has a working adapter, an explicit documented blocker, or
   an owner-approved alternative.
 - Every new source has pilot evidence and a live-ingestion verdict.
@@ -607,6 +653,8 @@ helpful.
 | FD-020 | 2026-08-29 | Accepted | Store a compact identity/material-fact index for every morning candidate story, including candidates not printed in the bounded issue, and compare afternoon representatives against that frozen cutoff. | Prevents morning overflow or rewritten cluster members from masquerading as afternoon news while preserving the reader's finite morning issue. |
 | FD-021 | 2026-08-29 | Accepted | Treat corrections, rumor-to-confirmed transitions, and newly introduced numeric facts as material developments; link them to the morning fingerprint. Treat matched rewrites without those signals as unchanged. | Provides explicit, testable first-prototype semantics without depending on an LLM or claiming semantic certainty the deterministic engine does not possess. |
 | FD-022 | 2026-08-29 | Accepted | Observe candidate feeds every six hours for 72 hours in private ignored state; require at least 48 hours before any verdict and never auto-promote from pilot success. | Satisfies the evidence window with durable measurements while preserving the separate production-admission gate. |
+| FD-023 | 2026-08-29 | Accepted | Treat owner-authenticated Medium preferences and FT subscription access as legitimate connector inputs; implement first-party HTML/API/email connectors for Reuters and WSL when RSS is absent. | The architecture explicitly defines RSS as one adapter, not the product boundary. A missing feed is an engineering routing problem, not grounds to reject an essential source. |
+| FD-024 | 2026-08-30 | Accepted | Deliver safe owner-usable slices independently of long-running internal validation; background pilots may gate source promotion but may not block an already-verifiable bounded reader. Owner status/use surfaces must be browser-facing or proactively reported, not CLI/JSON instructions. | Gabriel correctly rejected waiting three days for a simple product and being told to follow its pilot from a project directory. Product delivery had been subordinated to engineering process. |
 
 ## Problem and resolution log
 
@@ -625,6 +673,9 @@ erase superseded conclusions.
 | FP-016 | 2026-08-29 | Step 5 | The first shadow audit classified all 333 raw articles, so 176 non-representative cluster members appeared as material updates even though the selector correctly published none of them. | Resolved by applying material-change classification to the 60 story representatives, the same unit publication uses. The repeated identical-input shadow run reported 60 unchanged, zero material updates, zero new stories, and an explicit empty afternoon. |
 | FP-017 | 2026-08-29 | Step 6 | The first seven-day pilot window returned zero Aeon and Psyche items even though both feeds were healthy; their latest posts were eight to nine days old. | Resolved for observation by using a declared 14-day pilot window. The clean restarted run parsed seven items from each. This does not silently alter production lookback policy. |
 | FP-018 | 2026-08-29 | Step 6 | The existing Atom parser matched only bare `<entry>` tags, so Kickstarter's valid attributed `<entry xml:lang=...>` records parsed as zero. | Resolved with case-insensitive attributed RSS/Atom container matching and a regression fixture. Kickstarter still needs an editorial-scope verdict; its public feed is not automatically equivalent to the owner's requested technology-project coverage. |
+| FP-019 | 2026-08-29 | Step 6 | Initial connector reporting framed absent public RSS for Reuters and WSL too close to a source failure and did not exploit the owner's authenticated Medium preferences or FT subscription. | Corrected by owner. Step 6 now requires source-specific connectors: Medium profile/following signals, Gabriel's FT subscription, and first-party non-RSS Reuters/WSL access. Only a demonstrated legal/technical impossibility after those paths are exhausted may be reported as blocked. |
+| FP-020 | 2026-08-30 | Step 6 | Arc exposes both approved authenticated tabs over its native AppleScript inventory, but JavaScript content reads time out. The first connector draft incorrectly reported `ready` from tab presence alone. | Partially resolved: health now requires readable content, distinguishes missing from unreadable sources, and records timeout/command/JSON/empty-content failures. Current live result is two present tabs, zero readable sources, and `content_timeout` for both; no authenticated content has been ingested. Continue with a compliant content-read path without treating browser-relay pairing as a prerequisite. |
+| FP-021 | 2026-08-30 | Step 6 delivery | The 72-hour source pilot was allowed to appear as a prerequisite for a usable reader, and the owner was given project-directory and `jq` commands as the way to follow it. After being told to correct this, implementation began before the canonical plan was amended. | Resolved for immediate delivery: governance was amended first, then the non-destructive bounded Live Preview was tested and commissioned over LAN and Tailscale. The pilot remains background evidence only. The broader doctrine remains binding for all future work. |
 | FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open and now machine-visible: Step 3 registry reconciliation reports exactly these six as planned connectors with no active adapter. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
 | FP-007 | 2026-08-29 | Source review | Globo Avoid guidance is linguistically ambiguous. | Waiting for owner confirmation; no durable filter should encode the ambiguous clause meanwhile. |
 | FP-008 | 2026-08-29 | Step 1 | Four TBD queues needed to become eleven agreed source records without losing the owner-selected pages or disturbing unrelated rows. | Technically resolved: reused the four original pages, created seven companion pages, populated source-specific guidance, and reconciled the complete table. Awaiting owner closure. |
@@ -657,6 +708,9 @@ session to verify the claim.
 | 2026-08-29 | Step 5 | Added versioned content fingerprints, canonical URL normalization, compact material-fact extraction, legacy compatibility, title-overlap matching, and deterministic new/unchanged/material-update classification. Morning editions persist a compact index for every candidate story; afternoon updates reject unchanged rewrites, link corrections/confirmations/new numeric facts to the morning fingerprint, and publish an explicit empty state when nothing changed. | All 32 tests pass, including headline/URL rewrites, corrections, rumor confirmation, new facts, genuinely new stories, stale morning overflow, explicit empty afternoons, target caps, malformed URLs, and edition immutability. Compilation, both Compose validations, container build, diff checks, and the public privacy boundary pass. On the repeated live 333-item digest, isolated shadow publication indexed 60 morning story representatives, printed 15, then classified all 60 as unchanged and published an explicit zero-story afternoon. Production edition checksums remained byte-identical. | Await explicit owner closure after GitHub PR and CI verification. Do not start Step 6. |
 | 2026-08-29 | Step 5 closure | Gabriel explicitly accepted Step 5 as closed after PR #8 merged at `1560221` and final `main` CI passed. Updated the canonical plan before advancing. | Owner message: “continue.” | Begin Step 6 only: controlled source pilots and compliant adapter investigation. |
 | 2026-08-29 | Step 6 initial observation | Added a public eleven-source pilot slate, durable private observation state, atomic runner, RSS/Atom compatibility fix, reliability/volume/promotion metrics, and tests. Installed a silent six-hour observer plus a one-shot 72-hour finalizer; neither can promote production feeds. Began official-source connector review. | Initial clean 14-day run: all 11 candidate feeds fetched and parsed; item counts ranged 5–60 except 10–40 for higher-volume sources; detected promotional ratios were zero for eight sources, 0.143 Hackaday, and 0.475 Brickset. Medium officially supports profile/publication/topic RSS. FT exposes a working international RSS feed but official republishing RSS terms also describe licensed keyed delivery. ATP publishes an official RSS page/endpoint but this host receives 403. Kickstarter exposes a public projects Atom feed after parser compatibility. Reuters and WSL have no verified compliant public adapter yet. | Continue six-hour observations through 72 hours; finish connector evidence and source-level relevance review; prepare explicit promote/hold/reject recommendations. Do not start Step 7. |
+| 2026-08-30 | Step 6 authenticated-source continuation | Recovered the interrupted Arc connector work and bypassed the failed relay dependency with a read-only native Arc inventory over the already-authorized Mac Studio SSH path. Both intended tabs are discoverable. Hardened connector health so tab presence without page content cannot pass, and added explicit failure evidence. | Live inventory found `https://www.ft.com/` and Gabriel's Medium following-topic page. Both content executions timed out; connector now reports `partial`, two present sources, zero readable sources, and both sources unreadable. Four focused Arc tests pass. The source observer remains healthy with three durable six-hour samples; the 72-hour finalizer remains scheduled and production is unchanged. | Continue the independent Reuters/WSL and Medium/FT connector paths while the source-pilot observation window matures. Do not start Step 7 or promote sources. |
+| 2026-08-30 | Step 6 delivery correction | Gabriel rejected the three-day wait and developer-plumbing status path, then required the canonical plan to adopt product-before-plumbing before further implementation. Added an explicit delivery doctrine, FD-024, FP-021, and ordered Step 6 so a non-destructive bounded browser preview ships before further connector work while the pilot continues independently. | Plan now distinguishes owner-usable delivery from source-promotion evidence and preserves all existing safety, immutability, and sequential closure gates. A live-preview code draft had been started prematurely; it remains uncommissioned and production remains unchanged pending verification under this amended plan. | Verify and deliver the bounded live preview first. Then continue background Step 6 connector and pilot work. Do not start Step 7. |
+| 2026-08-30 | Step 6 usable delivery | Added a non-persistent bounded Live Preview as the first item in the existing browser Editions view, rebuilt the private service, and verified it through the normal LAN and Tailscale paths. The preview recomputes from the current digest and never writes the edition archive. | All 40 tests pass. Live ingestion completed successfully with 19 feeds and 362 retained articles. The preview produced 16 selected stories with grounded reasons. Both private-network routes served the UI and preview. Pre/post SHA-256 manifests for every historical edition were byte-identical. | Secure the commissioned change through reviewed GitHub history, then resume background Step 6 connector and pilot work. Do not start Step 7. |
 
 ## Session reconciliation checklist
 

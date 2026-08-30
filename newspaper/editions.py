@@ -85,6 +85,32 @@ def publish(digest, kind, now=None, force=False):
     return payload
 
 
+def preview(digest, now=None):
+    """Build a bounded current issue without mutating the edition archive."""
+    now = now or datetime.now(ZoneInfo(TIMEZONE))
+    articles = [annotate(article) for article in (digest.get('articles') or [])]
+    max_stories = int(os.environ.get('MORNING_MAX_STORIES', '40'))
+    source_share = float(os.environ.get('SOURCE_SHARE_CAP', '0.20'))
+    selected, selection_report = select_issue(
+        articles,
+        registry=_load_json(EDITORIAL_REGISTRY_FILE),
+        rules=_load_json(SELECTION_RULES_FILE),
+        max_stories=max_stories,
+        source_share=source_share,
+    )
+    return {
+        'id': 'live-preview',
+        'kind': 'preview',
+        'date': now.date().isoformat(),
+        'published_at': now.isoformat(),
+        'article_count': len(selected),
+        'articles': selected,
+        'selection_report': selection_report,
+        'preview': True,
+        'preview_message': 'Built live from the current digest; the immutable archive is unchanged.',
+    }
+
+
 def _why(article):
     category = str(article.get('category') or 'your interests').replace('-', ' ')
     n = int(article.get('cluster_size') or 1)

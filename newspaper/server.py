@@ -624,10 +624,27 @@ class StateHandler(BaseHTTPRequestHandler):
             self._serve_digest()
             return
         if path == '/editions':
-            self._json(200, editions.list_editions())
+            archive = editions.list_editions()
+            try:
+                with open(DIGEST_FILE, encoding='utf-8') as fh:
+                    live = editions.preview(json.load(fh))
+                preview_item = {k: live.get(k) for k in (
+                    'id', 'kind', 'date', 'published_at', 'article_count', 'preview')}
+                archive.insert(0, preview_item)
+            except (OSError, json.JSONDecodeError):
+                pass
+            self._json(200, archive)
             return
         if path.startswith('/editions/'):
-            item = editions.load(path.rsplit('/', 1)[-1])
+            edition_name = path.rsplit('/', 1)[-1]
+            if edition_name == 'live-preview':
+                try:
+                    with open(DIGEST_FILE, encoding='utf-8') as fh:
+                        item = editions.preview(json.load(fh))
+                except (OSError, json.JSONDecodeError):
+                    item = None
+            else:
+                item = editions.load(edition_name)
             self._json(200, item) if item else self._json(404, {'error': 'Edition not found'})
             return
         # Static assets (explicit whitelist — no path traversal).

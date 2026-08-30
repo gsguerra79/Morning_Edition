@@ -1872,9 +1872,9 @@ async function renderEditions() {
   try {
     const list = await (await fetch(EDITIONS_URL, {cache:'no-store'})).json();
     if (!list.length) { el.innerHTML = '<p class="empty">The first edition has not been published yet.</p>'; return; }
-    el.innerHTML = `<p class="sec-label">The Archive</p>` + list.map(e => `
+    el.innerHTML = `<p class="sec-label">Read Now</p>` + list.map(e => `
       <button class="rail-more" style="display:block;width:100%;text-align:left;margin:8px 0"
-        onclick="openEdition('${e.id}')">${e.date} · ${e.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'} · ${e.article_count} stories</button>`).join('');
+        onclick="openEdition('${e.id}')">${e.preview ? 'Live Preview' : `${e.date} · ${e.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`} · ${e.article_count} stories${e.preview ? ' · updates automatically' : ''}</button>`).join('');
   } catch (e) { el.innerHTML = '<p class="empty">Could not load the archive.</p>'; }
 }
 
@@ -1882,7 +1882,9 @@ window.openEdition = async function(id) {
   const edition = await (await fetch(`${EDITIONS_URL}/${id}`, {cache:'no-store'})).json();
   applyDigestData(edition);
   switchView('digest');
-  document.getElementById('header-date').textContent = `${edition.date} · ${edition.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`;
+  document.getElementById('header-date').textContent = edition.preview
+    ? `${edition.date} · Live Preview · ${edition.article_count} stories`
+    : `${edition.date} · ${edition.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`;
 };
 
 function renderGrid(cards) {
