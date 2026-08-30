@@ -5,6 +5,7 @@ newspaper/*.local.md
 newspaper/feeds.json
 newspaper/categories.json
 newspaper/editorial-adapters.local.json
+newspaper/selection-rules.local.json
 
 # Local configuration and generated state
 .env

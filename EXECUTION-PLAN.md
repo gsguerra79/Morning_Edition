@@ -298,13 +298,16 @@ Additional closure gate:
 
 ### Step 3 — Build editorial registry and reconcile Notion
 
-Status: Awaiting owner closure
+Status: Closed
+
+Owner closure: accepted by Gabriel on 2026-08-29 after live reconciliation,
+failure-preservation evidence, PR #6, and successful `main` CI.
 
 This step executes Phase 1 below. It cannot start until Step 2 is closed.
 
 ### Step 4 — Implement bounded deterministic editorial selection
 
-Status: Not started
+Status: Awaiting owner closure
 
 This step executes Phase 2 below. It cannot start until Step 3 is closed.
 
@@ -360,7 +363,7 @@ Exit gate:
 
 ### Phase 1 — Editorial registry and Notion reconciliation
 
-Status: Awaiting owner closure
+Status: Gate passed
 
 Work:
 
@@ -379,7 +382,7 @@ Exit gate:
 
 ### Phase 2 — Bounded deterministic editorial selection
 
-Status: Not started
+Status: Awaiting owner closure
 
 Work:
 
@@ -593,6 +596,8 @@ helpful.
 | FD-015 | 2026-08-29 | Accepted | Changes reach `main` through pull requests with passing checks and container builds, even during initial bootstrap. | Makes repository recovery evidence reviewable and prevents an untested bootstrap from becoming the canonical source. |
 | FD-016 | 2026-08-29 | Accepted | Notion reconciliation is read-only through the official CLI; a pure compiler merges private adapter mappings into an atomic, versioned local registry while a separate report records changes and faults. | Keeps owner intent separate from engineering plumbing, makes behavior testable without network access, and prevents API or validation failures from destroying the last known-good registry. |
 | FD-017 | 2026-08-29 | Accepted | Adapter status describes technical availability (`active`, `planned`, or `blocked`) and does not itself promote a source into production editions. | Inventory reconciliation and live-ingestion admission remain separate controlled gates. |
+| FD-018 | 2026-08-29 | Proposed default | Bound ordinary morning issues at 40 clusters, afternoon issues at 15, each ordinary source at 20 percent, and legacy pages at technology 8, photography 5, outdoors 5, F1 6, world 8, and comics 2. Must include matches may exceed these caps but remain deduplicated. | These values produce a 34-story representative morning fixture while preventing a high-volume source from filling the issue; owner review will calibrate them. |
+| FD-019 | 2026-08-29 | Accepted | Compile owner guidance into a private, structured phrase-rule overlay and keep deterministic matching separate from the public registry/sample. | Source-specific Must include/Avoid behavior remains auditable without publishing the owner's detailed rule set or pretending deterministic substring matching has semantic judgment. |
 
 ## Problem and resolution log
 
@@ -602,10 +607,11 @@ erase superseded conclusions.
 
 | ID | Date | Phase | Problem/evidence | Resolution/status |
 |---|---|---|---|---|
-| FP-001 | 2026-08-29 | Baseline | Morning issue contained 321 articles while the product promises a calm finite edition. | Open. Phase 2 introduces separate candidate retention and bounded issue selection. |
+| FP-001 | 2026-08-29 | Baseline | Morning issue contained 321 articles while the product promises a calm finite edition. | Implementation resolved in Step 4: edition publication now selects a bounded set of cluster representatives. Production deployment remains intentionally pending owner closure. |
 | FP-002 | 2026-08-29 | Baseline | Prototype categories do not match the seven live Notion Topic/Page options. | Open. Phase 1 imports owner pages; Phase 5 aligns navigation and presentation. |
 | FP-003 | 2026-08-29 | Baseline | Feed configuration permits only one category per source. | Open. Phase 1 registry supports multiple topic/pages with one canonical reading item. |
-| FP-004 | 2026-08-29 | Baseline | `why_selected` is generic and does not cite the owner rule that caused selection. | Open. Phase 2 adds reason codes and grounded explanations. |
+| FP-004 | 2026-08-29 | Baseline | `why_selected` is generic and does not cite the owner rule that caused selection. | Implementation resolved in Step 4: reasons identify matched Must include guidance or cite the canonical source, owner reading intent, and page; the immutable edition also stores machine-readable selection/rejection evidence. Production deployment remains pending owner closure. |
+| FP-015 | 2026-08-29 | Step 4 | The current 333-item live digest yielded only 60 cluster representatives across four populated legacy pages; page and source caps selected 15 rather than padding toward the 30-story morning target. | Correct honest behavior. The selector does not manufacture filler or weaken diversity caps. Phase 4 source pilots and Phase 5 page alignment will broaden qualified supply; the representative six-page fixture selects 34. |
 | FP-005 | 2026-08-29 | Baseline | Afternoon exclusion can fail when a story's URL, headline, or cluster identity changes. | Open. Phase 3 adds stable story fingerprints and material-change classification. |
 | FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open and now machine-visible: Step 3 registry reconciliation reports exactly these six as planned connectors with no active adapter. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
 | FP-007 | 2026-08-29 | Source review | Globo Avoid guidance is linguistically ambiguous. | Waiting for owner confirmation; no durable filter should encode the ambiguous clause meanwhile. |
@@ -633,6 +639,8 @@ session to verify the claim.
 | 2026-08-29 | Step 2 GitHub recovery | Initialized this project against `gsguerra79/Morning_Edition`; separated public source from ignored private runtime/operator material; moved CI to repository root; preserved the Cruxwire MIT license; added a repository overview, recovery boundary, sample-only image build, tests, Compose validation, container CI, and portable backup verification. Merged bootstrap PR #1 plus recovery fixes PR #2 and PR #3 after all checks passed. | Public preflight found no tracked backups, `.env`, live state, source OPML, live feed/category configuration, local runbooks, internal addresses, absolute operator paths, credentials, or private-key material. Final clean clone of `main` commit `84ae7a89cbe8b0ecc4360a2d7df2ff8ccdaeb488` passed six tests, both Compose validations, container build, copied-archive SHA-256 verification, and disposable-volume edition restoration. Temporary clones containing copied private backups were removed afterward. | Await explicit owner confirmation that Step 2 is closed. Do not start Step 3. |
 | 2026-08-29 | Step 2 closure | Gabriel explicitly accepted Step 2 as closed after the final GitHub recovery and CI evidence. Updated the canonical plan before advancing. | Owner message: “closed - lets move.” | Begin Step 3 only: editorial registry and read-only Notion reconciliation. |
 | 2026-08-29 | Step 3 | Added a pure editorial registry compiler, official-CLI read-only sync command with pagination, private adapter-map boundary, atomic last-known-good writes, explicit reconciliation reports, sample configuration, documentation, and five focused registry tests. Reconciled the complete live Notion source table. | Live reconciliation: 33 Notion rows → 33 registry sources; 27 sources with active adapters; six explicit planned connectors; zero missing adapter mappings; zero errors; all eleven formerly TBD replacements present. The Verge compiled once with both `Technology & Things` and `Ideas` and one adapter. A second identical sync reported 33 unchanged, wrote no registry, and retained SHA-256 `47b81d9e40d4c1f6da995fc81cc7a784959bc04762b8853f4299e401de3a7657`. A forced missing-CLI failure exited nonzero, reported `last_known_good_preserved: true`, and left that hash unchanged; the next live sync returned success. Eleven total unit/regression tests pass; private adapter and generated registry/report files are ignored. | Await explicit owner confirmation that Step 3 is closed. Do not start Step 4. |
+| 2026-08-29 | Step 3 closure | Gabriel explicitly accepted Step 3 as closed after being shown the live and reviewable surfaces. Updated the canonical plan before advancing. | Owner message: “lets close it and move on.” | Begin Step 4 only: bounded deterministic editorial selection. |
+| 2026-08-29 | Step 4 | Added and integrated deterministic issue selection with morning/afternoon caps, page quotas, canonical-source dominance limits, structured Must include/Avoid rules, grounded explanations, explicit rejection evidence, deterministic tie-breaking, cluster deduplication, and retained corroborating-source provenance. Added public sample rules, deployment wiring, operator documentation, and focused unit/integration tests. | Nineteen tests pass, including a 34-story representative six-page morning fixture, Must include/Avoid behavior, deterministic replay, honest empty input, publisher integration, and edition immutability. Compose validation, Python compilation, container build, diff checks, and the public-repository privacy boundary pass. An isolated shadow publication transformed the live 333-item digest into 60 candidate clusters and 15 selected stories across the four populated legacy pages, with all reasons present, 13 corroborated cards, and maximum source count 8/8. Production and historical editions were not modified. | Await explicit owner closure after GitHub PR and CI verification. Do not start Step 5. |
 
 ## Session reconciliation checklist
 

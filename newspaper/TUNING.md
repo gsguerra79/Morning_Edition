@@ -205,9 +205,21 @@ Infrastructure, deliberately **not** in the Settings UI (shown read-only there).
 | `FEED_TIMEOUT` | `12` | Per-feed fetch timeout (s). |
 | `PAGE_TIMEOUT` | `8` | Per-article page fetch timeout (s) for `og:image` + excerpt. |
 | `OLLAMA_TIMEOUT` | `120` | Per-request Ollama timeout (s). |
+| `MORNING_MAX_STORIES` | `40` | Hard ceiling for ordinary morning story clusters; Must include matches may exceed it. |
+| `AFTERNOON_MAX_STORIES` | `15` | Hard ceiling for ordinary afternoon story clusters; Must include matches may exceed it. |
+| `SOURCE_SHARE_CAP` | `0.20` | Maximum ordinary share of an issue assigned to one canonical source. |
+| `EDITORIAL_REGISTRY_FILE` | `/data/editorial-registry.json` | Private generated registry containing owner reading intent. |
+| `SELECTION_RULES_FILE` | `/data/selection-rules.json` | Private structured Must include/Avoid rule overlay. |
 
 Every Settings-tier knob *also* has an env default (`SIM_THRESHOLD`, `LOOKBACK_HOURS`, `RETAIN_*`,
 etc.) - see [.env.example](.env.example). Those just seed the default; the UI overrides them.
+
+Edition selection is deterministic. It keeps one card per cluster, applies the
+private source-rule overlay, seeds populated pages, enforces per-page and
+per-source caps, and records a machine-readable `selection_report` in every
+immutable edition. Copy `selection-rules.sample.json` to the ignored
+`selection-rules.local.json`, then install it at `SELECTION_RULES_FILE`. Keep
+phrases narrow: substring matches are deliberate and auditable, not semantic.
 
 ---
 
