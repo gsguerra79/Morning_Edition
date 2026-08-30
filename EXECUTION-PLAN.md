@@ -148,6 +148,20 @@ Deliver in the reader:
 - Pilot/reliability evidence appears as a simple health indicator; it does not
   delay editorial corrections or require owner operation.
 
+Connector checkpoints (each advances separately to `Owner inspection`):
+
+- Stage 2A — ATP Tour.
+- Stage 2B — Financial Times.
+- Stage 2C — Kickstarter.
+- Stage 2D — Medium.
+- Stage 2E — Reuters.
+- Stage 2F — World Surf League.
+
+For each checkpoint, the Source Coverage card must change from `connector gap`
+to `live`, expose understandable health, and link to attributable current or
+sample cards in the normal reader. One working connector does not close or
+conceal another, and no checkpoint closes without Gabriel's visual acceptance.
+
 Owner inspection:
 
 - Gabriel can open sample/current cards from every source and verify that each
