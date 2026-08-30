@@ -1,0 +1,32 @@
+name: forge-daily-shadow
+
+services:
+  forge-daily-shadow:
+    build: .
+    container_name: forge-daily-shadow
+    restart: "no"
+    ports:
+      - "127.0.0.1:18090:8090"
+    environment:
+      OLLAMA_HOST: http://localhost:11434
+      PORT: 8090
+      TZ: America/Chicago
+      AI_ENABLED: "false"
+      MORNING_MINUTE: 1440
+      AFTERNOON_MINUTE: 1440
+      STATE_FILE: /shadow/state.json
+      DIGEST_FILE: /shadow/digest.json
+      FEEDS_FILE: /shadow/feeds.json
+      SETTINGS_FILE: /shadow/settings.json
+      RUNS_FILE: /shadow/runs.json
+      EMBEDDINGS_FILE: /shadow/embeddings.json
+      CATEGORIES_FILE: /shadow/categories.json
+      EDITIONS_DIR: /shadow/editions
+      SEED_FEEDS: /app/feeds.sample.json
+      SEED_CATEGORIES: /app/categories.sample.json
+    volumes:
+      - forge-daily-shadow-data:/shadow
+
+volumes:
+  forge-daily-shadow-data:
+    name: forge-daily-shadow-data

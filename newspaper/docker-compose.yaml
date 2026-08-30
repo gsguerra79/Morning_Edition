@@ -1,0 +1,35 @@
+services:
+  cruxwire:
+    build: .
+    container_name: forge-daily
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:${PORT:-8090}:8090"
+    environment:
+      # Infrastructure wiring lives here in compose (not buried in .env).
+      # Point this at your Ollama server. Which models to use is configured
+      # in the app's Settings → Models, not here.
+      #
+      # Running Ollama natively on the SAME machine via Docker Desktop (Mac/Win)?
+      # Use host.docker.internal - inside the container `localhost` is the
+      # container, not your host:
+      #     OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://localhost:11434}
+      PORT: 8090
+      # Timezone the scheduler uses for the active-hours window. Without this
+      # the container runs in UTC and runs fire in the wrong local window.
+      # Override via .env or your shell, e.g. TZ=America/New_York.
+      TZ: ${TZ:-America/Chicago}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      MORNING_MINUTE: ${MORNING_MINUTE:-450}
+      AFTERNOON_MINUTE: ${AFTERNOON_MINUTE:-990}
+      SEED_FEEDS: /app/feeds.sample.json
+      SEED_CATEGORIES: /app/categories.sample.json
+    volumes:
+      - forge-daily-data:/data
+    env_file:
+      - path: .env                  # optional: extra overrides
+        required: false
+
+volumes:
+  forge-daily-data:
