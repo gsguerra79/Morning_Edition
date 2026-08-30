@@ -269,7 +269,7 @@ Closure gate:
 
 ### Step 2 — Preserve and instrument the baseline
 
-Status: In progress
+Status: Awaiting owner closure
 
 This step executes Phase 0 below. It cannot start until Step 1 is closed.
 
@@ -586,6 +586,8 @@ helpful.
 | FD-011 | 2026-08-29 | Accepted | Inventory approval and live-ingestion promotion are separate gates. | The owner table should express desired sources immediately, while production admission still requires verified adapter and editorial behavior. |
 | FD-012 | 2026-08-29 | Accepted | Shadow execution uses a standalone Compose project, loopback-only port 18090, a dedicated shadow volume, shadow-only application paths, and disabled automatic publication deadlines. | Makes test publication mechanically unable to write production editions while keeping it easy to inspect. |
 | FD-013 | 2026-08-29 | Accepted | Runtime backups pause the production container only during archive/checksum capture and are verified through restoration into a disposable Docker volume. | Produces a consistent snapshot and proves recoverability without overwriting production. |
+| FD-014 | 2026-08-29 | Accepted | GitHub is canonical for public versioned code, tests, deployment definitions, sanitized examples, engineering documents, and execution history; private runtime backups remain a separate recovery layer. | A public repository must never contain reading state, editions, owner inventories, credentials, private endpoints, or operator evidence. |
+| FD-015 | 2026-08-29 | Accepted | Changes reach `main` through pull requests with passing checks and container builds, even during initial bootstrap. | Makes repository recovery evidence reviewable and prevents an untested bootstrap from becoming the canonical source. |
 
 ## Problem and resolution log
 
@@ -605,6 +607,9 @@ erase superseded conclusions.
 | FP-008 | 2026-08-29 | Step 1 | Four TBD queues needed to become eleven agreed source records without losing the owner-selected pages or disturbing unrelated rows. | Technically resolved: reused the four original pages, created seven companion pages, populated source-specific guidance, and reconciled the complete table. Awaiting owner closure. |
 | FP-009 | 2026-08-29 | Step 2 | Initial backup invocation could resolve Docker's mount path but checked the root-owned directory as the ordinary user, then aborted before pausing or archiving. | Resolved by performing only the directory-existence check through non-interactive sudo. Removed the empty failed-attempt directory and completed a fresh backup. |
 | FP-010 | 2026-08-29 | Step 2 | Initial shadow Compose launch inherited the production project name; after adding an explicit project name, the old disposable shadow container caused one name collision and the first health probe raced startup. | Resolved by verifying and removing only the disposable shadow container/volume, recreating under project `forge-daily-shadow`, and adding a bounded readiness poll. Production was never mounted or removed. |
+| FP-011 | 2026-08-29 | Step 2 GitHub | The first local commit attempt failed because the workspace had no Git author identity. The branch push contained only the existing remote ancestry; no staged project files were published by that failed attempt. | Resolved with repository-local `Gabriel Guerra` / GitHub noreply attribution. Global Git configuration was not changed; the real bootstrap commit was then pushed and reviewed. |
+| FP-012 | 2026-08-29 | Step 2 GitHub | The first public recovery verifier assumed the production image tag, while the clean-clone instructions built `morning-edition:recovery`. | Resolved in PR #2 by defaulting to the documented recovery tag and permitting an explicit `RESTORE_IMAGE` override. CI passed. |
+| FP-013 | 2026-08-29 | Step 2 GitHub | The first clean-clone drill revealed that the archive checksum manifest stored the original absolute backup path. A copied backup could therefore validate the original archive rather than its own copy before restoration. | Resolved in PR #3: backup manifests now reference `runtime-data.tar` by basename and the verifier rejects non-portable targets. The backup manifest was regenerated and the entire clean-clone drill passed. |
 
 ## Execution progress ledger
 
@@ -619,6 +624,7 @@ session to verify the claim.
 | 2026-08-29 | Step 1 closure | Gabriel explicitly accepted Step 1 as closed. Updated the canonical plan before advancing. | Owner message: “consider it closed and move on.” | Begin Step 2 only: baseline preservation and instrumentation. |
 | 2026-08-29 | Step 2 | Added guarded runtime backup and disposable-volume restore verification scripts; recorded production identity and recovery procedure; added a standalone shadow Compose project; added byte-immutability and legacy-state regression tests; created and restored a production backup; ran shadow execution; performed a no-op production rebuild; reverified historical editions and service health. | A private ignored backup passed SHA-256 verification and restored into a disposable volume with all 12 edition checksums identical. Production editions remained byte-identical after shadow execution, rebuild, and the post-rebuild ingestion run. Six unit/regression tests passed. Final production status was successful with 19 feeds. Detailed host paths, image IDs, and runtime counts remain in the untracked operator evidence. | Await explicit owner confirmation that Step 2 is closed. Do not start Step 3. |
 | 2026-08-29 | Step 2 extension | Gabriel withheld Step 2 closure until the project also had recoverable GitHub source management, then authorized execution against public repository `gsguerra79/Morning_Edition`. Reopened Step 2 while leaving Step 3 locked. | Repository preflight: public, `main`, initial README only, authenticated GitHub access over SSH, secret scanning and push protection enabled. | Bootstrap safely, push, verify CI, and prove clean-clone recovery before returning Step 2 for closure. |
+| 2026-08-29 | Step 2 GitHub recovery | Initialized this project against `gsguerra79/Morning_Edition`; separated public source from ignored private runtime/operator material; moved CI to repository root; preserved the Cruxwire MIT license; added a repository overview, recovery boundary, sample-only image build, tests, Compose validation, container CI, and portable backup verification. Merged bootstrap PR #1 plus recovery fixes PR #2 and PR #3 after all checks passed. | Public preflight found no tracked backups, `.env`, live state, source OPML, live feed/category configuration, local runbooks, internal addresses, absolute operator paths, credentials, or private-key material. Final clean clone of `main` commit `84ae7a89cbe8b0ecc4360a2d7df2ff8ccdaeb488` passed six tests, both Compose validations, container build, copied-archive SHA-256 verification, and disposable-volume edition restoration. Temporary clones containing copied private backups were removed afterward. | Await explicit owner confirmation that Step 2 is closed. Do not start Step 3. |
 
 ## Session reconciliation checklist
 
