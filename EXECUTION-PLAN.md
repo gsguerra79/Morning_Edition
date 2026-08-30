@@ -8,11 +8,12 @@ step and phase status, acceptance gates, implementation decisions, problems,
 evidence, and handoff between work sessions.
 
 Update this document after every substantive execution session. Execute only
-one numbered step at a time. After implementing and verifying a step, set it to
-`Awaiting owner closure` and present the evidence. Do not mark it closed or
-start the next step until the owner explicitly agrees it is closed. Record that
-agreement here before advancing. Do not mark a phase complete from code
-presence alone: record the verification evidence that passed its exit gate.
+one owner-verifiable stage at a time. After implementing a stage, set it to
+`Owner inspection` and present the ordinary browser-facing product surface.
+Do not mark it closed or start the next stage until the owner explicitly agrees
+it is closed. Record that agreement here before advancing. Tests, code, pull
+requests, CI, logs, JSON, and shell commands are internal engineering evidence;
+none can close a stage and the owner is never expected to review them.
 Durable governing decisions may also be promoted to the workspace `MEMORY.md`;
 detailed working state belongs here.
 
@@ -32,11 +33,196 @@ use and progress visibility belong in the browser-facing product or in concise
 proactive reports. If no suitable owner-facing surface exists, creating it is
 unfinished product work and takes priority over further internal machinery.
 
-This doctrine does not weaken numbered-step closure, source-admission, archive
+This doctrine does not weaken stage closure, source-admission, archive
 immutability, or safety gates. It changes sequencing *within* the active step:
 deliver reversible usable capability first, then continue background evidence
-collection. A usable slice does not silently close the active step or unlock a
-later numbered step.
+collection. A usable slice does not silently close the active stage or unlock a
+later stage.
+
+## Owner-verifiable completion contract
+
+This section supersedes the old numbered engineering steps and phase gates
+later in this document. Those records remain as historical evidence only.
+
+A stage can end only when all of the following are true:
+
+1. The promised outcome is running in the private browser-facing reader.
+2. Gabriel can inspect it through normal product controls without a terminal,
+   raw API/JSON, logs, GitHub, or code review.
+3. The interface clearly identifies what is live, incomplete, degraded, or
+   excluded; hidden fallback behavior is a stage failure.
+4. Gabriel explicitly says the visible outcome is accepted and the stage may
+   close.
+
+An implementation, passing test suite, merged pull request, shadow run, or
+background pilot is never the end of a stage. These support delivery but do not
+replace owner inspection.
+
+If visual inspection exposes a defect, repair and republish the same stage.
+Do not open the next stage, create a new research detour, or ask the owner to
+inspect engineering artifacts.
+
+## Complete source scope — authoritative from Stage 0
+
+The live Notion `Clipping Sources` inventory was reconciled on 2026-08-30: 33
+sources, seven owner pages, 27 active adapters, and six connector gaps. This is
+the starting product scope. The eleven sources added on 2026-08-29 are merely a
+subset of this inventory and must never again be described as the project scope.
+
+- Brazil News (5): ((o))eco, Agência Brasil, Agência Pública, Globo,
+  RioOnWatch.
+- Comics (2): GiantITP, Wilde Life.
+- Formula 1 (4): Formula 1, Motorsport, RaceFans, The Race.
+- Ideas (5): Aeon, Medium, Psyche, Quanta Magazine, The Verge.
+- Sports (5): ATP Tour, Alpinist, Climbing, ExplorersWeb, World Surf League.
+- Technology & Things (10): Brickset, DPReview, Hackaday, New Atlas, PetaPixel,
+  The Brothers Brick, The Gadgeteer, The Verge, Wired, Kickstarter.
+- World News (3): BBC, Financial Times, Reuters.
+
+Current connector gaps, visible rather than hidden: ATP Tour, Financial Times,
+Kickstarter, Medium, Reuters, and World Surf League. The other 27 sources are
+the initial live editorial corpus. Multi-page sources such as The Verge remain
+one canonical source routed to each approved owner page.
+
+## Rebaselined visual delivery stages
+
+Status vocabulary: `Not started`, `In progress`, `Owner inspection`, `Closed`,
+`Blocked`. Only Gabriel can move `Owner inspection` to `Closed`.
+
+### Stage 0 — Source scope and reader truth
+
+Status: In progress
+
+Deliver in the reader:
+
+- A browser-facing Source Coverage view showing all 33 Notion sources grouped
+  under the seven owner pages.
+- For every source: reading intent, Must include, Avoid, adapter state, and
+  current ingestion health in plain language.
+- The 27 active sources loaded into the running product from the compiled
+  registry; the six connector gaps shown explicitly as incomplete.
+- No legacy category names, hidden registry fallback, or eleven-source framing.
+
+Owner inspection:
+
+- Gabriel opens Source Coverage, sees all 33 sources and seven pages, and can
+  compare the displayed intent with Notion without reviewing code.
+- The reader visibly warns if its live registry or rule set is missing/stale.
+- Close only when Gabriel accepts that the reader is working from the correct
+  complete scope.
+
+### Stage 1 — Editorial calibration and direct feedback
+
+Status: Not started
+
+Deliver in the reader:
+
+- A live issue drawn from all currently active sources, grouped by the seven
+  owner pages, with honest relevance thresholds and actual-issue diversity.
+- A concrete “Why this is here” reason tied to owner intent; same-source copies
+  are never called independent corroboration.
+- “Not for me” on every card with short reason choices: wrong topic, low value,
+  wrong source use, repetitive, promotional/filler, and do not show this story.
+- Feedback immediately removes the card, persists across devices, and affects
+  the next preview. A visible Feedback view lets Gabriel inspect and undo it.
+- No quota filling: a short or empty page is preferable to poor material.
+
+Owner inspection:
+
+- Gabriel reads and rejects/keeps cards in the ordinary interface, refreshes,
+  and sees the correction persist and influence the next issue.
+- Close only when the visible source mix, topics, reasons, and rejection loop
+  are credible enough to calibrate without developer intervention.
+
+### Stage 2 — Complete all named source connectors
+
+Status: Not started
+
+Deliver in the reader:
+
+- Working compliant connectors for ATP Tour, Financial Times, Kickstarter,
+  Medium, Reuters, and World Surf League, using Gabriel's authorized access
+  where applicable.
+- Source Coverage changes each gap from incomplete to live only after its own
+  sample cards are visible and attributable.
+- Pilot/reliability evidence appears as a simple health indicator; it does not
+  delay editorial corrections or require owner operation.
+
+Owner inspection:
+
+- Gabriel can open sample/current cards from every source and verify that each
+  source is being used for the intended material.
+- Close only after every source is visibly live or Gabriel explicitly accepts a
+  displayed blocker or alternative.
+
+### Stage 3 — Finite morning newspaper
+
+Status: Not started
+
+Deliver in the reader:
+
+- The real 07:30 morning edition, immutable after publication, using the full
+  live registry, accepted feedback, source rules, seven pages, grounded reasons,
+  and bounded volume.
+- Clear source provenance and honest empty/short sections.
+
+Owner inspection:
+
+- Gabriel reads an actual morning edition in the normal desktop and mobile
+  interface and evaluates every page, source mix, story fit, and explanation.
+- Close only when Gabriel accepts the visible morning product. A fixture or
+  preview cannot close this stage.
+
+### Stage 4 — Non-repetitive afternoon update
+
+Status: Not started
+
+Deliver in the reader:
+
+- The real 16:30 update containing only genuinely new or materially changed
+  stories, linked back to the morning where relevant.
+- An explicit no-material-change state instead of filler.
+
+Owner inspection:
+
+- Gabriel compares an actual morning and afternoon pair in the reader and can
+  see why each afternoon card qualifies.
+- Close only after Gabriel accepts a real published pair.
+
+### Stage 5 — Source-appropriate presentation
+
+Status: Not started
+
+Deliver in the reader:
+
+- Comics as current panels with original-page links.
+- Sports as schedules/results/status and relevant Brazilian competitors.
+- Formula 1 with fact/analysis/rumor labeling and event/team/driver context.
+- Kickstarter and development-stage gear with campaign, evidence, readiness,
+  delivery-risk, support, and landed-cost context when available.
+- Ordinary articles retain the accepted newspaper presentation.
+
+Owner inspection:
+
+- Gabriel inspects real examples of every presentation type in the reader.
+- Close only when the formats are visibly useful and correctly differentiated.
+
+### Stage 6 — Cross-device and operational acceptance
+
+Status: Not started
+
+Deliver in the reader:
+
+- Read, saved, dismissed, feedback, and navigation state synchronized across
+  desktop and mobile over LAN and Tailscale.
+- Visible freshness and failure health, tested backup/recovery, and preserved
+  historical editions.
+
+Owner inspection:
+
+- Gabriel performs the normal workflow on two devices and verifies state,
+  editions, and recovery-visible behavior without technical tools.
+- Close only when Gabriel accepts the complete first prototype.
 
 ## Mission
 
@@ -254,7 +440,12 @@ afternoon engine can distinguish:
 - Ordinary articles: publication-owned headline, concise summary, selection
   reason, time, primary provenance, and corroborating links.
 
-## Execution phases and gates
+## Historical engineering phases and gates — superseded
+
+The records below document work previously performed and claims previously
+made. They do not govern current execution and their `Closed` labels do not
+mean the integrated product passed owner inspection. Current execution is
+governed only by the rebaselined visual delivery stages above.
 
 Status vocabulary for numbered steps: `Not started`, `In progress`, `Awaiting
 owner closure`, `Closed`, `Blocked`.
@@ -359,17 +550,42 @@ Delivery correction, ordered within Step 6:
    production digest. It must not rewrite today's immutable edition or any
    historical issue, and it must be verified over the owner's normal private
    network path. **Delivered and verified 2026-08-30.**
-2. Keep the 72-hour eleven-source observation running independently in the
+2. Use the live preview for immediate editorial calibration before expanding
+   source volume. Repair relevance, diversity, routing, explanations, and
+   owner feedback from actual visible failures; do not wait for the reliability
+   pilot. **In progress.**
+3. Keep the 72-hour eleven-source observation running independently in the
    background. Present its progress proactively in plain language; do not ask
    the owner to inspect files or run commands.
-3. Continue compliant Medium, Financial Times, Reuters, ATP Tour, Kickstarter,
+4. Continue compliant Medium, Financial Times, Reuters, ATP Tour, Kickstarter,
    and World Surf League adapter work without withholding the usable preview.
-4. After pilot evidence matures, prepare deliberate promote/hold/reject
+5. After pilot evidence matures, prepare deliberate promote/hold/reject
    recommendations. No source auto-promotes.
 
 The bounded live preview is the immediate delivery target. Step 6 remains open
 after that delivery until the source/adaptor exit gate is separately met and
 the owner explicitly closes it.
+
+Immediate editorial-repair acceptance criteria:
+
+- The production preview loads the current compiled Notion editorial registry
+  and private selection rules; missing rule assets are visible health failures,
+  not silent generic fallback.
+- Source dominance is measured against the issue actually shown, not the
+  configured 40-story ceiling.
+- Availability never fills a quota by itself: low-fit items may leave a page or
+  issue intentionally short.
+- Same-source duplicates are not called independent corroboration and do not
+  receive a cross-source credibility boost.
+- Globo/G1 is restricted to the owner's stated federal, country-scale, Rio de
+  Janeiro, Flamengo, F1, environmental, wildlife, travel, and outdoors intent;
+  regional TV-video indexes and unrelated state-local filler are excluded.
+- Formula 1 marketing, entertainment, betting/markets, and driver-lifestyle
+  filler do not displace news, results, schedules, rules, technical reporting,
+  teams, and drivers.
+- The reader offers a simple owner-facing “not for me” signal with a reason;
+  feedback affects the next preview without requiring source removal, JSON, or
+  terminal work.
 
 ### Step 7 — Align navigation and special presentations
 
@@ -655,6 +871,9 @@ helpful.
 | FD-022 | 2026-08-29 | Accepted | Observe candidate feeds every six hours for 72 hours in private ignored state; require at least 48 hours before any verdict and never auto-promote from pilot success. | Satisfies the evidence window with durable measurements while preserving the separate production-admission gate. |
 | FD-023 | 2026-08-29 | Accepted | Treat owner-authenticated Medium preferences and FT subscription access as legitimate connector inputs; implement first-party HTML/API/email connectors for Reuters and WSL when RSS is absent. | The architecture explicitly defines RSS as one adapter, not the product boundary. A missing feed is an engineering routing problem, not grounds to reject an essential source. |
 | FD-024 | 2026-08-30 | Accepted | Deliver safe owner-usable slices independently of long-running internal validation; background pilots may gate source promotion but may not block an already-verifiable bounded reader. Owner status/use surfaces must be browser-facing or proactively reported, not CLI/JSON instructions. | Gabriel correctly rejected waiting three days for a simple product and being told to follow its pilot from a project directory. Product delivery had been subordinated to engineering process. |
+| FD-025 | 2026-08-30 | Accepted | Treat the Live Preview as the editorial calibration surface. Correct visible fit failures immediately from owner intent and feedback; reserve the 72-hour pilot for reliability and promotion evidence only. | The first live preview exposed severe editorial defects within minutes, proving that elapsed observation time is irrelevant to correcting selection quality. |
+| FD-026 | 2026-08-30 | Accepted | Replace engineering-completion steps with owner-verifiable visual delivery stages. Tests, code review, CI, logs, APIs, and shell output cannot close a stage; only Gabriel's inspection of the running browser product and explicit acceptance can. | Gabriel will not perform code reviews and correctly requires inspectable outcomes before closure. |
+| FD-027 | 2026-08-30 | Accepted | Treat all 33 current Notion Clipping Sources across all seven pages as the product scope from Stage 0. The eleven recent additions are a subset, not a pilot-sized substitute for the complete inventory. | The prior eleven-source framing materially misrepresented the intended product scope. |
 
 ## Problem and resolution log
 
@@ -676,6 +895,8 @@ erase superseded conclusions.
 | FP-019 | 2026-08-29 | Step 6 | Initial connector reporting framed absent public RSS for Reuters and WSL too close to a source failure and did not exploit the owner's authenticated Medium preferences or FT subscription. | Corrected by owner. Step 6 now requires source-specific connectors: Medium profile/following signals, Gabriel's FT subscription, and first-party non-RSS Reuters/WSL access. Only a demonstrated legal/technical impossibility after those paths are exhausted may be reported as blocked. |
 | FP-020 | 2026-08-30 | Step 6 | Arc exposes both approved authenticated tabs over its native AppleScript inventory, but JavaScript content reads time out. The first connector draft incorrectly reported `ready` from tab presence alone. | Partially resolved: health now requires readable content, distinguishes missing from unreadable sources, and records timeout/command/JSON/empty-content failures. Current live result is two present tabs, zero readable sources, and `content_timeout` for both; no authenticated content has been ingested. Continue with a compliant content-read path without treating browser-relay pairing as a prerequisite. |
 | FP-021 | 2026-08-30 | Step 6 delivery | The 72-hour source pilot was allowed to appear as a prerequisite for a usable reader, and the owner was given project-directory and `jq` commands as the way to follow it. After being told to correct this, implementation began before the canonical plan was amended. | Resolved for immediate delivery: governance was amended first, then the non-destructive bounded Live Preview was tested and commissioned over LAN and Tailscale. The pilot remains background evidence only. The broader doctrine remains binding for all future work. |
+| FP-022 | 2026-08-30 | Step 6 editorial calibration | The first live preview selected 8 G1 cards, including regional TV-video indexes, plus low-value F1 marketing/lifestyle pieces. All deterministic base scores were tied at 6.0; G1 same-source clusters received the maximum cluster boost and were described as independent corroboration. The source cap allowed 8 because it used 20% of the 40-story ceiling rather than the 16-story issue. The running volume contained neither the compiled registry nor private rules, so explanations and filters silently fell back to generic behavior. | Open and immediate. Execute the editorial-repair criteria above before additional source expansion. Reliability observation continues independently and is not an excuse to defer visible quality corrections. |
+| FP-023 | 2026-08-30 | Plan governance | Prior step closures were supported primarily by implementation, tests, shadow evidence, PRs, and CI, while critical integration remained invisible or absent in the running reader. The plan also allowed the eleven newly added sources to be mistaken for total scope despite 33 live Notion sources. | Superseded the old steps with Stages 0–6, each ending in a named browser-facing owner inspection. Reset active execution to Stage 0. All 33 sources and seven owner pages are authoritative from the first stage. Historical closed labels no longer imply product acceptance. |
 | FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open and now machine-visible: Step 3 registry reconciliation reports exactly these six as planned connectors with no active adapter. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
 | FP-007 | 2026-08-29 | Source review | Globo Avoid guidance is linguistically ambiguous. | Waiting for owner confirmation; no durable filter should encode the ambiguous clause meanwhile. |
 | FP-008 | 2026-08-29 | Step 1 | Four TBD queues needed to become eleven agreed source records without losing the owner-selected pages or disturbing unrelated rows. | Technically resolved: reused the four original pages, created seven companion pages, populated source-specific guidance, and reconciled the complete table. Awaiting owner closure. |
@@ -711,6 +932,8 @@ session to verify the claim.
 | 2026-08-30 | Step 6 authenticated-source continuation | Recovered the interrupted Arc connector work and bypassed the failed relay dependency with a read-only native Arc inventory over the already-authorized Mac Studio SSH path. Both intended tabs are discoverable. Hardened connector health so tab presence without page content cannot pass, and added explicit failure evidence. | Live inventory found `https://www.ft.com/` and Gabriel's Medium following-topic page. Both content executions timed out; connector now reports `partial`, two present sources, zero readable sources, and both sources unreadable. Four focused Arc tests pass. The source observer remains healthy with three durable six-hour samples; the 72-hour finalizer remains scheduled and production is unchanged. | Continue the independent Reuters/WSL and Medium/FT connector paths while the source-pilot observation window matures. Do not start Step 7 or promote sources. |
 | 2026-08-30 | Step 6 delivery correction | Gabriel rejected the three-day wait and developer-plumbing status path, then required the canonical plan to adopt product-before-plumbing before further implementation. Added an explicit delivery doctrine, FD-024, FP-021, and ordered Step 6 so a non-destructive bounded browser preview ships before further connector work while the pilot continues independently. | Plan now distinguishes owner-usable delivery from source-promotion evidence and preserves all existing safety, immutability, and sequential closure gates. A live-preview code draft had been started prematurely; it remains uncommissioned and production remains unchanged pending verification under this amended plan. | Verify and deliver the bounded live preview first. Then continue background Step 6 connector and pilot work. Do not start Step 7. |
 | 2026-08-30 | Step 6 usable delivery | Added a non-persistent bounded Live Preview as the first item in the existing browser Editions view, rebuilt the private service, and verified it through the normal LAN and Tailscale paths. The preview recomputes from the current digest and never writes the edition archive. | All 40 tests pass. Live ingestion completed successfully with 19 feeds and 362 retained articles. The preview produced 16 selected stories with grounded reasons. Both private-network routes served the UI and preview. Pre/post SHA-256 manifests for every historical edition were byte-identical. PR #10 passed both checks, merged at `9809115`, and the exact `main` merge commit passed final CI. | Resume background Step 6 connector and pilot work. Do not start Step 7. |
+| 2026-08-30 | Step 6 first editorial audit | Audited every visible Live Preview card against the compiled Notion intent and selection evidence after Gabriel reported widespread mismatch. Reframed Step 6 so immediate editorial calibration precedes further source expansion while the reliability pilot remains background-only. | 16 visible cards: 8 G1, 4 Formula 1, 2 The Verge, and 2 Order of the Stick. G1 included six regional TV-video indexes; F1 included betting-market, career-list, and music-marketing filler. Every base score was 6.0. Source cap was 8; same-source clusters produced maximum boost and false corroboration language. Production lacked both registry and private rule files. | Implement and live-verify the immediate editorial-repair acceptance criteria. Do not wait for the pilot and do not start Step 7. |
+| 2026-08-30 | Visual-stage rebaseline | Reconciled the live Notion inventory and replaced the engineering-step completion model with seven sequential owner-verifiable stages. Made ordinary browser inspection and Gabriel's explicit acceptance the only closure mechanism; code review is explicitly excluded from owner duties. Reset active work to Stage 0 Source scope and reader truth. | Live read-only reconciliation returned 33 unchanged sources, seven owner pages, 27 active adapters, six explicit connector gaps, zero errors, and no missing adapter mappings. The plan now names all 33 sources by page and defines the exact product surface Gabriel will inspect at every stage. | Implement Stage 0 only: browser Source Coverage, all 33 sources, seven pages, visible rules/health/gaps, and live registry/rule failure warnings. Present it for owner inspection; do not start Stage 1. |
 
 ## Session reconciliation checklist
 
