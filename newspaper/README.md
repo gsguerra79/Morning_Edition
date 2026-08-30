@@ -231,6 +231,13 @@ selected card receives a grounded `why_selected` explanation and every edition
 stores its full `selection_report` for audit. See `selection-rules.sample.json`
 and [TUNING.md](TUNING.md) for deployment settings.
 
+Afternoon publication also assigns a content-derived `story_fingerprint`,
+normalizes tracking variants of URLs, and compares candidates with the frozen
+morning edition. Unchanged rewrites are rejected; corrections, newly confirmed
+rumors, and new numeric facts are included once with an `afternoon_update_of`
+link and machine-readable change reason. If nothing changed, the edition stores
+an explicit `no_material_change` empty state instead of filler.
+
 
 | Method | Path | Purpose |
 |--------|------|---------|

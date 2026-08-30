@@ -62,6 +62,64 @@ class EditionTests(unittest.TestCase):
         self.assertEqual(2, issue['selection_report']['selected_stories'])
         self.assertTrue(all(item['why_selected'] for item in issue['articles']))
 
+    def test_material_afternoon_update_links_to_morning_story(self):
+        morning = editions.publish({'articles': [{
+            'id': 'am', 'title': 'Ferrari rumored to sign Brazilian driver',
+            'url': 'https://example.com/f1-driver', 'source': 'Source',
+            'category': 'f1', 'cluster_rep': True, 'score': 8,
+        }]}, 'morning', self.now)
+        afternoon = editions.publish({'articles': [{
+            'id': 'pm', 'title': 'Ferrari officially confirmed Brazilian driver signs',
+            'url': 'https://example.com/f1-driver?utm_source=feed', 'source': 'Source',
+            'category': 'f1', 'cluster_rep': True, 'score': 8,
+        }]}, 'afternoon', self.now)
+        self.assertEqual(['pm'], [item['id'] for item in afternoon['articles']])
+        self.assertEqual(morning['articles'][0]['story_fingerprint'],
+                         afternoon['articles'][0]['afternoon_update_of'])
+        self.assertEqual('status_confirmed', afternoon['articles'][0]['change_reason'])
+
+    def test_no_change_afternoon_has_explicit_empty_state(self):
+        item = {'id': 'same', 'title': 'Agency announces a policy review',
+                'url': 'https://example.com/policy', 'source': 'Source',
+                'category': 'world', 'cluster_rep': True, 'score': 8}
+        editions.publish({'articles': [item]}, 'morning', self.now)
+        afternoon = editions.publish({'articles': [dict(item, id='rewrite')]},
+                                     'afternoon', self.now)
+        self.assertEqual(0, afternoon['article_count'])
+        self.assertEqual('no_material_change', afternoon['empty_state']['code'])
+        self.assertEqual(1, afternoon['selection_report']['material_change']['unchanged_rejected'])
+
+    def test_unselected_morning_candidate_cannot_become_stale_afternoon_filler(self):
+        os.environ['MORNING_MAX_STORIES'] = '1'
+        os.environ['SOURCE_SHARE_CAP'] = '1.0'
+        candidates = [
+            {'id': 'top', 'title': 'Top morning story', 'url': 'https://example.com/top',
+             'source': 'Source', 'category': 'world', 'cluster_rep': True, 'score': 9},
+            {'id': 'overflow', 'title': 'Morning overflow story',
+             'url': 'https://example.com/overflow', 'source': 'Source',
+             'category': 'world', 'cluster_rep': True, 'score': 8},
+        ]
+        morning = editions.publish({'articles': candidates}, 'morning', self.now)
+        self.assertEqual(1, morning['article_count'])
+        self.assertEqual(2, len(morning['candidate_story_index']))
+        afternoon = editions.publish({'articles': [dict(candidates[1], id='rewritten')]},
+                                     'afternoon', self.now)
+        self.assertEqual(0, afternoon['article_count'])
+        self.assertEqual('no_material_change', afternoon['empty_state']['code'])
+
+    def test_new_afternoon_stories_remain_within_target_cap(self):
+        editions.publish({'articles': []}, 'morning', self.now)
+        items = [
+            {'id': f'new-{i}', 'title': f'Distinct afternoon development {i}',
+             'url': f'https://source{i % 8}.example/story-{i}',
+             'source': f'Source {i % 8}', 'category': 'world',
+             'cluster_rep': True, 'score': 100-i}
+            for i in range(30)
+        ]
+        afternoon = editions.publish({'articles': items}, 'afternoon', self.now)
+        self.assertLessEqual(afternoon['article_count'], 15)
+        self.assertEqual(30, afternoon['selection_report']['material_change']['new_stories'])
+
 
 if __name__ == '__main__':
     unittest.main()

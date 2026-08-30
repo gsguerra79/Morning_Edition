@@ -8,6 +8,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from editorial_selection import select_issue
+from story_identity import annotate, classify_afternoon
 
 EDITIONS_DIR = os.environ.get('EDITIONS_DIR', '/data/editions')
 TIMEZONE = os.environ.get('TZ', 'America/Chicago')
@@ -45,13 +46,16 @@ def publish(digest, kind, now=None, force=False):
     path = os.path.join(EDITIONS_DIR, eid + '.json')
     if os.path.exists(path) and not force:
         return load(eid)
-    articles = list(digest.get('articles') or [])
+    articles = [annotate(article) for article in (digest.get('articles') or [])]
+    candidate_story_index = [{key: article.get(key) for key in (
+        'id', 'cluster_id', 'title', 'canonical_url', 'story_fingerprint', 'material_facts')}
+        for article in articles if article.get('cluster_rep') is not False]
+    change_report = None
     if kind == 'afternoon':
         morning = load(edition_id('morning', now)) or {}
-        morning_ids = {a.get('id') for a in morning.get('articles', [])}
-        morning_clusters = {a.get('cluster_id') for a in morning.get('articles', [])}
-        articles = [a for a in articles if a.get('id') not in morning_ids
-                    and a.get('cluster_id') not in morning_clusters]
+        articles, change_report = classify_afternoon(
+            [article for article in articles if article.get('cluster_rep') is not False],
+            morning.get('candidate_story_index') or morning.get('articles', []))
     max_stories = int(os.environ.get(
         'MORNING_MAX_STORIES' if kind == 'morning' else 'AFTERNOON_MAX_STORIES',
         '40' if kind == 'morning' else '15'))
@@ -63,11 +67,20 @@ def publish(digest, kind, now=None, force=False):
         max_stories=max_stories,
         source_share=source_share,
     )
+    if change_report is not None:
+        selection_report['material_change'] = change_report
     payload = {
         'id': eid, 'kind': kind, 'date': now.date().isoformat(),
         'published_at': now.isoformat(), 'article_count': len(articles),
         'articles': articles, 'selection_report': selection_report,
     }
+    if kind == 'morning':
+        payload['candidate_story_index'] = candidate_story_index
+    if kind == 'afternoon' and not articles:
+        payload['empty_state'] = {
+            'code': 'no_material_change',
+            'message': 'No new or materially changed stories since the morning edition.',
+        }
     _atomic(path, payload)
     return payload
 
