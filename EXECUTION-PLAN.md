@@ -610,6 +610,7 @@ erase superseded conclusions.
 | FP-011 | 2026-08-29 | Step 2 GitHub | The first local commit attempt failed because the workspace had no Git author identity. The branch push contained only the existing remote ancestry; no staged project files were published by that failed attempt. | Resolved with repository-local `Gabriel Guerra` / GitHub noreply attribution. Global Git configuration was not changed; the real bootstrap commit was then pushed and reviewed. |
 | FP-012 | 2026-08-29 | Step 2 GitHub | The first public recovery verifier assumed the production image tag, while the clean-clone instructions built `morning-edition:recovery`. | Resolved in PR #2 by defaulting to the documented recovery tag and permitting an explicit `RESTORE_IMAGE` override. CI passed. |
 | FP-013 | 2026-08-29 | Step 2 GitHub | The first clean-clone drill revealed that the archive checksum manifest stored the original absolute backup path. A copied backup could therefore validate the original archive rather than its own copy before restoration. | Resolved in PR #3: backup manifests now reference `runtime-data.tar` by basename and the verifier rejects non-portable targets. The backup manifest was regenerated and the entire clean-clone drill passed. |
+| FP-014 | 2026-08-29 | Step 2 GitHub | The first successful `main` CI run warned that checkout v4 and setup-python v5 targeted deprecated Node 20 and were being forced onto Node 24. | Resolved by verifying the current official releases and upgrading both actions to v7 in PR #5. |
 
 ## Execution progress ledger
 
