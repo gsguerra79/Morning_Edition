@@ -36,6 +36,12 @@ consistent archive and edition checksums. Verification checks the archive,
 restores into a disposable Docker volume, compares every edition checksum, and
 removes the disposable volume without mounting production state.
 
+The verifier defaults to the clean-clone image tag
+`morning-edition:recovery`. Set `RESTORE_IMAGE` only when deliberately
+verifying with a different locally available image. The backup script defaults
+to container `forge-daily`; set `FORGE_DAILY_CONTAINER` for another explicit
+deployment name.
+
 ## Clean-clone source recovery
 
 ```sh
