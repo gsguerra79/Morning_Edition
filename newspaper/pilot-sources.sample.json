@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "minimum_observation_hours": 48,
+  "lookback_days": 14,
+  "sources": [
+    {"source": "New Atlas", "url": "https://newatlas.com/index.rss", "page": "Technology & Things"},
+    {"source": "Hackaday", "url": "https://hackaday.com/blog/feed/", "page": "Technology & Things"},
+    {"source": "Brickset", "url": "https://brickset.com/feed", "page": "Technology & Things"},
+    {"source": "The Brothers Brick", "url": "https://www.brothers-brick.com/feed/", "page": "Technology & Things"},
+    {"source": "Aeon", "url": "https://aeon.co/feed.rss", "page": "Ideas"},
+    {"source": "Quanta Magazine", "url": "https://www.quantamagazine.org/feed/", "page": "Ideas"},
+    {"source": "Psyche", "url": "https://psyche.co/feed.rss", "page": "Ideas"},
+    {"source": "Agência Brasil", "url": "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml", "page": "Brazil News"},
+    {"source": "Agência Pública", "url": "https://apublica.org/feed/", "page": "Brazil News"},
+    {"source": "RioOnWatch", "url": "https://rioonwatch.org/?feed=rss2", "page": "Brazil News"},
+    {"source": "((o))eco", "url": "https://oeco.org.br/feed/", "page": "Brazil News"}
+  ]
+}

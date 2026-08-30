@@ -206,7 +206,7 @@ def parse_feed(xml, source, category, cutoff):
     out = []
 
     # RSS <item>
-    for m in re.finditer(r'<item>([\s\S]*?)</item>', xml):
+    for m in re.finditer(r'<item\b[^>]*>([\s\S]*?)</item>', xml, re.IGNORECASE):
         block = m.group(1)
         title = clean_text(extract_field(block, 'title'))
         url = (extract_field(block, 'link') or extract_field(block, 'guid')).strip()
@@ -221,7 +221,7 @@ def parse_feed(xml, source, category, cutoff):
                     'category': category, 'published_at': pub.isoformat()})
 
     # Atom <entry>
-    for m in re.finditer(r'<entry>([\s\S]*?)</entry>', xml):
+    for m in re.finditer(r'<entry\b[^>]*>([\s\S]*?)</entry>', xml, re.IGNORECASE):
         block = m.group(1)
         title = clean_text(extract_field(block, 'title'))
         lm = re.search(r'<link[^>]*href=["\']([^"\']+)["\']', block, re.IGNORECASE)

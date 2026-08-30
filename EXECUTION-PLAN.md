@@ -316,13 +316,16 @@ This step executes Phase 2 below. It cannot start until Step 3 is closed.
 
 ### Step 5 — Harden clustering and afternoon material-change logic
 
-Status: Awaiting owner closure
+Status: Closed
+
+Owner closure: accepted by Gabriel on 2026-08-29 after PR #8 merged and final
+`main` CI passed.
 
 This step executes Phase 3 below. It cannot start until Step 4 is closed.
 
 ### Step 6 — Complete source adapters and run source pilots
 
-Status: Not started
+Status: In progress
 
 This step executes Phase 4 below. It cannot start until Step 5 is closed.
 
@@ -406,7 +409,7 @@ Exit gate:
 
 ### Phase 3 — Stable clustering and afternoon material-change logic
 
-Status: Awaiting owner closure
+Status: Gate passed
 
 Work:
 
@@ -425,7 +428,7 @@ Exit gate:
 
 ### Phase 4 — Source completion and controlled source pilots
 
-Status: Not started
+Status: In progress
 
 Work:
 
@@ -603,6 +606,7 @@ helpful.
 | FD-019 | 2026-08-29 | Accepted | Compile owner guidance into a private, structured phrase-rule overlay and keep deterministic matching separate from the public registry/sample. | Source-specific Must include/Avoid behavior remains auditable without publishing the owner's detailed rule set or pretending deterministic substring matching has semantic judgment. |
 | FD-020 | 2026-08-29 | Accepted | Store a compact identity/material-fact index for every morning candidate story, including candidates not printed in the bounded issue, and compare afternoon representatives against that frozen cutoff. | Prevents morning overflow or rewritten cluster members from masquerading as afternoon news while preserving the reader's finite morning issue. |
 | FD-021 | 2026-08-29 | Accepted | Treat corrections, rumor-to-confirmed transitions, and newly introduced numeric facts as material developments; link them to the morning fingerprint. Treat matched rewrites without those signals as unchanged. | Provides explicit, testable first-prototype semantics without depending on an LLM or claiming semantic certainty the deterministic engine does not possess. |
+| FD-022 | 2026-08-29 | Accepted | Observe candidate feeds every six hours for 72 hours in private ignored state; require at least 48 hours before any verdict and never auto-promote from pilot success. | Satisfies the evidence window with durable measurements while preserving the separate production-admission gate. |
 
 ## Problem and resolution log
 
@@ -619,6 +623,8 @@ erase superseded conclusions.
 | FP-015 | 2026-08-29 | Step 4 | The current 333-item live digest yielded only 60 cluster representatives across four populated legacy pages; page and source caps selected 15 rather than padding toward the 30-story morning target. | Correct honest behavior. The selector does not manufacture filler or weaken diversity caps. Phase 4 source pilots and Phase 5 page alignment will broaden qualified supply; the representative six-page fixture selects 34. |
 | FP-005 | 2026-08-29 | Baseline | Afternoon exclusion can fail when a story's URL, headline, or cluster identity changes. | Resolved in Step 5 with normalized canonical URLs, content fingerprints, title-overlap fallback, a frozen morning candidate index, and explicit unchanged/material-update classification. |
 | FP-016 | 2026-08-29 | Step 5 | The first shadow audit classified all 333 raw articles, so 176 non-representative cluster members appeared as material updates even though the selector correctly published none of them. | Resolved by applying material-change classification to the 60 story representatives, the same unit publication uses. The repeated identical-input shadow run reported 60 unchanged, zero material updates, zero new stories, and an explicit empty afternoon. |
+| FP-017 | 2026-08-29 | Step 6 | The first seven-day pilot window returned zero Aeon and Psyche items even though both feeds were healthy; their latest posts were eight to nine days old. | Resolved for observation by using a declared 14-day pilot window. The clean restarted run parsed seven items from each. This does not silently alter production lookback policy. |
+| FP-018 | 2026-08-29 | Step 6 | The existing Atom parser matched only bare `<entry>` tags, so Kickstarter's valid attributed `<entry xml:lang=...>` records parsed as zero. | Resolved with case-insensitive attributed RSS/Atom container matching and a regression fixture. Kickstarter still needs an editorial-scope verdict; its public feed is not automatically equivalent to the owner's requested technology-project coverage. |
 | FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open and now machine-visible: Step 3 registry reconciliation reports exactly these six as planned connectors with no active adapter. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
 | FP-007 | 2026-08-29 | Source review | Globo Avoid guidance is linguistically ambiguous. | Waiting for owner confirmation; no durable filter should encode the ambiguous clause meanwhile. |
 | FP-008 | 2026-08-29 | Step 1 | Four TBD queues needed to become eleven agreed source records without losing the owner-selected pages or disturbing unrelated rows. | Technically resolved: reused the four original pages, created seven companion pages, populated source-specific guidance, and reconciled the complete table. Awaiting owner closure. |
@@ -649,6 +655,8 @@ session to verify the claim.
 | 2026-08-29 | Step 4 | Added and integrated deterministic issue selection with morning/afternoon caps, page quotas, canonical-source dominance limits, structured Must include/Avoid rules, grounded explanations, explicit rejection evidence, deterministic tie-breaking, cluster deduplication, and retained corroborating-source provenance. Added public sample rules, deployment wiring, operator documentation, and focused unit/integration tests. | Nineteen tests pass, including a 34-story representative six-page morning fixture, Must include/Avoid behavior, deterministic replay, honest empty input, publisher integration, and edition immutability. Compose validation, Python compilation, container build, diff checks, and the public-repository privacy boundary pass. An isolated shadow publication transformed the live 333-item digest into 60 candidate clusters and 15 selected stories across the four populated legacy pages, with all reasons present, 13 corroborated cards, and maximum source count 8/8. GitHub PR #7 opened and both checks passed. Production and historical editions were not modified. | Await explicit owner closure. Do not start Step 5. |
 | 2026-08-29 | Step 4 closure | Gabriel explicitly accepted Step 4 as closed after PR #7 merged at `a29697e` and final `main` CI passed. Updated the canonical plan before advancing. | Owner message: “continue.” | Begin Step 5 only: stable story identity and afternoon material-change handling. |
 | 2026-08-29 | Step 5 | Added versioned content fingerprints, canonical URL normalization, compact material-fact extraction, legacy compatibility, title-overlap matching, and deterministic new/unchanged/material-update classification. Morning editions persist a compact index for every candidate story; afternoon updates reject unchanged rewrites, link corrections/confirmations/new numeric facts to the morning fingerprint, and publish an explicit empty state when nothing changed. | All 32 tests pass, including headline/URL rewrites, corrections, rumor confirmation, new facts, genuinely new stories, stale morning overflow, explicit empty afternoons, target caps, malformed URLs, and edition immutability. Compilation, both Compose validations, container build, diff checks, and the public privacy boundary pass. On the repeated live 333-item digest, isolated shadow publication indexed 60 morning story representatives, printed 15, then classified all 60 as unchanged and published an explicit zero-story afternoon. Production edition checksums remained byte-identical. | Await explicit owner closure after GitHub PR and CI verification. Do not start Step 6. |
+| 2026-08-29 | Step 5 closure | Gabriel explicitly accepted Step 5 as closed after PR #8 merged at `1560221` and final `main` CI passed. Updated the canonical plan before advancing. | Owner message: “continue.” | Begin Step 6 only: controlled source pilots and compliant adapter investigation. |
+| 2026-08-29 | Step 6 initial observation | Added a public eleven-source pilot slate, durable private observation state, atomic runner, RSS/Atom compatibility fix, reliability/volume/promotion metrics, and tests. Installed a silent six-hour observer plus a one-shot 72-hour finalizer; neither can promote production feeds. Began official-source connector review. | Initial clean 14-day run: all 11 candidate feeds fetched and parsed; item counts ranged 5–60 except 10–40 for higher-volume sources; detected promotional ratios were zero for eight sources, 0.143 Hackaday, and 0.475 Brickset. Medium officially supports profile/publication/topic RSS. FT exposes a working international RSS feed but official republishing RSS terms also describe licensed keyed delivery. ATP publishes an official RSS page/endpoint but this host receives 403. Kickstarter exposes a public projects Atom feed after parser compatibility. Reuters and WSL have no verified compliant public adapter yet. | Continue six-hour observations through 72 hours; finish connector evidence and source-level relevance review; prepare explicit promote/hold/reject recommendations. Do not start Step 7. |
 
 ## Session reconciliation checklist
 
