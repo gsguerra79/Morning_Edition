@@ -10,6 +10,9 @@ authentication, transport security, and an explicit threat review.
 - Edition files are immutable unless an operator deliberately forces recovery.
 - The home page groups stories by topic; sources appear as provenance.
 - Deterministic summaries and title-token clustering work with AI disabled.
+- The Editions view begins with a bounded **Live Preview** built from the
+  current digest. It updates after ingestion and never writes or replaces an
+  immutable edition file.
 
 ## Operations
 
@@ -29,6 +32,7 @@ volume; later in-app changes survive image rebuilds.
 
 - `/status` — ingestion health
 - `/editions` — archive index
+- `/editions/live-preview` — non-persistent bounded issue from the current digest
 - `/editions/YYYY-MM-DD-morning` — immutable issue
 - `/editions/YYYY-MM-DD-afternoon` — immutable update
 - `/feeds` and `/categories` — active source/topic configuration
