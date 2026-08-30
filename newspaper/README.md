@@ -221,6 +221,16 @@ registry atomically; unchanged runs do not rewrite it; query or validation
 failures preserve the last known-good registry and update only the reconciliation
 report.
 
+### Bounded edition selection
+
+Morning and afternoon publication use the deterministic selector in
+`editorial_selection.py`. It selects one representative per story cluster,
+retains corroborating links as provenance, applies private structured Must
+include/Avoid rules, and enforces issue, page, and canonical-source caps. Every
+selected card receives a grounded `why_selected` explanation and every edition
+stores its full `selection_report` for audit. See `selection-rules.sample.json`
+and [TUNING.md](TUNING.md) for deployment settings.
+
 
 | Method | Path | Purpose |
 |--------|------|---------|

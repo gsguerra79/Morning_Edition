@@ -14,6 +14,9 @@ services:
       AI_ENABLED: "false"
       MORNING_MINUTE: 1440
       AFTERNOON_MINUTE: 1440
+      MORNING_MAX_STORIES: 40
+      AFTERNOON_MAX_STORIES: 15
+      SOURCE_SHARE_CAP: 0.20
       STATE_FILE: /shadow/state.json
       DIGEST_FILE: /shadow/digest.json
       FEEDS_FILE: /shadow/feeds.json
@@ -22,6 +25,8 @@ services:
       EMBEDDINGS_FILE: /shadow/embeddings.json
       CATEGORIES_FILE: /shadow/categories.json
       EDITIONS_DIR: /shadow/editions
+      EDITORIAL_REGISTRY_FILE: /shadow/editorial-registry.json
+      SELECTION_RULES_FILE: /shadow/selection-rules.json
       SEED_FEEDS: /app/feeds.sample.json
       SEED_CATEGORIES: /app/categories.sample.json
     volumes:

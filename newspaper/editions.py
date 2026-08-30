@@ -7,8 +7,12 @@ import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from editorial_selection import select_issue
+
 EDITIONS_DIR = os.environ.get('EDITIONS_DIR', '/data/editions')
 TIMEZONE = os.environ.get('TZ', 'America/Chicago')
+EDITORIAL_REGISTRY_FILE = os.environ.get('EDITORIAL_REGISTRY_FILE', '/data/editorial-registry.json')
+SELECTION_RULES_FILE = os.environ.get('SELECTION_RULES_FILE', '/data/selection-rules.json')
 
 
 def _atomic(path, payload):
@@ -22,6 +26,15 @@ def _atomic(path, payload):
 def edition_id(kind, now=None):
     now = now or datetime.now(ZoneInfo(TIMEZONE))
     return f'{now:%Y-%m-%d}-{kind}'
+
+
+def _load_json(path):
+    try:
+        with open(path, encoding='utf-8') as fh:
+            value = json.load(fh)
+            return value if isinstance(value, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 def publish(digest, kind, now=None, force=False):
@@ -39,12 +52,21 @@ def publish(digest, kind, now=None, force=False):
         morning_clusters = {a.get('cluster_id') for a in morning.get('articles', [])}
         articles = [a for a in articles if a.get('id') not in morning_ids
                     and a.get('cluster_id') not in morning_clusters]
-    for article in articles:
-        article.setdefault('why_selected', _why(article))
+    max_stories = int(os.environ.get(
+        'MORNING_MAX_STORIES' if kind == 'morning' else 'AFTERNOON_MAX_STORIES',
+        '40' if kind == 'morning' else '15'))
+    source_share = float(os.environ.get('SOURCE_SHARE_CAP', '0.20'))
+    articles, selection_report = select_issue(
+        articles,
+        registry=_load_json(EDITORIAL_REGISTRY_FILE),
+        rules=_load_json(SELECTION_RULES_FILE),
+        max_stories=max_stories,
+        source_share=source_share,
+    )
     payload = {
         'id': eid, 'kind': kind, 'date': now.date().isoformat(),
         'published_at': now.isoformat(), 'article_count': len(articles),
-        'articles': articles,
+        'articles': articles, 'selection_report': selection_report,
     }
     _atomic(path, payload)
     return payload
