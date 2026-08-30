@@ -23,7 +23,7 @@ and copyright notice are preserved in [LICENSE](LICENSE).
 
 ```sh
 cd newspaper
-python -m unittest -v test_editions.py test_baseline.py
+python -m unittest -v
 docker compose config --quiet
 docker compose -f docker-compose.shadow.yaml config --quiet
 docker build -t morning-edition:local .

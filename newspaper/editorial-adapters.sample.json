@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "Example Publication": [
+      {"type": "rss", "status": "active", "url": "https://example.com/feed.xml"}
+    ],
+    "Example Connector": [
+      {"type": "connector", "status": "planned", "connector": "example-connector"}
+    ]
+  }
+}

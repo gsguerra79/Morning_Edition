@@ -201,6 +201,27 @@ next run. The pipeline, feed validation, and UI all read from this one place.
 
 ## HTTP API
 
+### Read-only editorial registry reconciliation
+
+The owner-facing source table can be reconciled through the official Notion CLI
+into a private local registry. Copy `editorial-adapters.sample.json` to the
+ignored `editorial-adapters.local.json`, map each requested source to an active
+RSS adapter or a planned/blocked connector, then run:
+
+```sh
+export NOTION_DATA_SOURCE_ID='configured-privately'
+python scripts/sync-editorial-registry.py \
+  --adapters editorial-adapters.local.json \
+  --registry data/editorial-registry.json \
+  --report data/editorial-reconciliation.json
+```
+
+The command never writes to Notion. Successful changed snapshots replace the
+registry atomically; unchanged runs do not rewrite it; query or validation
+failures preserve the last known-good registry and update only the reconciliation
+report.
+
+
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/` | The dashboard (`digest.html`) |

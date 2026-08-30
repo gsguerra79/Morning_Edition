@@ -44,8 +44,9 @@ Then open `http://localhost:8090/`.
 
 ## Testing
 
-There's no automated test suite - verify changes by running the app (Docker, or the direct-run command
-above) and exercising the affected flow. Say what you tested in the PR.
+Run the automated suite with `python -m unittest -v`, then verify behavioral
+changes through Docker or the direct-run command above. Include both automated
+and manual evidence in the PR.
 
 ## Design docs
 
