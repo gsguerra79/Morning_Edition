@@ -10,7 +10,7 @@ backup_dir=$1
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
 allowed_root=$project_root/backups
-container=forge-daily
+container=${FORGE_DAILY_CONTAINER:-forge-daily}
 
 case "$backup_dir" in
   "$allowed_root"/*) ;;

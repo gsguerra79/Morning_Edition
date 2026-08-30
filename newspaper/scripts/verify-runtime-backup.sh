@@ -10,6 +10,7 @@ backup_dir=$1
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
 allowed_root=$project_root/backups
+restore_image=${RESTORE_IMAGE:-morning-edition:recovery}
 case "$backup_dir" in
   "$allowed_root"/*) ;;
   *) echo "backup target must be a child of $allowed_root" >&2; exit 2 ;;
@@ -39,7 +40,7 @@ sudo -n docker volume create "$volume" >/dev/null
 sudo -n docker run --rm \
   -v "$volume:/restore" \
   -v "$backup_dir:/backup:ro" \
-  newspaper-cruxwire \
+  "$restore_image" \
   sh -c 'tar -xf /backup/runtime-data.tar -C /restore'
 
 restored_mount=$(sudo -n docker volume inspect "$volume" --format '{{.Mountpoint}}')
