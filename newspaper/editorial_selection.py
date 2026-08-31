@@ -112,6 +112,8 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
         topics = (record or {}).get("topics") or []
         if topics:
             item["category"] = _page_key(topics[0])
+        if source_rules.get("category"):
+            item["category"] = _page_key(source_rules["category"])
         item["editorial_must_include"] = mandatory
         item["selection_score"] = round(_score(item), 4)
         item["why_selected"] = _reason(item, record, mandatory)

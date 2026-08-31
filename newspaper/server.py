@@ -372,7 +372,10 @@ def normalize_feed_payload(payload):
         return None, 'category is required'
     if category not in allowed_categories():
         return None, f'Unknown category: {category}'
-    return {'url': url, 'source': source, 'category': category}, None
+    feed = {'url': url, 'source': source, 'category': category}
+    if payload.get('format') in ('globo_html',):
+        feed['format'] = payload['format']
+    return feed, None
 
 
 def feeds_to_opml(feeds, categories):

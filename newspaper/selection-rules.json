@@ -32,6 +32,25 @@
     },
     "BBC": {
       "exclude_any": ["cricket", "county championship"]
+    },
+    "BBC Football": {
+      "category": "sports",
+      "exclude_any": [
+        "american football", "nfl", "super bowl", "quarterback", "touchdown",
+        "college football", "gridiron"
+      ]
+    },
+    "Climbing": {
+      "category": "sports",
+      "require_any": [
+        "mountain", "mountaineer", "mountaineering", "alpine", "alpinism",
+        "expedition", "summit", "high-altitude", "high altitude", "big wall",
+        "ice climb", "avalanche", "himalaya", "andes", "rockies", "alps"
+      ],
+      "exclude_any": [
+        "indoor", "climbing gym", "competition climbing", "sport climbing",
+        "bouldering gym", "concrete bridge", "urban climbing"
+      ]
     }
   }
 }

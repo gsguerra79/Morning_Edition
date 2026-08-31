@@ -52,6 +52,7 @@ FEEDS_FILE  = os.environ.get('FEEDS_FILE', '/data/feeds.json')
 DIGEST_FILE = os.environ.get('DIGEST_FILE', '/data/digest.json')
 STATE_FILE  = os.environ.get('STATE_FILE', '/data/state.json')
 RUNS_FILE   = os.environ.get('RUNS_FILE', '/data/runs.json')
+SELECTION_RULES_FILE = os.environ.get('SELECTION_RULES_FILE', '/app/selection-rules.json')
 MAX_RUNS    = int(os.environ.get('MAX_RUNS', '200'))  # bounded run-history log
 # Article embeddings for the current digest, kept out of digest.json (which is
 # served to the browser) so semantic search can rank without shipping vectors.
@@ -251,12 +252,75 @@ def parse_feed(xml, source, category, cutoff):
     return out
 
 
+def parse_globo_topic_page(html_text, source, category, cutoff):
+    """Extract first-party GE topic cards when the section has no live RSS.
+
+    GE's section pages render ordinary ``feed-post`` cards server-side.  Keep
+    this deliberately narrow: only article URLs beneath ge.globo.com are
+    admitted, and the publication date must be present in the URL.
+    """
+    out, seen = [], set()
+    pattern = re.compile(
+        r'<h2[^>]*>\s*<a[^>]+href=["\'](https://ge\.globo\.com/[^"\']+\.ghtml)["\'][^>]*>'
+        r'[\s\S]*?<p[^>]*>([\s\S]*?)</p>[\s\S]*?</a>\s*</h2>',
+        re.IGNORECASE,
+    )
+    for match in pattern.finditer(html_text or ''):
+        url, raw_title = match.groups()
+        if url in seen:
+            continue
+        date_match = re.search(r'/noticia/(\d{4})/(\d{2})/(\d{2})/', url)
+        if not date_match:
+            continue
+        pub = datetime(*(int(part) for part in date_match.groups()), tzinfo=timezone.utc)
+        if pub < cutoff:
+            continue
+        title = clean_text(re.sub(r'<[^>]+>', ' ', raw_title))
+        if not title:
+            continue
+        seen.add(url)
+        out.append({'title': title, 'url': url, 'source': source,
+                    'feed_summary': '', 'category': category,
+                    'published_at': pub.isoformat()})
+    return out
+
+
 def stable_id(url):
     """Deterministic 8-char hex id from the URL (stable within a digest)."""
     h = 0
     for ch in url:
         h = (h * 31 + ord(ch)) & 0xFFFFFFFF
     return format(h, '08x')[:8]
+
+
+def load_selection_rules():
+    try:
+        with open(SELECTION_RULES_FILE, encoding='utf-8') as fh:
+            data = json.load(fh)
+        return data.get('sources', {}) if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def apply_source_scope(article, rule_map):
+    """Return False for material outside an approved source's stated scope."""
+    rule = rule_map.get(str(article.get('source') or ''), {})
+    if not isinstance(rule, dict):
+        return True
+    text = ' '.join(str(article.get(k) or '') for k in
+                    ('title', 'feed_summary', 'summary')).casefold()
+    matches = lambda values: any(str(v).casefold() in text for v in values or [] if v)
+    excluded = matches(rule.get('exclude_any'))
+    if excluded and matches(rule.get('exclude_unless_any')):
+        excluded = False
+    if excluded:
+        return False
+    required = rule.get('require_any') or []
+    if required and not matches(required):
+        return False
+    if rule.get('category'):
+        article['category'] = str(rule['category']).strip().casefold()
+    return True
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -931,6 +995,7 @@ def run_once():
     error = None
     try:
         cfg = settings.load()
+        source_rules = load_selection_rules()
         user_blocklist = [k.lower() for k in cfg['block_keywords']]
         feeds = load_feeds()
         if not feeds:
@@ -961,13 +1026,15 @@ def run_once():
         for body, feed in bodies:
             feed_cutoff = run_now - timedelta(hours=_page_window_hours(
                 feed.get('category'), cfg['lookback_hours']))
-            parsed = parse_feed(body, feed.get('source', ''),
-                                feed.get('category', 'tech'), feed_cutoff)
+            parser = parse_globo_topic_page if feed.get('format') == 'globo_html' else parse_feed
+            parsed = parser(body, feed.get('source', ''),
+                            feed.get('category', 'tech'), feed_cutoff)
             feed_health[feed.get('url', '')]['items'] = len(parsed)
             for art in parsed:
                 if (art['url'] in seen
                         or TITLE_BLOCKLIST.search(art['title'])
-                        or settings.is_blocked(art['title'], user_blocklist)):
+                        or settings.is_blocked(art['title'], user_blocklist)
+                        or not apply_source_scope(art, source_rules)):
                     continue
                 seen.add(art['url'])
                 art['id'] = stable_id(art['url'])
@@ -997,6 +1064,8 @@ def run_once():
             # otherwise carry-forward would keep showing it indefinitely.
             title = a.get('title', '')
             if TITLE_BLOCKLIST.search(title) or settings.is_blocked(title, user_blocklist):
+                continue
+            if not apply_source_scope(a, source_rules):
                 continue
             age = _age_hours(a.get('published_at'))
             article_hard_max = _page_window_hours(a.get('category'), hard_max)
