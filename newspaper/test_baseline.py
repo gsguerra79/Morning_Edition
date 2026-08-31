@@ -46,11 +46,26 @@ class BaselineRegressionTests(unittest.TestCase):
 
         self.assertEqual(["read-1"], normalized["readIds"])
         self.assertEqual([{"id": "saved-1"}], normalized["later"])
+        self.assertEqual([], normalized["feedback"])
         self.assertEqual("later", normalized["viewState"]["currentView"])
         self.assertEqual("all", normalized["viewState"]["currentCat"])
         self.assertFalse(normalized["viewState"]["showScores"])
         self.assertEqual({}, normalized["sourceStats"])
         self.assertEqual({"lastDecayAt": None}, normalized["learning"])
+
+    def test_feedback_is_persisted_and_malformed_entries_are_removed(self):
+        normalized = server.normalize_payload({
+            "readIds": ["story-1"],
+            "feedback": [
+                {"id": "story-1", "reason": "wrong_topic"},
+                {"reason": "missing id"},
+            ],
+        })
+        pruned = server.prune(normalized)
+        self.assertEqual(
+            [{"id": "story-1", "reason": "wrong_topic"}],
+            pruned["feedback"],
+        )
 
     def test_unknown_legacy_fields_are_not_persisted(self):
         normalized = server.normalize_payload({"readIds": [], "obsolete": 1})

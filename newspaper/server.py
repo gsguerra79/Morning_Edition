@@ -76,6 +76,7 @@ DEFAULT_STATE = {
     'readIds': [],
     'later': [],
     'history': [],
+    'feedback': [],
     'viewState': {
         'currentView': 'digest',
         'currentCat': 'all',
@@ -186,6 +187,17 @@ def prune(state):
             history.append(item)
     state['history'] = history
 
+    feedback = []
+    seen_feedback = set()
+    for item in (state.get('feedback') or []):
+        if not isinstance(item, dict) or not isinstance(item.get('id'), str):
+            continue
+        if item['id'] in seen_feedback:
+            continue
+        seen_feedback.add(item['id'])
+        feedback.append(item)
+    state['feedback'] = feedback[-2000:]
+
     # Drop sourceStats entries for sources no longer in feeds.json. User intent
     # is "once removed, gone for good". Guard against a transient empty/unreadable
     # feeds list so a disk hiccup can't nuke every counter.
@@ -241,6 +253,7 @@ def normalize_payload(payload):
         'readIds': list(payload.get('readIds') or []),
         'later': list(payload.get('later') or []),
         'history': list(payload.get('history') or []),
+        'feedback': list(payload.get('feedback') or []),
         'viewState': view_state,
         'sourceStats': _normalize_source_stats(payload.get('sourceStats')),
         'learning': _normalize_learning(payload.get('learning')),

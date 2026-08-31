@@ -17,6 +17,9 @@ authentication, transport security, and an explicit threat review.
   Notion editorial registry. It groups the complete inventory by owner page and
   shows reading intent, Must include, Avoid, adapter state, production loading,
   per-source fetch health, connector gaps, and missing rule assets.
+- The **Feedback** view records every **Not for me** decision with its selected
+  reason. Feedback synchronizes through shared state, immediately removes the
+  story cluster from Home, and can be undone in the browser.
 
 ## Operations
 
