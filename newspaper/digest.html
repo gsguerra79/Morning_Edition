@@ -287,6 +287,20 @@
     .act:hover { color: var(--text); }
     .act:active { color: var(--text); }
     .act.later:hover, .act.later:active { color: var(--later-hover); }
+    .act.reject:hover, .act.reject:active { color: #a43f32; }
+    .feedback-panel { position: fixed; z-index: 200; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow: auto; border: 1px solid var(--border2); border-radius: var(--radius-lg); background: var(--surface); padding: 22px; box-shadow: 0 18px 70px rgba(0,0,0,.28); }
+    .feedback-panel h2 { font-family: var(--font-head); font-size: 22px; margin: 0 0 6px; }
+    .feedback-panel p { color: var(--text2); line-height: 1.45; margin: 0 0 18px; }
+    .feedback-reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .feedback-reason { text-align: left; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface2); color: var(--text); padding: 11px 13px; cursor: pointer; font: inherit; }
+    .feedback-reason:hover { border-color: var(--brand); }
+    .feedback-cancel { margin-top: 14px; }
+    .feedback-row { display: grid; grid-template-columns: 1fr auto; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .feedback-row:last-child { border-bottom: 0; }
+    .feedback-title { font-family: var(--font-head); font-weight: 700; margin-bottom: 5px; }
+    .feedback-meta { color: var(--text2); font-size: 13px; }
+    .feedback-undo { align-self: center; border: 1px solid var(--border2); background: transparent; color: var(--text); border-radius: var(--radius); padding: 7px 11px; cursor: pointer; }
+    @media (max-width: 620px) { .feedback-reasons { grid-template-columns: 1fr; } .feedback-row { grid-template-columns: 1fr; } .feedback-undo { justify-self: start; } }
 
     /* ── Section label (with trailing rule) ── */
     .sec-label { font-family: var(--font-head); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--text); display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; }
@@ -737,6 +751,9 @@
     <button class="viewnav-tab" onclick="switchView('history')" id="vnav-history">
       History <span class="vbadge" id="badge-history"></span>
     </button>
+    <button class="viewnav-tab" onclick="switchView('feedback')" id="vnav-feedback">
+      Feedback <span class="vbadge" id="badge-feedback"></span>
+    </button>
     <button class="viewnav-tab" onclick="switchView('editions')" id="vnav-editions">
       Previous Editions
     </button>
@@ -788,6 +805,10 @@
     <div class="list-view" id="history-content"></div>
   </div>
 
+  <div class="view" id="view-feedback">
+    <div class="list-view" id="feedback-content"></div>
+  </div>
+
   <div class="view" id="view-editions">
     <div class="list-view" id="editions-content"></div>
   </div>
@@ -801,6 +822,13 @@
     <div class="list-view" id="settings-content"></div>
   </div>
 
+</div>
+
+<div class="feedback-panel" id="feedback-panel" hidden role="dialog" aria-modal="true" aria-labelledby="feedback-heading">
+  <h2 id="feedback-heading">Why isn’t this for you?</h2>
+  <p id="feedback-story"></p>
+  <div class="feedback-reasons" id="feedback-reasons"></div>
+  <button class="act feedback-cancel" onclick="closeFeedbackPanel()">Cancel</button>
 </div>
 
 <script>
@@ -821,6 +849,7 @@ const STATE_URL         = '/state';
 const READ_KEY          = 'digest_read_v1';
 const LATER_KEY         = 'digest_read_later';
 const HISTORY_KEY       = 'digest_history_v1';
+const FEEDBACK_KEY      = 'digest_feedback_v1';
 const VIEW_STATE_KEY    = 'digest_view_state_v1';
 const STATE_UPDATED_KEY = 'digest_state_updated_at';
 const SOURCE_STATS_KEY  = 'digest_source_stats_v1';
@@ -865,6 +894,7 @@ let sharedState = {
   readIds: new Set(),
   later: [],
   history: [],
+  feedback: [],
   viewState: { ...DEFAULT_VIEW_STATE },
   sourceStats: {},
   learning: { lastDecayAt: null },
@@ -893,6 +923,7 @@ function normalizeState(raw = {}) {
     readIds: new Set(Array.isArray(raw.readIds) ? raw.readIds : []),
     later: Array.isArray(raw.later) ? raw.later : [],
     history: Array.isArray(raw.history) ? raw.history : [],
+    feedback: Array.isArray(raw.feedback) ? raw.feedback : [],
     viewState: {
       currentView: viewState.currentView || 'digest',
       currentCat: viewState.currentCat || 'all',
@@ -923,6 +954,7 @@ function loadLocalState() {
   const readIds = new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]'));
   const later = JSON.parse(localStorage.getItem(LATER_KEY) || '[]');
   const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  const feedback = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || '[]');
   const viewState = JSON.parse(localStorage.getItem(VIEW_STATE_KEY) || JSON.stringify(DEFAULT_VIEW_STATE));
   const updatedAt = localStorage.getItem(STATE_UPDATED_KEY);
   const sourceStats = normalizeSourceStats(JSON.parse(localStorage.getItem(SOURCE_STATS_KEY) || '{}'));
@@ -939,6 +971,7 @@ function loadLocalState() {
     readIds,
     later,
     history: mergedHistory,
+    feedback,
     viewState,
     sourceStats,
     learning: { lastDecayAt: typeof learning.lastDecayAt === 'string' ? learning.lastDecayAt : null },
@@ -949,6 +982,7 @@ function saveLocalState(state) {
   localStorage.setItem(READ_KEY, JSON.stringify([...state.readIds]));
   localStorage.setItem(LATER_KEY, JSON.stringify(state.later));
   localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history));
+  localStorage.setItem(FEEDBACK_KEY, JSON.stringify(state.feedback || []));
   localStorage.setItem(VIEW_STATE_KEY, JSON.stringify(state.viewState));
   localStorage.setItem(STATE_UPDATED_KEY, state.updatedAt || new Date().toISOString());
   localStorage.setItem(SOURCE_STATS_KEY, JSON.stringify(state.sourceStats || {}));
@@ -985,6 +1019,7 @@ function statesDiffer(a, b) {
   if (a.readIds.size !== b.readIds.size) return true;
   if (a.later.length !== b.later.length) return true;
   if (a.history.length !== b.history.length) return true;
+  if ((a.feedback || []).length !== (b.feedback || []).length) return true;
   return false;
 }
 
@@ -1087,6 +1122,7 @@ function rerenderActiveView() {
   updateCatCounts();
   updateBadges();
   if (currentView === 'history') renderHistory();
+  else if (currentView === 'feedback') renderFeedback();
   else if (currentView === 'editions') renderEditions();
   else if (currentView === 'coverage') renderCoverage();
   else if (currentView === 'later') renderLater();
@@ -1156,6 +1192,7 @@ function switchView(view) {
   buildCatNav();
 
   if (view === 'history')  renderHistory();
+  if (view === 'feedback') renderFeedback();
   if (view === 'later')    renderLater();
   if (view === 'editions') renderEditions();
   if (view === 'coverage') renderCoverage();
@@ -1459,6 +1496,69 @@ window.dismiss = function(id, internal = false) {
   updateCatCounts();
 };
 
+const FEEDBACK_REASONS = {
+  wrong_topic: 'Wrong topic',
+  low_value: 'Low value',
+  wrong_source_use: 'Wrong use of this source',
+  repetitive: 'Repetitive',
+  promotional_filler: 'Promotional or filler',
+  never_story: 'Do not show this story',
+};
+let feedbackTargetId = null;
+
+window.openFeedbackPanel = function(id) {
+  const article = allArticles.find(a => a.id === id);
+  if (!article) return;
+  feedbackTargetId = id;
+  document.getElementById('feedback-story').textContent = article.title;
+  document.getElementById('feedback-reasons').innerHTML = Object.entries(FEEDBACK_REASONS)
+    .map(([key, label]) => `<button class="feedback-reason" onclick="submitFeedback('${key}')">${label}</button>`)
+    .join('');
+  document.getElementById('feedback-panel').hidden = false;
+};
+
+window.closeFeedbackPanel = function() {
+  feedbackTargetId = null;
+  document.getElementById('feedback-panel').hidden = true;
+};
+
+window.submitFeedback = function(reason) {
+  const article = allArticles.find(a => a.id === feedbackTargetId);
+  if (!article || !FEEDBACK_REASONS[reason]) return;
+  const cid = article.cluster_id || article.id;
+  const storyIds = allArticles
+    .filter(a => (a.cluster_id || a.id) === cid)
+    .map(a => a.id);
+  if (!sharedState.feedback) sharedState.feedback = [];
+  sharedState.feedback = sharedState.feedback.filter(item => item.id !== article.id);
+  sharedState.feedback.unshift({
+    id: article.id,
+    storyIds,
+    title: article.title,
+    url: article.url,
+    source: article.source,
+    category: article.category,
+    reason,
+    rejectedAt: new Date().toISOString(),
+  });
+  storyIds.forEach(id => sharedState.readIds.add(id));
+  recordInteraction(article.source, 'dismiss');
+  closeFeedbackPanel();
+  saveSharedState().catch(() => {});
+  animateDismiss(article.id);
+  updateCatCounts();
+};
+
+window.undoFeedback = function(id) {
+  const item = (sharedState.feedback || []).find(entry => entry.id === id);
+  if (!item) return;
+  (item.storyIds || [item.id]).forEach(storyId => sharedState.readIds.delete(storyId));
+  sharedState.feedback = sharedState.feedback.filter(entry => entry.id !== id);
+  saveSharedState().catch(() => {});
+  updateBadges();
+  renderFeedback();
+};
+
 /* ── Open article ─────────────────────────────────────── */
 function openArticle(id, url) {
   const article = allArticles.find(a => a.id === id);
@@ -1638,6 +1738,7 @@ function updateBadges() {
   document.getElementById('badge-digest').textContent  = unread  || '';
   document.getElementById('badge-history').textContent = hist.length || '';
   document.getElementById('badge-later').textContent   = later.length || '';
+  document.getElementById('badge-feedback').textContent = (sharedState.feedback || []).length || '';
 }
 
 /* ── Render digest ────────────────────────────────────── */
@@ -1857,8 +1958,11 @@ function srcLine(a) {
 function cardActions(a) {
   return `<div class="card-actions">
       <button class="act later" onclick="saveForLater('${a.id}')">Read later</button>
-      <button class="act done" onclick="dismiss('${a.id}')">Done</button>
+      <button class="act reject" onclick="openFeedbackPanel('${a.id}')">Not for me</button>
     </div>`;
+}
+function whyLine(a) {
+  return a.why_selected ? `<p class="card-summary"><strong>Why it’s here:</strong> ${escapeAttr(a.why_selected)}</p>` : '';
 }
 const openLink = (a, inner) =>
   `<a href="${a.url}" onclick="openArticle('${a.id}','${a.url}'); return false;">${inner}</a>`;
@@ -1872,6 +1976,7 @@ function renderHero(lead, side) {
       ${kicker(lead)}
       <h2 class="lead-title" title="${escapeAttr(lead.title)}">${openLink(lead, lead.title)}</h2>
       ${lead.summary ? `<p class="lead-summary">${lead.summary}</p>` : ''}
+      ${whyLine(lead)}
       ${clusterDisclosure(lead)}
       <div class="lead-foot">${srcLine(lead)} ${cardActions(lead)}</div>
     </article>`;
@@ -1881,6 +1986,7 @@ function renderHero(lead, side) {
       <div>
         ${kicker(a)}
         <h3 class="mini-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
+        ${whyLine(a)}
         ${clusterDisclosure(a)}
         <div class="mini-foot">${srcLine(a)} ${cardActions(a)}</div>
       </div>
@@ -1895,7 +2001,7 @@ function gridCardHTML(a) {
       ${kicker(a)}
       <h3 class="card-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
       ${a.summary ? `<p class="card-summary">${a.summary}</p>` : ''}
-      ${a.why_selected ? `<p class="card-summary"><strong>Why it’s here:</strong> ${a.why_selected}</p>` : ''}
+      ${whyLine(a)}
       ${clusterDisclosure(a)}
       <div class="card-foot">${srcLine(a)} ${cardActions(a)}</div>
     </article>`;
@@ -1911,6 +2017,25 @@ async function renderEditions() {
       <button class="rail-more" style="display:block;width:100%;text-align:left;margin:8px 0"
         onclick="openEdition('${e.id}')">${e.preview ? 'Live Preview' : `${e.date} · ${e.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`} · ${e.article_count} stories${e.preview ? ' · updates automatically' : ''}</button>`).join('');
   } catch (e) { el.innerHTML = '<p class="empty">Could not load the archive.</p>'; }
+}
+
+function renderFeedback() {
+  const el = document.getElementById('feedback-content');
+  const items = sharedState.feedback || [];
+  if (!items.length) {
+    el.innerHTML = `<p class="sec-label">Editorial Feedback</p><p class="empty">No rejected stories yet. Use “Not for me” on any card to calibrate the paper.</p>`;
+    return;
+  }
+  el.innerHTML = `<p class="sec-label">Editorial Feedback</p>
+    <h1 style="font-family:var(--font-head);font-size:30px;margin:6px 0 4px">What you rejected</h1>
+    <p style="color:var(--text2);font-size:14px;line-height:1.5">These decisions persist across devices and keep rejected stories out of subsequent previews. Undo restores the story to the current inbox when it is still available.</p>
+    ${items.map(item => `<article class="feedback-row">
+      <div>
+        <div class="feedback-title">${escapeAttr(item.title || 'Untitled story')}</div>
+        <div class="feedback-meta">${escapeAttr(item.source || 'Unknown source')} · ${escapeAttr(FEEDBACK_REASONS[item.reason] || item.reason || 'No reason')} · ${item.rejectedAt ? formatDateTime(item.rejectedAt) : ''}</div>
+      </div>
+      <button class="feedback-undo" onclick="undoFeedback('${item.id}')">Undo</button>
+    </article>`).join('')}`;
 }
 
 function coverageText(value, fallback = 'Not specified') {
@@ -2014,7 +2139,7 @@ function renderRail(articles, hidden = 0) {
         ${clusterDisclosure(a)}
         <div class="rail-actions">
           <button class="act later" onclick="saveForLater('${a.id}')">Later</button>
-          <button class="act done" onclick="dismiss('${a.id}')">Done</button>
+          <button class="act reject" onclick="openFeedbackPanel('${a.id}')">Not for me</button>
         </div>
       </article>`).join('')}
   `).join('') + moreCtl;
@@ -3552,7 +3677,7 @@ async function loadDigest() {
     // still renders something offline.
     applySharedState(remoteState || loadLocalState());
     const requestedView = location.hash.replace(/^#/, '');
-    if (['digest', 'later', 'history', 'editions', 'coverage', 'settings'].includes(requestedView)) {
+    if (['digest', 'later', 'history', 'feedback', 'editions', 'coverage', 'settings'].includes(requestedView)) {
       currentView = requestedView;
       sharedState.viewState = { ...sharedState.viewState, currentView };
     }
@@ -3566,6 +3691,7 @@ async function loadDigest() {
     updateCatCounts();
     updateBadges();
     if (currentView === 'history')       renderHistory();
+    else if (currentView === 'feedback') renderFeedback();
     else if (currentView === 'later')    renderLater();
     else if (currentView === 'editions') renderEditions();
     else if (currentView === 'coverage') renderCoverage();
