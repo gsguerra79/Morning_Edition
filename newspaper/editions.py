@@ -115,7 +115,7 @@ def _why(article):
     category = str(article.get('category') or 'your interests').replace('-', ' ')
     n = int(article.get('cluster_size') or 1)
     if n > 1:
-        return f'Selected for {category}; confirmed by {n} independent reports.'
+        return f'Selected for {category}; grouped with related coverage.'
     return f'Selected as timely coverage of {category}.'
 
 

@@ -287,7 +287,8 @@
     .act:hover { color: var(--text); }
     .act:active { color: var(--text); }
     .act.later:hover, .act.later:active { color: var(--later-hover); }
-    .act.reject:hover, .act.reject:active { color: #a43f32; }
+    .act.reject { color: #8e2f24; border: 1px solid #c8675a; border-radius: 999px; padding: 5px 10px; background: #fff7f5; }
+    .act.reject:hover, .act.reject:active { color: #fff; border-color: #8e2f24; background: #8e2f24; }
     .feedback-panel { position: fixed; z-index: 200; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow: auto; border: 1px solid var(--border2); border-radius: var(--radius-lg); background: var(--surface); padding: 22px; box-shadow: 0 18px 70px rgba(0,0,0,.28); }
     .feedback-panel h2 { font-family: var(--font-head); font-size: 22px; margin: 0 0 6px; }
     .feedback-panel p { color: var(--text2); line-height: 1.45; margin: 0 0 18px; }
@@ -843,7 +844,7 @@ function toggleTheme() {
 }
 
 /* ── Config ───────────────────────────────────────────── */
-const DIGEST_URL        = './digest.json';
+const DIGEST_URL        = '/editions/live-preview';
 const EDITIONS_URL      = '/editions';
 const STATE_URL         = '/state';
 const READ_KEY          = 'digest_read_v1';
@@ -3676,6 +3677,12 @@ async function loadDigest() {
     // If the server is unreachable, fall back to local cache so the app
     // still renders something offline.
     applySharedState(remoteState || loadLocalState());
+    // Category names changed when the authoritative seven owner pages were
+    // commissioned. Never let an obsolete persisted filter make a populated
+    // issue look blank.
+    if (!CATS[currentCat]) currentCat = 'all';
+    if (!CATS[digestCat]) digestCat = 'all';
+    sharedState.viewState = { ...sharedState.viewState, currentCat, digestCat };
     const requestedView = location.hash.replace(/^#/, '');
     if (['digest', 'later', 'history', 'feedback', 'editions', 'coverage', 'settings'].includes(requestedView)) {
       currentView = requestedView;

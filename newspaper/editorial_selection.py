@@ -4,8 +4,11 @@ import math
 import re
 
 DEFAULT_PAGE_CAPS = {
+    "brazilnews": 6, "worldnews": 8, "formula1": 6,
+    "technologythings": 8, "comics": 2, "sports": 5, "ideas": 5,
+    # Legacy keys remain bounded while carried articles are being remapped.
     "technology": 8, "photography": 5, "outdoors": 5,
-    "f1": 6, "world": 8, "comics": 2,
+    "f1": 6, "world": 8,
 }
 SOURCE_ALIASES = {
     "bbc world": "BBC", "bbc science & environment": "BBC",
@@ -40,6 +43,10 @@ def _score(article):
         float(article.get("taste_boost") or 0)
 
 
+def _page_key(value):
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").casefold())
+
+
 def _reason(article, source_record, mandatory=False):
     source = (source_record or {}).get("source") or article.get("source") or "an approved source"
     category = str(article.get("category") or "your interests").replace("-", " ")
@@ -50,7 +57,7 @@ def _reason(article, source_record, mandatory=False):
         first = re.split(r"[.;]", guidance, maxsplit=1)[0].strip()
         return f"Selected from {source} for {category}: {first[:140]}."
     if int(article.get("cluster_size") or 1) > 1:
-        return f"Selected for {category}; corroborated by multiple reports."
+        return f"Selected for {category}; grouped with related coverage."
     return f"Selected as timely coverage of {category} from {source}."
 
 
@@ -94,15 +101,27 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
             rejected.append({"id": article.get("id"), "code": "source_avoid_rule",
                              "source": canonical})
             continue
+        required = source_rules.get("require_any") or []
+        if required and not _matches(text, required):
+            rejected.append({"id": article.get("id"), "code": "outside_source_scope",
+                             "source": canonical})
+            continue
         mandatory = _matches(text, source_rules.get("must_any"))
         item = dict(article)
         item["editorial_source"] = canonical
+        topics = (record or {}).get("topics") or []
+        if topics:
+            item["category"] = _page_key(topics[0])
         item["editorial_must_include"] = mandatory
         item["selection_score"] = round(_score(item), 4)
         item["why_selected"] = _reason(item, record, mandatory)
         corroborating = []
         seen_evidence = set()
         for evidence in cluster_sources.get(cluster, []):
+            evidence_record = _source_record(evidence.get("source"), index)
+            evidence_source = (evidence_record or {}).get("source") or evidence.get("source")
+            if str(evidence_source or "").casefold() == str(canonical).casefold():
+                continue
             identity = (evidence.get("source"), evidence.get("url"))
             if identity in seen_evidence or (evidence.get("url") and evidence.get("url") == item.get("url")):
                 continue

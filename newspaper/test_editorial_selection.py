@@ -36,6 +36,15 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertEqual(["a-2"], [item["id"] for item in selected])
         self.assertEqual("source_avoid_rule", report["rejected"][0]["code"])
 
+    def test_required_scope_defaults_to_empty_instead_of_filler(self):
+        items = [article(1, source="Globo", title="Weather today in Brasília"),
+                 article(2, source="Globo", title="Federal government announces national policy")]
+        rules = {"sources": {"Globo": {"require_any": ["federal government", "rio de janeiro"]}}}
+        selected, report = select_issue(items, rules=rules, max_stories=10,
+                                        page_caps={"world": 10})
+        self.assertEqual(["a-2"], [item["id"] for item in selected])
+        self.assertEqual("outside_source_scope", report["rejected"][0]["code"])
+
     def test_repeated_input_is_deterministic(self):
         items = [article(i, source=f"Source {i % 3}", score=5) for i in range(12)]
         first, first_report = select_issue(items, max_stories=8, page_caps={"world": 8})
@@ -72,6 +81,16 @@ class EditorialSelectionTests(unittest.TestCase):
                                    page_caps={"world": 10})
         self.assertEqual(["a-1"], [item["id"] for item in selected])
         self.assertEqual("Other", selected[0]["corroborating_sources"][0]["source"])
+
+    def test_same_source_cluster_is_not_presented_as_corroboration(self):
+        registry = {"sources": [{"source": "Globo", "what_i_read": "Federal news"}]}
+        rep = dict(article(1, source="Globo"), url="https://g1.example/story")
+        member = dict(rep, id="member", cluster_rep=False, source="G1 Brasil",
+                      url="https://g1.example/rewrite")
+        selected, _ = select_issue([rep, member], registry=registry, max_stories=10,
+                                   page_caps={"world": 10})
+        self.assertNotIn("corroborating_sources", selected[0])
+        self.assertNotIn("independent", selected[0]["why_selected"].lower())
 
 
 if __name__ == "__main__":
