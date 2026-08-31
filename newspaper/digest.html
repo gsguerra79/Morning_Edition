@@ -1879,15 +1879,16 @@ function render() {
   // One ranked inbox, split into today (by score) and earlier (carried, by
   // recency). The front page draws today first; if today can't fill it (you've
   // cleared the top), it borrows the best of earlier so no section sits empty.
-  const today = dedupeToReps(allArticles.filter(a => visible(a)))
+  const inbox = dedupeToReps(allArticles.filter(a => visible(a)))
     .sort((a, b) => effectiveScore(b) - effectiveScore(a));
-  const earlier = dedupeToReps(allArticles.filter(a => !isToday(a) && visible(a)))
+  const today = inbox.filter(a => isToday(a));
+  const earlier = inbox.filter(a => !isToday(a))
     .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
 
   // The edition is organized by subject, not by publisher. Each category is
   // a newspaper section with its own lead story and compact supporting cards.
   const sections = Object.keys(CATS).filter(k => k !== 'all').map(key => ({
-    key, articles: today.filter(a => a.category === key)
+    key, articles: inbox.filter(a => a.category === key)
   })).filter(s => s.articles.length);
   if (sections.length && currentCat === 'all') {
     document.getElementById('section-hero').innerHTML = sections.map(section => {
