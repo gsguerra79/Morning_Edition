@@ -891,6 +891,7 @@ function buildCats(list) {
 
 /* ── State helpers ────────────────────────────────────── */
 let allArticles = [];
+let coverageGaps = [];
 let sharedState = {
   readIds: new Set(),
   later: [],
@@ -1299,7 +1300,6 @@ function historyItems() {
 }
 
 function visible(article) {
-  if (sharedState.readIds.has(article.id)) return false;
   if (sharedState.later.some(a => a.id === article.id)) return false;
   return currentCat === 'all' || article.category === currentCat;
 }
@@ -1889,13 +1889,15 @@ function render() {
   // a newspaper section with its own lead story and compact supporting cards.
   const sections = Object.keys(CATS).filter(k => k !== 'all').map(key => ({
     key, articles: inbox.filter(a => a.category === key)
-  })).filter(s => s.articles.length);
+  })).filter(s => s.articles.length || coverageGaps.some(g => g.page === s.key));
   if (sections.length && currentCat === 'all') {
     document.getElementById('section-hero').innerHTML = sections.map(section => {
       const lead = section.articles[0], rest = section.articles.slice(1, 5);
+      const gaps = coverageGaps.filter(g => g.page === section.key);
+      const warning = gaps.length ? `<p class="empty" style="border:1px solid #a52a2a;padding:10px;margin:8px 0 14px">Coverage incomplete: ${gaps.map(g => g.subtopic ? `${g.subtopic} (${g.available}/${g.required})` : `${g.available}/${g.required} stories`).join(', ')}.</p>` : '';
       return `<section style="border-top:3px solid ${catMeta(section.key).c};padding:18px 0 28px;margin-top:12px">
         <p class="sec-label">${catMeta(section.key).label}</p>
-        <div class="grid">${[lead, ...rest].map(gridCardHTML).join('')}</div>
+        ${warning}<div class="grid">${[lead, ...rest].filter(Boolean).map(gridCardHTML).join('')}</div>
       </section>`;
     }).join('');
     document.getElementById('section-grid').innerHTML = '';
@@ -3568,6 +3570,7 @@ function applyDigestData(data) {
     const ds = new Date(b.published_at) - new Date(a.published_at);
     return ds !== 0 ? ds : b.score - a.score;
   });
+  coverageGaps = Array.isArray(data.coverage_gaps) ? data.coverage_gaps : [];
   loadedGeneratedAt = data.generated_at || null;
   const genDate = data.generated_at ? new Date(data.generated_at) : new Date();
   document.getElementById('header-date').textContent =

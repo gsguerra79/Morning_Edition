@@ -5,6 +5,49 @@ import pipeline
 
 
 class PipelineDiversityTests(unittest.TestCase):
+    def test_balanced_issue_protects_every_page_and_sports_subtopic(self):
+        now = datetime.now(timezone.utc).isoformat()
+        items = []
+        for page, (minimum, _) in pipeline.PAGE_BUDGETS.items():
+            if page == "sports":
+                continue
+            for i in range(minimum + 3):
+                items.append({"id": f"{page}-{i}", "cluster_id": f"{page}-{i}",
+                              "cluster_rep": True, "source": page, "category": page,
+                              "title": f"{page} story {i}", "score": 6,
+                              "published_at": now})
+        sports = [
+            ("BBC Football", "football match"), ("BBC Football", "soccer result"),
+            ("GE Flamengo", "Flamengo victory"), ("BBC Tennis", "US Open tennis"),
+            ("World Surf League", "WSL surf finals"),
+            ("Alpinist", "Alpine mountain expedition"),
+            ("BBC Tennis", "ATP tennis draw"),
+            ("ExplorersWeb", "Mountain summit expedition"),
+        ]
+        for i, (source, title) in enumerate(sports):
+            items.append({"id": f"sports-{i}", "cluster_id": f"sports-{i}",
+                          "cluster_rep": True, "source": source, "category": "sports",
+                          "title": title, "score": 6, "published_at": now})
+        selected, gaps = pipeline.select_balanced_issue(items)
+        counts = {}
+        for item in selected:
+            counts[item["category"]] = counts.get(item["category"], 0) + 1
+        for page, (minimum, maximum) in pipeline.PAGE_BUDGETS.items():
+            self.assertGreaterEqual(counts.get(page, 0), minimum)
+            self.assertLessEqual(counts.get(page, 0), maximum)
+        self.assertEqual([], gaps)
+
+    def test_balanced_issue_reports_missing_sports_subtopic(self):
+        now = datetime.now(timezone.utc).isoformat()
+        football = [{"id": f"f{i}", "cluster_id": f"f{i}", "cluster_rep": True,
+                     "source": "BBC Football", "category": "sports",
+                     "title": "Football", "score": 10, "published_at": now}
+                    for i in range(20)]
+        selected, gaps = pipeline.select_balanced_issue(football)
+        self.assertLessEqual(len(selected), pipeline.SPORTS_MAXIMUMS["football"])
+        missing = {gap.get("subtopic") for gap in gaps}
+        self.assertTrue({"tennis", "surf", "mountaineering"} <= missing)
+
     def test_durable_pages_receive_longer_windows(self):
         self.assertGreaterEqual(pipeline._page_window_hours("ideas", 36), 24 * 14)
         self.assertEqual(36, pipeline._page_window_hours("unknown", 36))

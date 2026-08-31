@@ -103,6 +103,15 @@ PAGE_LOOKBACK_HOURS = {
     'brazilnews': 72, 'formula1': 72, 'worldnews': 48, 'world': 48,
 }
 
+PAGE_BUDGETS = {
+    'brazilnews': (4, 6), 'worldnews': (5, 8), 'formula1': (4, 6),
+    'technology': (8, 10), 'comics': (2, 2), 'sports': (8, 12),
+    'ideas': (3, 5),
+}
+SPORTS_MINIMUMS = {'football': 3, 'tennis': 1, 'surf': 1, 'mountaineering': 1}
+SPORTS_MAXIMUMS = {'football': 4, 'tennis': 2, 'surf': 2,
+                   'mountaineering': 3, 'other': 1}
+
 
 def _page_window_hours(category, default):
     return max(default, PAGE_LOOKBACK_HOURS.get(str(category or '').casefold(), default))
@@ -285,6 +294,28 @@ def parse_globo_topic_page(html_text, source, category, cutoff):
     return out
 
 
+def parse_wsl_homepage(html_text, source, category, cutoff):
+    """Extract current first-party WSL post links from its server-rendered home."""
+    out, seen = [], set()
+    now = datetime.now(timezone.utc)
+    for match in re.finditer(r'(?:https://www\.worldsurfleague\.com)?/posts/(\d+)/([^"\' <);?]+)',
+                             html_text or '', re.IGNORECASE):
+        post_id, slug = match.groups()
+        url = f'https://www.worldsurfleague.com/posts/{post_id}/{slug}'
+        if url in seen:
+            continue
+        title = clean_text(slug.replace('-', ' ').title())
+        if not title:
+            continue
+        seen.add(url)
+        out.append({'title': title, 'url': url, 'source': source,
+                    'feed_summary': '', 'category': category,
+                    'published_at': now.isoformat()})
+        if len(out) >= 24:
+            break
+    return out
+
+
 def stable_id(url):
     """Deterministic 8-char hex id from the URL (stable within a digest)."""
     h = 0
@@ -307,8 +338,8 @@ def apply_source_scope(article, rule_map):
     rule = rule_map.get(str(article.get('source') or ''), {})
     if not isinstance(rule, dict):
         return True
-    text = ' '.join(str(article.get(k) or '') for k in
-                    ('title', 'feed_summary', 'summary')).casefold()
+    fields = ('title',) if rule.get('title_only') else ('title', 'feed_summary', 'summary')
+    text = ' '.join(str(article.get(k) or '') for k in fields).casefold()
     matches = lambda values: any(str(v).casefold() in text for v in values or [] if v)
     excluded = matches(rule.get('exclude_any'))
     if excluded and matches(rule.get('exclude_unless_any')):
@@ -932,6 +963,82 @@ def apply_retention(scored, cfg, now=None):
     return [a for a in scored if a.get('cluster_id', a['id']) in kept]
 
 
+def sports_subtopic(article):
+    source = str(article.get('source') or '').casefold()
+    text = ' '.join(str(article.get(k) or '') for k in
+                    ('title', 'summary', 'feed_summary')).casefold()
+    if source in ('bbc football', 'ge flamengo') or any(x in text for x in
+            ('football', 'soccer', 'flamengo', 'brasileirão', 'premier league', 'world cup')):
+        return 'football'
+    if source == 'atp tour' or any(x in text for x in
+            ('tennis', 'atp ', 'us open', 'wimbledon', 'roland garros')):
+        return 'tennis'
+    if source == 'world surf league' or any(x in text for x in
+            ('surf', 'surfer', 'wsl ', 'championship tour')):
+        return 'surf'
+    if source in ('alpinist', 'explorersweb', 'climbing') or any(x in text for x in
+            ('mountain', 'alpine', 'summit', 'expedition', 'mountaineer')):
+        return 'mountaineering'
+    return 'other'
+
+
+def select_balanced_issue(articles):
+    """Select a finite issue without allowing one interest to evict another."""
+    reps, seen = [], set()
+    for article in articles:
+        cid = article.get('cluster_id') or article.get('id')
+        if not cid or cid in seen or article.get('cluster_rep') is False:
+            continue
+        seen.add(cid)
+        reps.append(article)
+    def published_rank(article):
+        dt = parse_date(str(article.get('published_at') or ''))
+        return dt.timestamp() if dt else 0
+    reps.sort(key=lambda a: (-float(a.get('score') or 0),
+                             -published_rank(a), str(a.get('id') or '')))
+
+    selected, selected_ids, gaps = [], set(), []
+    def add(article):
+        ident = article.get('cluster_id') or article.get('id')
+        if ident in selected_ids:
+            return False
+        selected_ids.add(ident); selected.append(article); return True
+
+    sports = [a for a in reps if a.get('category') == 'sports']
+    for topic, minimum in SPORTS_MINIMUMS.items():
+        matches = [a for a in sports if sports_subtopic(a) == topic]
+        for article in matches[:minimum]:
+            add(article)
+        if len(matches) < minimum:
+            gaps.append({'page': 'sports', 'subtopic': topic,
+                         'required': minimum, 'available': len(matches)})
+
+    sports_counts = {topic: sum(1 for a in selected
+                     if a.get('category') == 'sports' and sports_subtopic(a) == topic)
+                     for topic in SPORTS_MAXIMUMS}
+    for article in sports:
+        topic = sports_subtopic(article)
+        if sports_counts.get(topic, 0) >= SPORTS_MAXIMUMS.get(topic, 1):
+            continue
+        if add(article):
+            sports_counts[topic] = sports_counts.get(topic, 0) + 1
+
+    for page, (minimum, maximum) in PAGE_BUDGETS.items():
+        if page == 'sports':
+            continue
+        candidates = [a for a in reps if a.get('category') == page]
+        current = sum(1 for a in selected if a.get('category') == page)
+        for article in candidates:
+            if current >= maximum:
+                break
+            if add(article):
+                current += 1
+        if len(candidates) < minimum:
+            gaps.append({'page': page, 'required': minimum,
+                         'available': len(candidates)})
+    return selected, gaps
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Digest assembly
 # ──────────────────────────────────────────────────────────────────────
@@ -1031,7 +1138,8 @@ def run_once():
         for body, feed in bodies:
             feed_cutoff = run_now - timedelta(hours=_page_window_hours(
                 feed.get('category'), cfg['lookback_hours']))
-            parser = parse_globo_topic_page if feed.get('format') == 'globo_html' else parse_feed
+            parser = {'globo_html': parse_globo_topic_page,
+                      'wsl_html': parse_wsl_homepage}.get(feed.get('format'), parse_feed)
             parsed = parser(body, feed.get('source', ''),
                             feed.get('category', 'tech'), feed_cutoff)
             feed_health[feed.get('url', '')]['items'] = len(parsed)
@@ -1149,9 +1257,9 @@ def run_once():
 
         # Retention: rank-weighted lifespan inside the [floor, ceiling] band.
         pool_size = len(scored)
-        scored = apply_retention(scored, cfg)
-        if len(scored) != pool_size:
-            log(f'retention kept {len(scored)}/{pool_size} articles')
+        scored, coverage_gaps = select_balanced_issue(scored)
+        log(f'balanced issue selected {len(scored)}/{pool_size} stories; '
+            f'{len(coverage_gaps)} coverage gaps')
 
         for article in scored:
             article.setdefault('why_selected', editions._why(article))
@@ -1163,6 +1271,7 @@ def run_once():
             'article_count': article_count,
             'articles': scored,
             'feed_health': list(feed_health.values()),
+            'coverage_gaps': coverage_gaps,
         }
         _atomic_write_json(DIGEST_FILE, digest_payload)
         editions.maybe_publish(digest_payload)

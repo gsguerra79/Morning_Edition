@@ -3,12 +3,16 @@
   "scope": "partial",
   "sources": {
     "Globo": {
+      "title_only": true,
       "exclude_any": [
         "previsão do tempo", "tempo hoje", "jornal do acre", "jornal do amazonas",
         "bom dia acre", "eptv", "tv integração", "jornal vanguarda", "ao vivo",
         "loteria", "mega-sena", "quina", "festa do peão", "celebridade", "famosos",
         "programação deste", "amazônia agro", "bilionário", "forbes", "quinto dia útil", "data para pagamentos", "feriados de", "folga prolongada", "candidatos ao governo do am", "governo do amapá",
-        "governo de pernambuco", "governo do pará", "governo de mg", "governo do maranhão"
+        "governo de pernambuco", "governo do pará", "governo de mg", "governo do maranhão",
+        "é preso", "são presos", "suspeito", "morto", "morta", "a tiros", "crime",
+        "charge", "salão de humor", "virada cultural", "summit", "festival",
+        "clube de futebol no es", "fraude em apostas"
       ],
       "require_any": [
         "rio de janeiro", "estado do rio", "sul do estado do rio", "carioca",
@@ -37,6 +41,14 @@
         "american football", "nfl", "super bowl", "quarterback", "touchdown",
         "college football", "gridiron"
       ]
+    },
+    "BBC Tennis": {
+      "category": "sports",
+      "priority_boost": 1.0
+    },
+    "World Surf League": {
+      "category": "sports",
+      "priority_boost": 1.0
     },
     "Climbing": {
       "category": "sports",

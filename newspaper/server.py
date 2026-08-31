@@ -373,7 +373,7 @@ def normalize_feed_payload(payload):
     if category not in allowed_categories():
         return None, f'Unknown category: {category}'
     feed = {'url': url, 'source': source, 'category': category}
-    if payload.get('format') in ('globo_html',):
+    if payload.get('format') in ('globo_html', 'wsl_html'):
         feed['format'] = payload['format']
     return feed, None
 
