@@ -320,6 +320,10 @@ def apply_source_scope(article, rule_map):
         return False
     if rule.get('category'):
         article['category'] = str(rule['category']).strip().casefold()
+    boost = float(rule.get('priority_boost') or 0)
+    if matches(rule.get('priority_any')):
+        boost += float(rule.get('priority_match_boost') or 0)
+    article['_editorial_boost'] = boost
     return True
 
 
@@ -442,6 +446,7 @@ def enrich(article, chat_model, embed_model, system_prompt, valid_cats):
     image, excerpt = _fetch_page(article['url'])
     score, summary, category, score_ok, score_ms = _score(
         article, excerpt, chat_model, system_prompt, valid_cats)
+    score = round(min(10.0, score + float(article.get('_editorial_boost') or 0)), 1)
     embedding = _embed(f"{article['title']}\n{summary}", embed_model)
     return {
         'id': article['id'],

@@ -27,14 +27,12 @@
     "RaceFans": {
       "exclude_any": ["indycar", "formula e", "wec", "motogp"]
     },
-    "The Verge": {
-      "exclude_any": ["song", "album", "dance punk", "music video", "celebrity"]
-    },
     "BBC": {
       "exclude_any": ["cricket", "county championship"]
     },
     "BBC Football": {
       "category": "sports",
+      "priority_boost": 1.0,
       "exclude_any": [
         "american football", "nfl", "super bowl", "quarterback", "touchdown",
         "college football", "gridiron"
@@ -51,6 +49,47 @@
         "indoor", "climbing gym", "competition climbing", "sport climbing",
         "bouldering gym", "concrete bridge", "urban climbing"
       ]
+    },
+    "GE Flamengo": {
+      "category": "sports",
+      "priority_boost": 2.0,
+      "priority_any": [
+        "vitória", "vence", "venceu", "botafogo", "clássico", "3 a 0",
+        "gol", "gols", "brasileirão", "libertadores", "título"
+      ],
+      "priority_match_boost": 2.0
+    },
+    "Medium Technology": {
+      "category": "technology",
+      "priority_boost": 1.0,
+      "require_any": [
+        "technology", "gadget", "hardware", "software", "computer", "robot",
+        "artificial intelligence", " ai ", "camera", "chip", "cybersecurity",
+        "data science", "iphone", "android", "electronics", "engineering"
+      ],
+      "exclude_any": [
+        "dopamine", "self-help", "person you are becoming", "resume",
+        "productivity tips", "motivation", "manifestation"
+      ]
+    },
+    "Wired": {
+      "category": "technology",
+      "priority_any": [
+        "technology", "gadget", "hardware", "software", "computer", "robot",
+        "artificial intelligence", " ai ", "camera", "chip", "science",
+        "engineering", "cybersecurity", "electric vehicle", "space"
+      ],
+      "priority_match_boost": 2.0
+    },
+    "The Verge": {
+      "category": "technology",
+      "priority_any": [
+        "technology", "gadget", "hardware", "software", "computer", "robot",
+        "artificial intelligence", " ai ", "camera", "chip", "review",
+        "electric vehicle", "smart home", "gaming"
+      ],
+      "priority_match_boost": 2.0,
+      "exclude_any": ["song", "album", "dance punk", "music video", "celebrity"]
     }
   }
 }
