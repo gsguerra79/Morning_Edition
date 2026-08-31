@@ -27,7 +27,7 @@ services:
       AFTERNOON_MAX_STORIES: ${AFTERNOON_MAX_STORIES:-15}
       SOURCE_SHARE_CAP: ${SOURCE_SHARE_CAP:-0.20}
       EDITORIAL_REGISTRY_FILE: /data/editorial-registry.json
-      SELECTION_RULES_FILE: /data/selection-rules.json
+      SELECTION_RULES_FILE: /app/selection-rules.json
       SEED_FEEDS: /app/feeds.sample.json
       SEED_CATEGORIES: /app/categories.sample.json
     volumes:

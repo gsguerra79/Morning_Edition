@@ -13,6 +13,9 @@ authentication, transport security, and an explicit threat review.
 - The Editions view begins with a bounded **Live Preview** built from the
   current digest. It updates after ingestion and never writes or replaces an
   immutable edition file.
+- Home reads that finite selected preview rather than exposing the raw retained
+  ingestion pool. If a saved category filter no longer exists, Home safely
+  resets to All instead of appearing empty.
 - The **Sources** view is the owner-facing reconciliation surface for the live
   Notion editorial registry. It groups the complete inventory by owner page and
   shows reading intent, Must include, Avoid, adapter state, production loading,

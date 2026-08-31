@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "scope": "partial",
+  "sources": {
+    "Globo": {
+      "exclude_any": [
+        "previsão do tempo", "tempo hoje", "jornal do acre", "jornal do amazonas",
+        "bom dia acre", "eptv", "tv integração", "jornal vanguarda", "ao vivo",
+        "loteria", "mega-sena", "quina", "festa do peão", "celebridade", "famosos",
+        "programação deste", "amazônia agro", "bilionário", "forbes", "candidatos ao governo do am", "governo do amapá",
+        "governo de pernambuco", "governo do pará", "governo de mg", "governo do maranhão"
+      ],
+      "require_any": [
+        "rio de janeiro", "estado do rio", "sul do estado do rio", "carioca",
+        "fluminense", "niterói", "baixada fluminense", "flamengo", "fórmula 1",
+        "formula 1", " f1 ", "governo federal", "presidente", "presidência",
+        "congresso nacional", "câmara dos deputados", "senado federal", "stf",
+        "supremo tribunal federal", "ministério", "ministro", "brasil", "nacional",
+        "banco central", "selic", "inflação", "amazônia", "meio ambiente",
+        "ambiental", "fauna", "vida selvagem", "conservação", "turismo", "viagem",
+        "trilha", "montanhismo", "surfe", "surf"
+      ]
+    }
+  }
+}

@@ -123,9 +123,18 @@ Deliver in the reader:
   are never called independent corroboration.
 - “Not for me” on every card with short reason choices: wrong topic, low value,
   wrong source use, repetitive, promotional/filler, and do not show this story.
+- The feedback control must read as an obvious button at normal desktop and
+  phone sizes; faint action text or controls the owner cannot locate are a
+  failed delivery.
 - Feedback immediately removes the card, persists across devices, and affects
   the next preview. A visible Feedback view lets Gabriel inspect and undo it.
 - No quota filling: a short or empty page is preferable to poor material.
+- Brazil News must default to empty rather than admit material outside the
+  source-specific intent. Globo/G1 excludes non-Rio state-local news, routine
+  local weather, regional television indexes, celebrity/gory/shallow filler,
+  and anything that is neither Rio de Janeiro State nor federal/country scale
+  (apart from the separately named Flamengo, F1, environment, wildlife,
+  travel, and outdoors interests).
 
 Owner inspection:
 
@@ -951,6 +960,8 @@ session to verify the claim.
 | 2026-08-30 | Stage 0 owner surface | Commissioned the browser Sources view and the complete registry-driven runtime scope. The page groups all 33 Notion sources under seven owner pages and displays What I read here, Must include, Avoid, adapter state, production loading, current content count, and actual fetch health. Six connector gaps and the missing structured rules are explicitly amber rather than hidden. Production now loads all 27 active sources through 30 feed endpoints and the seven owner page names. | Desktop and phone-width rendered inspection passed. The visible summary is 33 sources, seven pages, 27 active adapters, 27 loaded, and six connector gaps. The latest 30-feed run succeeded with no feed fetch failures; active sources are visibly healthy or healthy with no recent items. LAN and Tailscale serve the same surface. The pre-change runtime backup is recoverable and all historical edition checksums remain byte-identical. | Owner inspects the running Sources view. Keep Stage 0 at `Owner inspection` until Gabriel explicitly accepts closure. Do not start Stage 1. |
 | 2026-08-30 | Stage 0 owner acceptance | Gabriel explicitly instructed: “close step 0 and move on.” Closed Stage 0 and opened Stage 1 Editorial calibration and direct feedback. | The complete 33-source Source Coverage surface remains commissioned as the accepted scope baseline. | Deliver Stage 1 through the normal reader: credible seven-page selection, grounded reasons, immediate card rejection, persistent cross-device feedback, and visible undo. |
 | 2026-08-30 | Stage 1 feedback slice | Replaced anonymous card dismissal with browser-visible “Not for me” feedback: six named reasons, immediate cluster removal, shared-state persistence, a Feedback view, and Undo. Added “Why it’s here” to lead and secondary cards so the selection claim is always inspectable. | Desktop, mobile, and the live reason dialog render through the commissioned reader. State migration preserves existing read/later/history data; 44 tests pass. Historical edition hashes remain byte-identical. Visual inspection also confirms remaining Stage 1 defects: G1 local/weather filler dominates and same-source clusters still make false independent-report claims. | Keep Stage 1 `In progress`. Repair source-specific filtering, same-source corroboration language, page routing, and issue diversity before owner inspection. |
+| 2026-08-30 | Stage 1 owner rejection | Gabriel rejected the visible Brazil issue as comprehensively wrong and reported that no usable feedback buttons were visible. Treat both as product failures inside Stage 1, not as completed functionality or a new phase. | The deployed paper visibly admitted Brasília/local weather and regional filler despite the accepted Globo scope. The low-contrast text action did not function as an owner-discoverable feedback control. Prior internal visual checks were therefore insufficient. | Freeze expansion. Make feedback unmistakable, suppress all out-of-scope Brazil material before selection, remove false corroboration language, republish the same Stage 1 surface, and keep the stage `In progress` until Gabriel accepts it. |
+| 2026-08-30 | Stage 1 Brazil repair | Rewired Home from the raw 60-story retention pool to the finite selected preview; added enforced Globo exclusions and a hard scope allowlist; remapped carried stories to owner pages; removed false independent-report language; made “Not for me” a visible outlined button; and reset obsolete saved category filters rather than rendering a false empty issue. | The live Home now contains 15 stories across five currently nonempty owner pages. Brazil contains four federal/presidential or Rio-scope candidates instead of weather, lotteries, regional TV indexes, unrelated state-government news, and celebrity filler. Desktop and phone surfaces render the same finite issue and obvious feedback buttons. Forty-six tests pass; historical editions remain byte-identical. | Stage 1 remains `In progress`. Gabriel judges the visible Brazil candidates and feedback interaction; rejection stays inside this stage. Continue source-specific calibration for the other pages only after Brazil is credible. |
 
 ## Session reconciliation checklist
 
