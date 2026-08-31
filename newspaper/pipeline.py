@@ -94,6 +94,18 @@ _run_lock = threading.Lock()
 _runs_lock = threading.Lock()
 _stop = threading.Event()
 
+# Publication cadence differs by owner page. Durable essays and specialist
+# reporting need a wider discovery/retention window than breaking news.
+PAGE_LOOKBACK_HOURS = {
+    'ideas': 24 * 21, 'sports': 24 * 7, 'comics': 24 * 21,
+    'technology': 24 * 5, 'technologythings': 24 * 5,
+    'brazilnews': 72, 'formula1': 72, 'worldnews': 48, 'world': 48,
+}
+
+
+def _page_window_hours(category, default):
+    return max(default, PAGE_LOOKBACK_HOURS.get(str(category or '').casefold(), default))
+
 # Live run status, polled by the UI via GET /status. Updated as run_once moves
 # through its phases so the frontend can show an "Updating…" indicator and
 # auto-surface a fresh digest when one lands.
@@ -675,13 +687,23 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
             best.append(i)
     groups.extend(group for group, _ in token_groups)
 
+    def source_family(value):
+        key = str(value or '').strip().casefold()
+        if key in ('g1 brasil', 'globo'):
+            return 'globo'
+        return key
+
     for grp in groups:
         size = len(grp)
         # Representative: highest score, tie-break has-image.
         rep = max(grp, key=lambda i: (
             articles[i]['score'], 1 if articles[i].get('image') else 0))
         cid = articles[rep]['id']
-        boost = min(boost_cap, boost_k * math.log2(size)) if size > 1 else 0.0
+        independent_sources = {source_family(articles[i].get('source')) for i in grp}
+        # Rewrites and template pages from one publisher are duplicates, not
+        # corroboration. Only genuinely distinct publishers may lift a story.
+        boost = (min(boost_cap, boost_k * math.log2(len(independent_sources)))
+                 if len(independent_sources) > 1 else 0.0)
         for i in grp:
             articles[i]['cluster_id'] = cid
             articles[i]['cluster_size'] = size
@@ -775,17 +797,22 @@ def apply_retention(scored, cfg, now=None):
             'cid': cid,
             'age': min(ages) if ages else None,        # freshest coverage = story age
             'rank': max(boosted(m) for m in members),
+            'source': str(max(members, key=boosted).get('source') or 'Unknown'),
+            'hard_max': max(_page_window_hours(m.get('category'), hard_max)
+                            for m in members),
+            'ttl_floor': max(_page_window_hours(m.get('category'), base_ttl)
+                             for m in members),
         })
 
     # Hard age cap first: drop outright (None age = can't judge, so keep).
-    live = [c for c in clusters if c['age'] is None or c['age'] < hard_max]
+    live = [c for c in clusters if c['age'] is None or c['age'] < c['hard_max']]
     live.sort(key=lambda c: c['rank'], reverse=True)   # best first
     m = len(live)
 
     kept, expired = set(), []
     for i, c in enumerate(live):
         pct = (m - 1 - i) / (m - 1) if m > 1 else 1.0  # 1.0 best … 0.0 worst
-        ttl = base_ttl + (max_ttl - base_ttl) * pct
+        ttl = max(c['ttl_floor'], base_ttl + (max_ttl - base_ttl) * pct)
         if c['age'] is None or c['age'] <= ttl:
             kept.add(c['cid'])
         else:
@@ -793,7 +820,39 @@ def apply_retention(scored, cfg, now=None):
 
     # Ceiling: keep only the top-ranked stories (live is best-first).
     if len(kept) > ceiling:
-        kept = set([c['cid'] for c in live if c['cid'] in kept][:ceiling])
+        eligible = [c for c in live if c['cid'] in kept]
+        source_cap = max(3, math.ceil(ceiling * 0.15))
+        chosen, source_counts = [], {}
+
+        # First preserve the best live story from every contributing source.
+        for c in eligible:
+            source = c['source'].casefold()
+            if source_counts.get(source, 0) == 0:
+                chosen.append(c)
+                source_counts[source] = 1
+                if len(chosen) >= ceiling:
+                    break
+
+        # Then fill by rank without letting a high-volume feed consume the pool.
+        chosen_ids = {c['cid'] for c in chosen}
+        for c in eligible:
+            if len(chosen) >= ceiling or c['cid'] in chosen_ids:
+                continue
+            source = c['source'].casefold()
+            if source_counts.get(source, 0) >= source_cap:
+                continue
+            chosen.append(c)
+            chosen_ids.add(c['cid'])
+            source_counts[source] = source_counts.get(source, 0) + 1
+
+        # If the source cap leaves spare room, use the next best live stories.
+        for c in eligible:
+            if len(chosen) >= ceiling:
+                break
+            if c['cid'] not in chosen_ids:
+                chosen.append(c)
+                chosen_ids.add(c['cid'])
+        kept = chosen_ids
 
     # Floor: backfill the best expired-but-in-window stories until we hit it.
     for c in expired:
@@ -880,7 +939,7 @@ def run_once():
         feed_count = len(feeds)
         log(f'fetching {feed_count} feeds')
         _set_status(feed_count=feed_count)
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg['lookback_hours'])
+        run_now = datetime.now(timezone.utc)
 
         # Fetch feeds concurrently.
         def fetch(feed):
@@ -900,8 +959,10 @@ def run_once():
         # Parse + dedup + blocklist.
         seen, fresh = set(), []
         for body, feed in bodies:
+            feed_cutoff = run_now - timedelta(hours=_page_window_hours(
+                feed.get('category'), cfg['lookback_hours']))
             parsed = parse_feed(body, feed.get('source', ''),
-                                feed.get('category', 'tech'), cutoff)
+                                feed.get('category', 'tech'), feed_cutoff)
             feed_health[feed.get('url', '')]['items'] = len(parsed)
             for art in parsed:
                 if (art['url'] in seen
@@ -938,7 +999,8 @@ def run_once():
             if TITLE_BLOCKLIST.search(title) or settings.is_blocked(title, user_blocklist):
                 continue
             age = _age_hours(a.get('published_at'))
-            if age is not None and age >= hard_max:
+            article_hard_max = _page_window_hours(a.get('category'), hard_max)
+            if age is not None and age >= article_hard_max:
                 continue
             carried.append(a)
         if carried:

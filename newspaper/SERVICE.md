@@ -16,6 +16,11 @@ authentication, transport security, and an explicit threat review.
 - Home reads that finite selected preview rather than exposing the raw retained
   ingestion pool. If a saved category filter no longer exists, Home safely
   resets to All instead of appearing empty.
+- Corpus admission preserves the best live story from each contributing source
+  before filling remaining capacity under a per-source ceiling. Same-publisher
+  clusters receive no corroboration boost. Durable pages use cadence-appropriate
+  discovery and retention windows (for example, Ideas is not limited to the
+  breaking-news window).
 - The **Sources** view is the owner-facing reconciliation surface for the live
   Notion editorial registry. It groups the complete inventory by owner page and
   shows reading intent, Must include, Avoid, adapter state, production loading,

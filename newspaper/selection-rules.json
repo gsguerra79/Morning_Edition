@@ -7,7 +7,7 @@
         "previsão do tempo", "tempo hoje", "jornal do acre", "jornal do amazonas",
         "bom dia acre", "eptv", "tv integração", "jornal vanguarda", "ao vivo",
         "loteria", "mega-sena", "quina", "festa do peão", "celebridade", "famosos",
-        "programação deste", "amazônia agro", "bilionário", "forbes", "candidatos ao governo do am", "governo do amapá",
+        "programação deste", "amazônia agro", "bilionário", "forbes", "quinto dia útil", "data para pagamentos", "feriados de", "folga prolongada", "candidatos ao governo do am", "governo do amapá",
         "governo de pernambuco", "governo do pará", "governo de mg", "governo do maranhão"
       ],
       "require_any": [
@@ -20,6 +20,18 @@
         "ambiental", "fauna", "vida selvagem", "conservação", "turismo", "viagem",
         "trilha", "montanhismo", "surfe", "surf"
       ]
+    },
+    "The Race": {
+      "exclude_any": ["motogp", "moto2", "moto3", "indycar", "wec"]
+    },
+    "RaceFans": {
+      "exclude_any": ["indycar", "formula e", "wec", "motogp"]
+    },
+    "The Verge": {
+      "exclude_any": ["song", "album", "dance punk", "music video", "celebrity"]
+    },
+    "BBC": {
+      "exclude_any": ["cricket", "county championship"]
     }
   }
 }
