@@ -75,6 +75,7 @@ class BaselineRegressionTests(unittest.TestCase):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
         self.assertIn("className = 'topic-sections'", html)
         self.assertIn("section.articles.map(gridCardHTML)", html)
+        self.assertIn("balancedTopicColumns(section.articles.length)", html)
         self.assertNotIn("section.articles.slice(1, 5)", html)
 
 
