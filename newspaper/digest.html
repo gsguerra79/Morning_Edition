@@ -1343,11 +1343,11 @@ function f1ArticleClass(a) {
   const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
   if (/\b(rumou?r|speculat|could join|linked with|tipped for|may replace)\b/.test(text)) return {tier:'paddock', label:'Rumour'};
   if (/\b(wedding|girlfriend|boyfriend|family|lifestyle|holiday|vacation|social media|off.track|personal life|health|injur|recovery|recovers)\b/.test(text)) return {tier:'paddock', label:'Personal'};
-  if (/\b(celebrity|fashion|film|movie|gaming|sim racing|fan event|live event|three.day event|sponsor activation|merchandise)\b/.test(text)) return {tier:'paddock', label:'Tangential'};
-  if (/\b(interview|says|admits|reveals|warns|opens up|explains why|sets out target|wanted to|why\b)\b/.test(title)) return {tier:'paddock', label:'Interview'};
+  if (/\b(celebrity|fashion|film|movie|documentary|trailer|netflix|streaming|gaming|sim racing|fan event|live event|three.day event|sponsor activation|merchandise)\b/.test(text)) return {tier:'paddock', label:'Tangential'};
   if (/\b(strategy|strategic|undercut|overcut|pit stop|tyre choice|tire choice|degradation|race pace|long run|fuel load|stint)\b/.test(text)) return {tier:'desk', label:'Strategy'};
   if (/\b(appointed|appointment|signing|signed|confirmed|team principal|driver line.up|personnel|replacement)\b/.test(text)) return {tier:'desk', label:'Personnel'};
   if (/\b(technical|technology|upgrade|engine|power unit|aero|regulation|rule|tyre|tire|battery|chassis|floor|wing|design|top speed|mj)\b/.test(title)) return {tier:'desk', label:'Technical'};
+  if (/\b(interview|says|admits|reveals|warns|opens up|explains why|sets out target|wanted to|why\b)\b/.test(title)) return {tier:'paddock', label:'Interview'};
   if (a.f1_kind === 'results_updates' || a.f1_kind === 'preview_forecast') return {tier:'desk', label:'Update'};
   if (a.f1_kind === 'rumor_interview') return {tier:'paddock', label:'Paddock'};
   return {tier:'desk', label:'News'};
