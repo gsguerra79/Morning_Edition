@@ -164,12 +164,21 @@ def _race_weekend(index, now):
             break
     future = [item for item in sessions if _utc(item, "StartDate") and _utc(item, "StartDate") > now]
     next_session = min(future, key=lambda item: _utc(item, "StartDate")) if future else None
+    live = [item for item in sessions if _utc(item, "StartDate") and _utc(item, "EndDate")
+            and _utc(item, "StartDate") <= now <= _utc(item, "EndDate")]
+    current_session = live[0] if live else None
     return {
         "active": True,
         "meeting": active.get("Name"),
         "country": (active.get("Country") or {}).get("Name"),
         "circuit": (active.get("Circuit") or {}).get("ShortName"),
         "latest_session": result,
+        "current_session": ({
+            "name": current_session.get("Name"),
+            "type": current_session.get("Type"),
+            "start": _utc(current_session, "StartDate").isoformat(),
+            "end": _utc(current_session, "EndDate").isoformat(),
+        } if current_session else None),
         "next_session": ({
             "name": next_session.get("Name"),
             "type": next_session.get("Type"),

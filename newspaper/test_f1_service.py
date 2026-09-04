@@ -43,11 +43,12 @@ class F1ServiceTests(unittest.TestCase):
                  "EndDate": "2026-09-06T17:00:00", "GmtOffset": "02:00:00"},
             ]}]}
         result = {"session": "Practice 1", "rows": [{"position": 1}]}
-        now = datetime(2026, 9, 4, 12, 0, tzinfo=timezone.utc)
+        now = datetime(2026, 9, 4, 14, 30, tzinfo=timezone.utc)
         with patch.object(f1_service, "_session_result", return_value=result):
             weekend = f1_service._race_weekend(index, now)
         self.assertEqual("Practice 1", weekend["latest_session"]["session"])
-        self.assertEqual("Practice 2", weekend["next_session"]["name"])
+        self.assertEqual("Practice 2", weekend["current_session"]["name"])
+        self.assertEqual("Race", weekend["next_session"]["name"])
 
     def test_failed_refresh_serves_stale_cache(self):
         cached = {"updated_at": "2026-09-04T00:00:00+00:00", "standings": {}}
