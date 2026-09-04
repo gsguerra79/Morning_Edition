@@ -115,6 +115,30 @@ def preview(digest, now=None):
     }
 
 
+def _adhoc_path():
+    return os.environ.get('ADHOC_FILE', os.path.join(EDITIONS_DIR, 'adhoc-current.json'))
+
+
+def publish_adhoc(digest, now=None):
+    """Persist one explicitly requested full-current comparison edition."""
+    now = now or datetime.now(ZoneInfo(TIMEZONE))
+    articles = [annotate(article) for article in (digest.get('articles') or [])]
+    item = {
+        'id': 'adhoc-current',
+        'kind': 'adhoc',
+        'date': now.date().isoformat(),
+        'published_at': now.isoformat(),
+        'generated_at': digest.get('generated_at'),
+        'article_count': len(articles),
+        'articles': articles,
+        'selection_report': digest.get('selection_report') or {},
+        'preview': False,
+        'edition_message': 'Ad Hoc Full Edition · fresh comparison snapshot; scheduled editions unchanged.',
+    }
+    _atomic(_adhoc_path(), item)
+    return item
+
+
 def _why(article):
     category = str(article.get('category') or 'your interests').replace('-', ' ')
     n = int(article.get('cluster_size') or 1)
@@ -124,6 +148,12 @@ def _why(article):
 
 
 def load(eid):
+    if eid == 'adhoc-current':
+        try:
+            with open(_adhoc_path(), encoding='utf-8') as fh:
+                return json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            return None
     if not re.fullmatch(r'\d{4}-\d{2}-\d{2}-(morning|afternoon)', eid or ''):
         return None
     try:
@@ -188,6 +218,10 @@ def list_editions():
     except OSError:
         return []
     out = []
+    adhoc = load('adhoc-current')
+    if adhoc:
+        out.append({k: adhoc.get(k) for k in
+                    ('id', 'kind', 'date', 'published_at', 'article_count')})
     for eid in names:
         item = load(eid)
         if item:
@@ -196,6 +230,8 @@ def list_editions():
     # Morning and afternoon may share the same timestamp during first boot;
     # afternoon is still the later issue in the editorial sequence.
     out.sort(key=lambda item: (item.get('date') or '', item.get('kind') == 'afternoon'), reverse=True)
+    if adhoc:
+        out.sort(key=lambda item: item.get('kind') == 'adhoc', reverse=True)
     return out
 
 

@@ -1096,7 +1096,10 @@ class StateHandler(BaseHTTPRequestHandler):
             kind = (payload or {}).get('kind')
             try:
                 with open(DIGEST_FILE, encoding='utf-8') as fh:
-                    item = editions.publish(json.load(fh), kind, force=bool((payload or {}).get('force')))
+                    digest = json.load(fh)
+                    item = (editions.publish_adhoc(digest) if kind == 'adhoc' else
+                            editions.publish(digest, kind,
+                                             force=bool((payload or {}).get('force'))))
                 self._json(201, item)
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 self._json(400, {'error': str(exc)})

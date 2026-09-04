@@ -8,6 +8,18 @@ import editions
 
 
 class EditionTests(unittest.TestCase):
+    def test_adhoc_snapshot_is_separate_from_scheduled_editions(self):
+        digest = {'generated_at': '2026-09-04T12:00:00+00:00', 'articles': [
+            {'id': 'one', 'title': 'One', 'url': 'https://example.com/one',
+             'source': 'Example', 'category': 'worldnews'},
+        ]}
+        item = editions.publish_adhoc(digest, now=self.now)
+        self.assertEqual('adhoc-current', item['id'])
+        self.assertEqual('adhoc', editions.load('adhoc-current')['kind'])
+        self.assertEqual(1, item['article_count'])
+        self.assertFalse(any(name.endswith('-morning.json') or name.endswith('-afternoon.json')
+                             for name in os.listdir(self.tmp.name)))
+
     def test_preview_is_bounded_and_does_not_write_archive(self):
         digest = {'generated_at': '2026-08-24T20:15:00+00:00', 'articles': [
             {'id': f'a-{i}', 'cluster_id': f'c-{i}', 'cluster_rep': True,
