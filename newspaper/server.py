@@ -360,7 +360,8 @@ _TITLE_RE = re.compile(
 def validate_feed_url(url, timeout=10):
     """Fetch the URL and confirm it actually returns an RSS or Atom feed.
 
-    Returns {'ok': bool, 'error': str?, 'title': str?, 'kind': 'rss'|'atom'?}.
+    Returns {'ok': bool, 'error': str?, 'title': str?,
+    'kind': 'rss'|'atom'|'sitemap'?}.
     """
     if not url or not isinstance(url, str):
         return {'ok': False, 'error': 'URL is required'}
@@ -392,8 +393,10 @@ def validate_feed_url(url, timeout=10):
         kind = 'rss'
     elif '<feed' in low and 'xmlns' in low:
         kind = 'atom'
+    elif '<urlset' in low or '<sitemapindex' in low:
+        kind = 'sitemap'
     if not kind:
-        return {'ok': False, 'error': 'Response does not look like RSS or Atom'}
+        return {'ok': False, 'error': 'Response does not look like RSS, Atom, or a news sitemap'}
 
     m = _TITLE_RE.search(body)
     title = m.group(1).strip() if m else None
@@ -638,7 +641,8 @@ def normalize_feed_payload(payload):
     if category not in allowed_categories():
         return None, f'Unknown category: {category}'
     feed = {'url': url, 'source': source, 'category': category}
-    if payload.get('format') in ('globo_html', 'wsl_html', 'reuters_sitemap'):
+    if payload.get('format') in ('globo_html', 'wsl_html', 'reuters_sitemap',
+                                 'news_sitemap'):
         feed['format'] = payload['format']
     return feed, None
 

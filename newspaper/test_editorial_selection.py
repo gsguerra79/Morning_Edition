@@ -105,20 +105,29 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertNotIn("corroborating_sources", selected[0])
         self.assertNotIn("independent", selected[0]["why_selected"].lower())
 
-    def test_named_world_and_sports_sources_survive_page_caps(self):
+    def test_named_news_and_sports_sources_survive_page_caps(self):
         items = [article(i, source="BBC World", category="worldnews", score=100-i)
                  for i in range(8)]
         items += [
-            article(20, source="BBC US & Canada", category="worldnews", score=1),
-            article(21, source="Financial Times US", category="worldnews", score=1),
+            article(20, source="BBC World", category="worldnews", score=1),
+            article(21, source="Financial Times World", category="worldnews", score=1),
             article(22, source="Reuters", category="worldnews", score=1),
+            article(25, source="New York Times World", category="worldnews", score=1),
+            article(26, source="BBC US & Canada", category="usnews", score=1),
+            article(27, source="Financial Times US", category="usnews", score=1),
+            article(28, source="Reuters", category="usnews", score=1),
+            article(29, source="New York Times US", category="usnews", score=1),
+            article(30, source="Washington Post", category="usnews", score=1),
+            article(31, source="Houston Chronicle", category="usnews", score=1),
             article(23, source="ATP Tour", category="sports", score=1),
             article(24, source="World Surf League", category="sports", score=1),
         ]
         selected, _ = select_issue(items, max_stories=20, source_share=1,
-                                   page_caps={"worldnews": 8, "sports": 5})
+                                   page_caps={"worldnews": 12, "usnews": 12, "sports": 5})
         sources = {item["source"] for item in selected}
-        self.assertTrue({"BBC US & Canada", "Financial Times US", "Reuters",
+        self.assertTrue({"BBC World", "Financial Times World", "Reuters", "New York Times World",
+                         "BBC US & Canada", "Financial Times US", "New York Times US",
+                         "Washington Post", "Houston Chronicle",
                          "ATP Tour", "World Surf League"} <= sources)
 
     def test_comics_shows_only_latest_from_each_series(self):
@@ -137,7 +146,7 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertEqual({"a-2", "a-4"}, {item["id"] for item in selected})
 
     def test_default_page_caps_match_balanced_retained_issue(self):
-        page_counts = {"brazilnews": 6, "worldnews": 8, "formula1": 12,
+        page_counts = {"worldnews": 12, "usnews": 12, "brazilnews": 8, "formula1": 12,
                        "technology": 10, "comics": 2, "sports": 12, "ideas": 5}
         items = []
         number = 0
@@ -146,8 +155,11 @@ class EditorialSelectionTests(unittest.TestCase):
                 if page == "comics":
                     source = ("GiantITP", "Wilde Life")[offset]
                 elif page == "worldnews":
-                    source = ("BBC US & Canada" if offset < 3 else
-                              "Reuters" if offset < 7 else "Financial Times US")
+                    source = ("BBC World" if offset < 3 else "Reuters" if offset < 6 else
+                              "Financial Times World" if offset < 9 else "New York Times World")
+                elif page == "usnews":
+                    source = ("BBC US & Canada", "Financial Times US", "Reuters",
+                              "New York Times US", "Washington Post", "Houston Chronicle")[offset % 6]
                 elif page == "sports":
                     source = ("World Surf League" if offset < 3 else
                               "ATP Tour" if offset < 5 else f"Sports Source {offset}")
@@ -157,7 +169,7 @@ class EditorialSelectionTests(unittest.TestCase):
                                      score=100-number/100))
                 number += 1
         selected, report = select_issue(items)
-        self.assertEqual(55, len(selected))
+        self.assertEqual(73, len(selected))
         self.assertEqual(page_counts, report["page_counts"])
         self.assertFalse(any(item["code"] == "page_cap" for item in report["rejected"]))
 

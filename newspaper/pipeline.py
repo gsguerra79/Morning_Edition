@@ -102,11 +102,13 @@ _stop = threading.Event()
 PAGE_LOOKBACK_HOURS = {
     'ideas': 24 * 21, 'sports': 24 * 7, 'comics': 24 * 365 * 10,
     'technology': 24 * 5, 'technologythings': 24 * 5,
-    'brazilnews': 72, 'formula1': 72, 'worldnews': 48, 'world': 48,
+    'brazilnews': 72, 'usnews': 48, 'formula1': 72,
+    'worldnews': 48, 'world': 48,
 }
 
 PAGE_BUDGETS = {
-    'brazilnews': (4, 6), 'worldnews': (5, 8), 'formula1': (8, 12),
+    'worldnews': (8, 12), 'usnews': (8, 12), 'brazilnews': (6, 8),
+    'formula1': (8, 12),
     'technology': (8, 10), 'comics': (2, 2), 'sports': (8, 12),
     'ideas': (3, 5),
 }
@@ -115,11 +117,44 @@ SPORTS_MAXIMUMS = {'football': 4, 'tennis': 2, 'surf': 2,
                    'mountaineering': 3, 'other': 1}
 COMIC_SOURCES = ('giantitp', 'wilde life')
 PAGE_REQUIRED_SOURCES = {
-    'worldnews': ('bbc us & canada', 'financial times us', 'reuters'),
+    'worldnews': ('bbc world', 'financial times world', 'reuters', 'new york times world'),
+    'usnews': ('bbc us & canada', 'financial times us', 'reuters',
+               'new york times us', 'washington post', 'houston chronicle'),
     'sports': ('atp tour', 'world surf league'),
     'technology': ('brickset', 'the brothers brick'),
     'formula1': ('formula 1', 'motorsport', 'autosport'),
 }
+
+NEWS_DESK_SOURCES = {
+    'worldnews': {'bbc world', 'financial times world', 'reuters', 'new york times world'},
+    'usnews': {'bbc us & canada', 'financial times us', 'reuters',
+               'new york times us', 'washington post', 'houston chronicle'},
+}
+
+G1_REGIONAL_PATH = re.compile(
+    r'^/(?:ac|al|am|ap|ba|ce|df|es|go|ma|mg|ms|mt|pa|pb|pe|pi|pr|rn|ro|rr|rs|sc|se|sp|to)/',
+    re.IGNORECASE,
+)
+HOUSTON_ROUTINE_PATHS = ('/sports/', '/food/', '/entertainment/', '/life/', '/neighborhood/')
+HOUSTON_MAJOR_TERMS = (
+    'hurricane', 'tropical storm', 'flood', 'emergency', 'evacuation', 'disaster',
+    'city council', 'mayor', 'metro', 'harris county', 'houston isd', 'hisd',
+    'texas legislature', 'texas supreme court', 'governor', 'attorney general',
+    'power grid', 'ercot', 'public health', 'infrastructure', 'immigration',
+)
+US_DOMESTIC_TERMS = (
+    'u.s. economy', 'us economy', 'u.s. jobs', 'us jobs', 'white house',
+    'congress', 'supreme court', 'federal reserve', 'justice department',
+    'trump administration', 'u.s. election', 'us election', 'voter data',
+    'senate republicans', 'senate democrats', 'house republicans',
+    'house democrats', 'texas', 'houston', 'harris county',
+)
+CANADA_ONLY_TERMS = ('canada', 'canadian', 'ottawa', 'ontario', 'quebec', 'alberta')
+INTERNATIONAL_EVENT_TERMS = (
+    'iran', 'iranian', 'israel', 'gaza', 'lebanon', 'ukraine', 'russia',
+    'moscow', 'kyiv', 'china', 'taiwan', 'nato', 'european union', 'venezuela',
+    'nepal', 'afghanistan', 'pakistan', 'india', 'north korea', 'south korea',
+)
 F1_SOURCE_MAXIMUMS = {'formula 1': 3, 'motorsport': 3, 'autosport': 3,
                       'racefans': 2, 'the race': 2}
 F1_KIND_MINIMUMS = {'results_updates': 3, 'technical': 2,
@@ -389,11 +424,40 @@ def parse_reuters_sitemap(xml, source, category, cutoff):
             continue
         image = html_lib.unescape(extract_field(block, 'image:loc')).strip()
         seen.add(url)
+        # Reuters publishes US reporting beneath /world/us... in the same
+        # sitemap as international reporting. Route by article, not by the
+        # feed's historical single-category label.
+        routed_category = ('usnews' if parsed.path.casefold().startswith('/world/us')
+                           else 'worldnews')
+        item = {'title': title, 'url': url, 'source': source,
+                'feed_summary': '', 'category': category,
+                'published_at': pub.isoformat()}
+        item['category'] = routed_category
+        if image.startswith('https://'):
+            item['feed_image'] = image
+        out.append(item)
+    return out
+
+
+def parse_news_sitemap(xml, source, category, cutoff):
+    """Parse a publisher's Google News sitemap with exact article artwork."""
+    out, seen = [], set()
+    for match in re.finditer(r'<url\b[^>]*>([\s\S]*?)</url>', xml or '', re.IGNORECASE):
+        block = match.group(1)
+        url = html_lib.unescape(extract_field(block, 'loc')).strip()
+        pub = parse_date(extract_field(block, 'news:publication_date')
+                         or extract_field(block, 'lastmod'))
+        title = clean_text(extract_field(block, 'news:title'))
+        if (not url.startswith('https://') or not pub or pub < cutoff
+                or not title or url in seen):
+            continue
+        image = html_lib.unescape(extract_field(block, 'image:loc')).strip()
         item = {'title': title, 'url': url, 'source': source,
                 'feed_summary': '', 'category': category,
                 'published_at': pub.isoformat()}
         if image.startswith('https://'):
             item['feed_image'] = image
+        seen.add(url)
         out.append(item)
     return out
 
@@ -438,6 +502,85 @@ def apply_source_scope(article, rule_map):
         boost += float(rule.get('priority_match_boost') or 0)
     article['_editorial_boost'] = boost
     return True
+
+
+def apply_news_desk_scope(article):
+    """Enforce the owner's desk/source contract and reject local filler."""
+    category = str(article.get('category') or '').casefold()
+    source = str(article.get('source') or '').casefold()
+    title = str(article.get('title') or '').casefold()
+    parsed = urllib.parse.urlparse(str(article.get('url') or ''))
+    path = parsed.path.casefold()
+
+    if category in NEWS_DESK_SOURCES and source not in NEWS_DESK_SOURCES[category]:
+        return False
+
+    # G1 regional portals are not Brazil-national news. Rio is explicitly in
+    # scope; other states belong only when covered by a national desk/feed.
+    if category == 'brazilnews' and source in ('globo', 'g1 brasil'):
+        if G1_REGIONAL_PATH.match(path) and not path.startswith('/rj/'):
+            return False
+
+    # Houston Chronicle is commissioned for consequential city/Texas news,
+    # not neighborhood lifestyle, restaurant, sports or routine crime churn.
+    if category == 'usnews' and source == 'houston chronicle':
+        if any(part in path for part in HOUSTON_ROUTINE_PATHS):
+            return any(term in title for term in HOUSTON_MAJOR_TERMS)
+        if '/crime/' in path or '/trending/' in path:
+            return any(term in title for term in HOUSTON_MAJOR_TERMS)
+    return True
+
+
+def route_news_article(article):
+    """Correct cross-listed publisher items before eligibility and dedup."""
+    category = str(article.get('category') or '').casefold()
+    source = str(article.get('source') or '')
+    source_key = source.casefold()
+    title = str(article.get('title') or '').casefold()
+    if category == 'worldnews' and any(term in title for term in US_DOMESTIC_TERMS):
+        article['category'] = 'usnews'
+        article['source'] = {
+            'bbc world': 'BBC US & Canada',
+            'financial times world': 'Financial Times US',
+            'new york times world': 'New York Times US',
+        }.get(source_key, source)
+    elif category == 'usnews' and source_key == 'bbc us & canada':
+        if any(term in title for term in CANADA_ONLY_TERMS):
+            article['category'] = 'worldnews'
+            article['source'] = 'BBC World'
+        elif (any(term in title for term in INTERNATIONAL_EVENT_TERMS)
+              and not any(term in title for term in US_DOMESTIC_TERMS)):
+            article['category'] = 'worldnews'
+            article['source'] = 'BBC World'
+    elif category == 'usnews' and source_key in (
+            'financial times us', 'new york times us'):
+        if (any(term in title for term in INTERNATIONAL_EVENT_TERMS)
+                and not any(term in title for term in US_DOMESTIC_TERMS)):
+            article['category'] = 'worldnews'
+            article['source'] = ('Financial Times World' if source_key.startswith('financial')
+                                 else 'New York Times World')
+    return article
+
+
+def news_entity_tokens(article):
+    """Distinctive title entities used to prevent one-subject page floods."""
+    title = str(article.get('title') or '')
+    tokens = re.findall(r"\b[A-Z][A-Za-z’'-]{3,}\b", title)
+    generic = {'World', 'News', 'United', 'States', 'Latest', 'Update', 'Watch',
+               'President', 'Government', 'Court', 'Party'}
+    return {token.casefold() for token in tokens if token not in generic}
+
+
+def apply_headline_priority(article, feed_rank):
+    """Respect publisher ordering for US/World desks without replacing score."""
+    article['feed_rank'] = int(feed_rank)
+    if article.get('category') in ('worldnews', 'usnews'):
+        # RSS/news sitemaps are publisher-curated. Their first items deserve a
+        # meaningful but bounded lift so key headlines survive generic scoring.
+        article['_editorial_boost'] = float(article.get('_editorial_boost') or 0)
+        article['_editorial_boost'] += max(0.0, 2.0 - 0.25 * int(feed_rank))
+        article['_desk_locked'] = True
+    return article
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -585,6 +728,8 @@ def enrich(article, chat_model, embed_model, system_prompt, valid_cats):
     image = article.get('feed_image') or image
     score, summary, category, score_ok, score_ms = _score(
         article, excerpt, chat_model, system_prompt, valid_cats)
+    if article.get('_desk_locked'):
+        category = article['category']
     score = round(min(10.0, score + float(article.get('_editorial_boost') or 0)), 1)
     embedding = _embed(f"{article['title']}\n{summary}", embed_model)
     return {
@@ -597,6 +742,7 @@ def enrich(article, chat_model, embed_model, system_prompt, valid_cats):
         'summary': summary,
         'image': image,
         'published_at': article['published_at'],
+        'feed_rank': article.get('feed_rank'),
         'embedding': embedding,
         '_score_ok': score_ok,           # transient: dropped before the digest is written
         '_score_ms': round(score_ms, 1),
@@ -838,6 +984,77 @@ def apply_taste(articles, embed_model, weight):
     return articles
 
 
+def editorial_scope(article):
+    """Small, auditable geography/scope label used by rejection learning."""
+    category = str(article.get('category') or '').casefold()
+    source = str(article.get('source') or '').casefold()
+    path = urllib.parse.urlparse(str(article.get('url') or '')).path.casefold()
+    if category == 'brazilnews' and source in ('globo', 'g1 brasil'):
+        if G1_REGIONAL_PATH.match(path):
+            return 'rio_local' if path.startswith('/rj/') else 'brazil_regional'
+        return 'brazil_national'
+    if category == 'usnews' and source == 'houston chronicle':
+        return 'houston_local'
+    return category or 'other'
+
+
+def apply_feedback_learning(articles, embed_model):
+    """Turn qualified dismissals into bounded next-run ranking penalties.
+
+    Exact IDs are already removed through readIds. This layer learns the
+    *reason*: semantic similarity, same-source misuse, and geographic scope.
+    One dismissal can lower related material; it cannot silently ban a source.
+    """
+    feedback = _load_user_state().get('feedback')
+    feedback = [item for item in (feedback or [])
+                if isinstance(item, dict) and item.get('title') and item.get('reason')]
+    for article in articles:
+        article['feedback_penalty'] = 0.0
+        article['editorial_scope'] = editorial_scope(article)
+    if not feedback:
+        return articles
+
+    vectors = _embed_many([str(item['title']) for item in feedback], embed_model)
+    reason_weight = {
+        'wrong_topic': 2.5, 'wrong_desk': 3.0,
+        'too_local': 4.0, 'not_important': 2.5,
+        'low_value': 2.0, 'wrong_source_use': 2.5, 'repetitive': 1.5,
+        'promotional_filler': 4.0, 'never_story': 5.0,
+    }
+    for article in articles:
+        norm = _normalize(article.get('embedding') or [])
+        penalty = 0.0
+        for item, vector in zip(feedback, vectors):
+            reason = str(item.get('reason') or '')
+            weight = reason_weight.get(reason, 1.5)
+            same_source = (str(item.get('source') or '').casefold()
+                           == str(article.get('source') or '').casefold())
+            rejected_scope = str(item.get('editorialScope') or editorial_scope(item))
+            if reason in ('too_local', 'wrong_topic') and rejected_scope in (
+                    'brazil_regional', 'houston_local', 'rio_local'):
+                if article['editorial_scope'] == rejected_scope:
+                    penalty = max(penalty, weight)
+            if reason == 'wrong_source_use' and not same_source:
+                continue
+            rejected_norm = _normalize(vector or [])
+            if norm and rejected_norm:
+                similarity = sum(x * y for x, y in zip(norm, rejected_norm))
+                if similarity >= 0.68:
+                    penalty = max(penalty, weight * (similarity - 0.55) / 0.45)
+        article['feedback_penalty'] = round(min(5.0, penalty), 3)
+    affected = sum(1 for article in articles if article['feedback_penalty'] > 0)
+    if affected:
+        log(f'qualified feedback penalized {affected} related article(s)')
+    return articles
+
+
+def editorial_rank(article):
+    return (float(article.get('score') or 0)
+            + float(article.get('cluster_boost') or 0)
+            + float(article.get('taste_boost') or 0)
+            - float(article.get('feedback_penalty') or 0))
+
+
 def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=BOOST_K):
     """Assign cluster_id/size/boost/rep.
 
@@ -859,7 +1076,7 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
     # article anchors each story; weaker articles attach to the best-matching
     # existing anchor or start their own.
     order = sorted((i for i in range(n) if norms[i] is not None),
-                   key=lambda i: articles[i]['score'], reverse=True)
+                   key=lambda i: editorial_rank(articles[i]), reverse=True)
     anchors = []          # anchor indices, in creation (descending-score) order
     members = {}          # anchor index -> list of member indices
     for i in order:
@@ -905,7 +1122,7 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
         size = len(grp)
         # Representative: highest score, tie-break has-image.
         rep = max(grp, key=lambda i: (
-            articles[i]['score'], 1 if articles[i].get('image') else 0))
+            editorial_rank(articles[i]), 1 if articles[i].get('image') else 0))
         cid = articles[rep]['id']
         independent_sources = {source_family(articles[i].get('source')) for i in grp}
         # Rewrites and template pages from one publisher are duplicates, not
@@ -990,7 +1207,7 @@ def apply_retention(scored, cfg, now=None):
     hard_max = cfg['retain_hard_max_age_hours']
 
     def boosted(a):
-        return a['score'] + a.get('cluster_boost', 0.0) + a.get('taste_boost', 0.0)
+        return editorial_rank(a)
 
     # Group articles into stories.
     groups = {}
@@ -1121,7 +1338,7 @@ def select_balanced_issue(articles):
     def published_rank(article):
         dt = parse_date(str(article.get('published_at') or ''))
         return dt.timestamp() if dt else 0
-    reps.sort(key=lambda a: (-float(a.get('score') or 0),
+    reps.sort(key=lambda a: (-editorial_rank(a),
                              -published_rank(a), str(a.get('id') or '')))
 
     selected, selected_ids, gaps = [], set(), []
@@ -1140,7 +1357,7 @@ def select_balanced_issue(articles):
             matches = [a for a in page_articles
                        if str(a.get('source') or '').casefold() == source]
             if matches:
-                add(max(matches, key=published_rank))
+                add(max(matches, key=lambda item: (editorial_rank(item), published_rank(item))))
             else:
                 gaps.append({'page': page, 'source': source,
                              'required': 1, 'available': 0})
@@ -1218,11 +1435,27 @@ def select_balanced_issue(articles):
             continue
         candidates = [a for a in reps if a.get('category') == page]
         current = sum(1 for a in selected if a.get('category') == page)
+        source_counts = {}
+        source_entities = {}
+        for chosen in selected:
+            if chosen.get('category') == page:
+                key = str(chosen.get('source') or '').casefold()
+                source_counts[key] = source_counts.get(key, 0) + 1
+                source_entities.setdefault(key, set()).update(news_entity_tokens(chosen))
         for article in candidates:
             if current >= maximum:
                 break
+            source = str(article.get('source') or '').casefold()
+            if page in ('worldnews', 'usnews') and source_counts.get(source, 0) >= 3:
+                continue
+            entities = news_entity_tokens(article)
+            if (page in ('worldnews', 'usnews') and entities
+                    and entities & source_entities.get(source, set())):
+                continue
             if add(article):
                 current += 1
+                source_counts[source] = source_counts.get(source, 0) + 1
+                source_entities.setdefault(source, set()).update(entities)
         if len(candidates) < minimum:
             gaps.append({'page': page, 'required': minimum,
                          'available': len(candidates)})
@@ -1330,17 +1563,21 @@ def run_once():
                 feed.get('category'), cfg['lookback_hours']))
             parser = {'globo_html': parse_globo_topic_page,
                       'wsl_html': parse_wsl_homepage,
-                      'reuters_sitemap': parse_reuters_sitemap}.get(
+                      'reuters_sitemap': parse_reuters_sitemap,
+                      'news_sitemap': parse_news_sitemap}.get(
                           feed.get('format'), parse_feed)
             parsed = parser(body, feed.get('source', ''),
                             feed.get('category', 'tech'), feed_cutoff)
             feed_health[feed.get('url', '')]['items'] = len(parsed)
-            for art in parsed:
+            for feed_rank, art in enumerate(parsed):
+                route_news_article(art)
                 if (art['url'] in seen
                         or TITLE_BLOCKLIST.search(art['title'])
                         or settings.is_blocked(art['title'], user_blocklist)
-                        or not apply_source_scope(art, source_rules)):
+                        or not apply_source_scope(art, source_rules)
+                        or not apply_news_desk_scope(art)):
                     continue
+                apply_headline_priority(art, feed_rank)
                 seen.add(art['url'])
                 art['id'] = stable_id(art['url'])
                 fresh.append(art)
@@ -1377,7 +1614,7 @@ def run_once():
             title = a.get('title', '')
             if TITLE_BLOCKLIST.search(title) or settings.is_blocked(title, user_blocklist):
                 continue
-            if not apply_source_scope(a, source_rules):
+            if not apply_source_scope(a, source_rules) or not apply_news_desk_scope(a):
                 continue
             age = _age_hours(a.get('published_at'))
             article_hard_max = _page_window_hours(a.get('category'), hard_max)
@@ -1437,6 +1674,7 @@ def run_once():
                                 cfg['block_topic_threshold'], embed_model)
         # Personalization: boost articles that match the user's taste.
         apply_taste(scored, embed_model, cfg['taste_weight'])
+        apply_feedback_learning(scored, embed_model)
 
         log('clustering')
         _set_status(phase='clustering')
@@ -1451,8 +1689,7 @@ def run_once():
             a.pop('embedding', None)
             a.pop('_score_ok', None)
             a.pop('_score_ms', None)
-        scored.sort(key=lambda a: a['score'] + a.get('cluster_boost', 0.0)
-                    + a.get('taste_boost', 0.0), reverse=True)
+        scored.sort(key=editorial_rank, reverse=True)
 
         # Retention: rank-weighted lifespan inside the [floor, ceiling] band.
         pool_size = len(scored)

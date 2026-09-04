@@ -1741,7 +1741,8 @@ function effectiveScore(article) {
   // Base relevance, plus same-topic coverage boost (cluster_boost) and the
   // personalization boost (taste_boost, baked in by the pipeline from what you
   // save/open), all lifted by the per-source affinity multiplier.
-  return ((article.score || 0) + (article.cluster_boost || 0) + (article.taste_boost || 0))
+  return ((article.score || 0) + (article.cluster_boost || 0) + (article.taste_boost || 0)
+    - (article.feedback_penalty || 0))
     * affinityFor(article.source);
 }
 
@@ -1852,6 +1853,9 @@ window.dismiss = function(id, internal = false) {
 
 const FEEDBACK_REASONS = {
   wrong_topic: 'Wrong topic',
+  wrong_desk: 'Wrong section',
+  too_local: 'Too local / not consequential',
+  not_important: 'Not important enough',
   low_value: 'Low value',
   wrong_source_use: 'Wrong use of this source',
   repetitive: 'Repetitive',
@@ -1892,6 +1896,8 @@ window.submitFeedback = function(reason) {
     url: article.url,
     source: article.source,
     category: article.category,
+    summary: article.summary || '',
+    editorialScope: article.editorial_scope || article.category || 'other',
     reason,
     rejectedAt: new Date().toISOString(),
   });

@@ -8,10 +8,12 @@ from urllib.parse import urlsplit, urlunsplit
 
 
 PAGE_DEFINITIONS = {
-    "Brazil News": {"key": "brazilnews", "color": "#2f6f56",
-                    "interest": "Consequential Brazil news, federal policy, Rio de Janeiro, environment, wildlife and relevant national sports"},
     "World News": {"key": "worldnews", "color": "#315b78",
                    "interest": "Consequential international news and analysis"},
+    "US News": {"key": "usnews", "color": "#704b3b",
+                "interest": "Consequential United States national, Texas state, and Houston city news"},
+    "Brazil News": {"key": "brazilnews", "color": "#2f6f56",
+                    "interest": "Consequential Brazil news, federal policy, Rio de Janeiro, environment, wildlife and relevant national sports"},
     "Formula 1": {"key": "formula1", "color": "#a52a2a",
                   "interest": "Formula 1 news, races, rules, teams, drivers, engineering and analysis"},
     "Technology & Things": {"key": "technology", "color": "#79632f",
@@ -30,6 +32,8 @@ SOURCE_ALIASES = {
     "bbc football": "BBC", "bbc formula 1": "BBC",
     "financial times us": "Financial Times",
     "financial times world": "Financial Times",
+    "new york times us": "New York Times",
+    "new york times world": "New York Times",
     "ge flamengo": "Globo",
     "medium technology": "Medium",
 }

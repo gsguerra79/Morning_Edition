@@ -41,7 +41,7 @@ class SourceCoverageTests(unittest.TestCase):
              "adapters": [{"type": "connector", "status": "planned"}]},
         ]}
         categories, feeds = runtime_scope(registry)
-        self.assertEqual(7, len(categories))
+        self.assertEqual(8, len(categories))
         self.assertEqual([{"url": "https://multi.test/feed", "source": "Multi",
                            "category": "technology"}], feeds)
 

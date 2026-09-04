@@ -1,38 +1,10 @@
 [
-  {
-    "key": "tech",
-    "label": "Tech",
-    "color": "#2b7fff",
-    "interest": "Technology -- hardware, software, gadgets, and the companies and industry behind them"
-  },
-  {
-    "key": "ai",
-    "label": "AI",
-    "color": "#7b5cff",
-    "interest": "AI and machine learning -- new models, research, tools, and how they are being applied"
-  },
-  {
-    "key": "science",
-    "label": "Science",
-    "color": "#10b981",
-    "interest": "Science -- research, discoveries, space, health, and the natural world"
-  },
-  {
-    "key": "business",
-    "label": "Business",
-    "color": "#d98a3b",
-    "interest": "Business and the economy -- companies, startups, markets, and tech-industry moves"
-  },
-  {
-    "key": "world",
-    "label": "World",
-    "color": "#06b6d4",
-    "interest": "World news -- significant global events and current affairs"
-  },
-  {
-    "key": "gaming",
-    "label": "Gaming",
-    "color": "#ff5a3c",
-    "interest": "Video games -- releases, the industry, hardware, and gaming culture"
-  }
+  {"key":"worldnews","label":"World News","color":"#315b78","interest":"Consequential international news: major wars, diplomacy, elections, economies, disasters, public health, science and events of broad global importance"},
+  {"key":"usnews","label":"US News","color":"#704b3b","interest":"Consequential United States national news plus Texas state and Houston city government, infrastructure, disasters, public safety and civic affairs"},
+  {"key":"brazilnews","label":"Brazil News","color":"#2f6f56","interest":"Consequential Brazil-wide and federal news, Rio de Janeiro state, environment, wildlife and major national developments; exclude routine news from unrelated states"},
+  {"key":"formula1","label":"Formula 1","color":"#a52a2a","interest":"Formula 1 sessions, results, strategy, technical developments, teams, drivers, rules and analysis"},
+  {"key":"technology","label":"Technology & Things","color":"#79632f","interest":"Novel technology, ingenious gear, photography, electronics, fabrication and advanced projects"},
+  {"key":"comics","label":"Comics","color":"#8b5267","interest":"The latest subscribed webcomic installments"},
+  {"key":"sports","label":"Sports","color":"#46634a","interest":"Tennis, surfing, climbing, mountaineering and expeditions, with Brazilian competitors where relevant"},
+  {"key":"ideas","label":"Ideas","color":"#76538c","interest":"Substantive essays, science, philosophy, psychology and durable explanatory ideas"}
 ]

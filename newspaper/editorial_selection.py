@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 
 DEFAULT_PAGE_CAPS = {
-    "brazilnews": 6, "worldnews": 8, "formula1": 12,
+    "worldnews": 12, "usnews": 12, "brazilnews": 8, "formula1": 12,
     "technologythings": 10, "comics": 2, "sports": 12, "ideas": 5,
     # Legacy keys remain bounded while carried articles are being remapped.
     "technology": 10, "photography": 5, "outdoors": 5,
@@ -17,21 +17,25 @@ SOURCE_ALIASES = {
     "bbc us & canada": "BBC",
     "financial times us": "Financial Times",
     "financial times world": "Financial Times",
+    "new york times us": "New York Times",
+    "new york times world": "New York Times",
     "motorsport f1": "Motorsport", "g1 brasil": "Globo",
     "autosport f1": "Autosport",
     "the order of the stick": "GiantITP",
 }
 REQUIRED_PAGE_SOURCES = {
-    "worldnews": ("bbc us & canada", "financial times us", "reuters"),
+    "worldnews": ("bbc world", "financial times world", "reuters", "new york times world"),
+    "usnews": ("bbc us & canada", "financial times us", "reuters",
+               "new york times us", "washington post", "houston chronicle"),
     "sports": ("atp tour", "world surf league"),
     "comics": ("giantitp", "wilde life"),
     "formula1": ("formula 1", "motorsport", "autosport"),
 }
 RAW_SOURCE_LIMITS = {
     "bbc us & canada": 3,
-    "financial times us": 2,
-    "financial times world": 2,
-    "reuters": 4,
+    "financial times us": 3,
+    "financial times world": 3,
+    "reuters": 6,
     "atp tour": 2,
     "world surf league": 3,
     "giantitp": 1,
@@ -115,7 +119,7 @@ def _reason(article, source_record, mandatory=False):
     return f"Selected as timely coverage of {category} from {source}."
 
 
-def select_issue(articles, registry=None, rules=None, max_stories=60,
+def select_issue(articles, registry=None, rules=None, max_stories=80,
                  source_share=0.20, page_caps=None):
     """Return ``(selected, report)``; one representative per story cluster."""
     page_caps = {**DEFAULT_PAGE_CAPS, **(page_caps or {})}

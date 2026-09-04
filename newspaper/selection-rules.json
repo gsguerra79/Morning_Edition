@@ -67,7 +67,6 @@
       "exclude_any": ["cricket", "county championship"]
     },
     "BBC US & Canada": {
-      "category": "worldnews",
       "priority_boost": 1.0,
       "priority_any": [
         "white house", "congress", "supreme court", "federal reserve",
@@ -81,15 +80,30 @@
       ]
     },
     "Financial Times US": {
-      "category": "worldnews",
-      "priority_boost": 1.0
+      "priority_boost": 1.0,
+      "exclude_any": ["travel guide", "insider addresses", "where to eat", "fashion", "wine", "weekend break"]
     },
     "Financial Times World": {
-      "category": "worldnews"
+      "exclude_any": ["travel guide", "where to eat", "fashion", "wine", "weekend break"]
     },
     "Reuters": {
-      "category": "worldnews",
       "priority_boost": 1.0
+    },
+    "New York Times US": {
+      "priority_boost": 1.0,
+      "exclude_any": ["recipe", "travel", "style", "celebrity"]
+    },
+    "New York Times World": {
+      "priority_boost": 1.0,
+      "exclude_any": ["recipe", "travel", "style", "celebrity"]
+    },
+    "Washington Post": {
+      "priority_boost": 1.0,
+      "exclude_any": ["celebrity", "lifestyle", "recipe", "travel deals"]
+    },
+    "Houston Chronicle": {
+      "priority_boost": 1.5,
+      "exclude_any": ["restaurant", "recipe", "astros", "rockets", "texans", "celebrity", "music", "real estate listings"]
     },
     "BBC Football": {
       "category": "sports",

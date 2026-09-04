@@ -15,16 +15,23 @@ class PipelineDiversityTests(unittest.TestCase):
                 source = (("GiantITP", "Wilde Life")[i % 2]
                           if page == "comics" else
                           ("Formula 1", "Motorsport", "Autosport", "RaceFans")[i % 4]
-                          if page == "formula1" else page)
+                          if page == "formula1" else f"{page}-source-{i % 4}")
                 items.append({"id": f"{page}-{i}", "cluster_id": f"{page}-{i}",
                               "cluster_rep": True, "source": source, "category": page,
                               "title": f"{page} story {i}", "score": 6,
                               "published_at": now})
-        for i, source in enumerate(("BBC US & Canada", "Financial Times US", "Reuters")):
+        for i, source in enumerate(("BBC World", "Financial Times World", "Reuters", "New York Times World")):
             items.append({"id": f"world-required-{i}",
                           "cluster_id": f"world-required-{i}", "cluster_rep": True,
                           "source": source, "category": "worldnews",
                           "title": f"{source} headline", "score": 6,
+                          "published_at": now})
+        for i, source in enumerate(("BBC US & Canada", "Financial Times US", "Reuters",
+                                    "New York Times US", "Washington Post", "Houston Chronicle")):
+            items.append({"id": f"us-required-{i}",
+                          "cluster_id": f"us-required-{i}", "cluster_rep": True,
+                          "source": source, "category": "usnews",
+                          "title": f"{source} national headline", "score": 6,
                           "published_at": now})
         for i, source in enumerate(("Brickset", "The Brothers Brick")):
             items.append({"id": f"lego-required-{i}",
