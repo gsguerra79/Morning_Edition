@@ -406,7 +406,7 @@
     .card-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 2px; }
 
     /* ── Formula 1 race desk ───────────────────────────── */
-    .f1-desk { display:none; margin:4px 0 34px; }
+    .f1-desk { display:none; margin:4px 0 0; }
     .f1-desk.active { display:block; }
     .f1-desk-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; border-bottom:3px solid #e10600; padding:8px 0 13px; margin-bottom:20px; }
     .f1-desk-head h1 { font-family:var(--font-head); font-size:30px; line-height:1; margin-top:4px; }
@@ -414,6 +414,7 @@
     .f1-panels { display:block; }
     .f1-panel { border:1px solid var(--border); background:var(--surface); padding:18px; min-width:0; }
     .f1-session-panel { width:100%; }
+    .f1-session-slot { margin-bottom:34px; }
     .f1-panel h2 { font-family:var(--font-head); font-size:20px; margin:0 0 4px; }
     .f1-panel-sub { color:var(--text3); font-size:12px; margin-bottom:14px; }
     .f1-session-top { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; }
@@ -425,6 +426,9 @@
     .f1-table .num { text-align:right; }
     .f1-team-mark { display:inline-block; width:3px; height:12px; margin-right:6px; vertical-align:-2px; }
     .f1-standings-rail { position:static; }
+    .f1-standings-rail .f1-table { font-size:11px; }
+    .f1-standings-rail .f1-table th { padding:3px 4px; }
+    .f1-standings-rail .f1-table td { padding:3px 4px; }
     .f1-standings-grid { display:grid; grid-template-columns:1fr; gap:22px; }
     .f1-standings-grid h3 { font-family:var(--font-head); font-size:15px; margin-bottom:7px; }
     .f1-kind { display:inline-flex; margin-left:7px; border:1px solid currentColor; border-radius:999px; padding:1px 6px; font-size:8px; line-height:1.4; letter-spacing:.04em; vertical-align:1px; opacity:.78; }
@@ -435,10 +439,10 @@
     .f1-news-head h2 { font-family:var(--font-head); font-size:22px; margin-bottom:4px; }
     .f1-news-head p { color:var(--text3); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
     .f1-news-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
-    #digest-magazine.f1-mode .cols { grid-template-columns:minmax(0,1fr) 370px; gap:28px; }
-    #digest-magazine.f1-mode .rail-col { min-width:0; position:sticky; top:18px; align-self:start; max-height:calc(100vh - 36px); overflow-y:auto; }
+    #digest-magazine.f1-mode .cols { grid-template-columns:minmax(0,1fr) 370px; gap:28px; margin-top:20px; }
+    #digest-magazine.f1-mode .rail-col { min-width:0; position:sticky; top:18px; align-self:start; }
     @media (max-width:1100px) { .f1-news-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width:900px) { #digest-magazine.f1-mode .cols { grid-template-columns:1fr; } #digest-magazine.f1-mode .rail-col { position:static; max-height:none; overflow:visible; } }
+    @media (max-width:900px) { #digest-magazine.f1-mode .cols { grid-template-columns:1fr; } #digest-magazine.f1-mode .rail-col { position:static; } }
     @media (max-width:640px) { .f1-desk-head,.f1-session-top { align-items:flex-start; flex-direction:column; } .f1-next { text-align:left; } .f1-panel { padding:14px 10px; } .f1-news-grid { grid-template-columns:1fr; } }
 
     /* ── Earlier rail (right column) ────────────────────── */
@@ -1343,14 +1347,14 @@ function f1ArticleClass(a) {
   const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
   if (/\b(rumou?r|speculat|could join|linked with|tipped for|may replace)\b/.test(text)) return {tier:'paddock', label:'Rumour'};
   if (/\b(wedding|girlfriend|boyfriend|family|lifestyle|holiday|vacation|social media|off.track|personal life|health|injur|recovery|recovers)\b/.test(text)) return {tier:'paddock', label:'Personal'};
-  if (/\b(celebrity|fashion|film|movie|documentary|trailer|netflix|streaming|gaming|sim racing|fan event|live event|three.day event|sponsor activation|merchandise)\b/.test(text)) return {tier:'paddock', label:'Tangential'};
   if (/\b(strategy|strategic|undercut|overcut|pit stop|tyre choice|tire choice|degradation|race pace|long run|fuel load|stint)\b/.test(text)) return {tier:'desk', label:'Strategy'};
   if (/\b(appointed|appointment|signing|signed|confirmed|team principal|driver line.up|personnel|replacement)\b/.test(text)) return {tier:'desk', label:'Personnel'};
   if (/\b(technical|technology|upgrade|engine|power unit|aero|regulation|rule|tyre|tire|battery|chassis|floor|wing|design|top speed|mj)\b/.test(title)) return {tier:'desk', label:'Technical'};
-  if (/\b(interview|says|admits|reveals|warns|opens up|explains why|sets out target|wanted to|why\b)\b/.test(title)) return {tier:'paddock', label:'Interview'};
-  if (a.f1_kind === 'results_updates' || a.f1_kind === 'preview_forecast') return {tier:'desk', label:'Update'};
-  if (a.f1_kind === 'rumor_interview') return {tier:'paddock', label:'Paddock'};
-  return {tier:'desk', label:'News'};
+  if (/\b(fp[123]|practice(?:\s+[123])?|qualifying|sprint(?:\s+(?:race|shootout|qualifying))?|race (?:result|report)|live timing|as it happened|leads?\b|outpaces?\b|tops?\b|fastest\b)\b/.test(title)) return {tier:'desk', label:'Update'};
+  if (/\b(penalt(?:y|ies)|investigation|crash|incident|red flag|withdraws?|disqualif|official decision)\b/.test(title)) return {tier:'desk', label:'News'};
+  if (/\b(interview|says|admits|reveals|warns|opens up|explains why|sets out target|wanted to|why\b|predicts?|questions?|opinion)\b/.test(title)) return {tier:'paddock', label:'Interview'};
+  if (/\b(celebrity|fashion|film|movie|documentary|trailer|netflix|streaming|gaming|sim racing|fan event|live event|three.day event|sponsor activation|merchandise|commercial|business|2027|2028)\b/.test(text)) return {tier:'paddock', label:'Tangential'};
+  return {tier:'paddock', label:'Tangential'};
 }
 
 function drawF1(data) {
@@ -1371,15 +1375,18 @@ function drawF1(data) {
   let sessionHtml = '';
   if (weekend) {
     const isLive = Boolean(current);
-    const shown = isLive ? liveResult : result;
+    const openF1IsNewer = liveResult && (!result || new Date(liveResult.end || 0) > new Date(result.end || 0));
+    const shown = isLive ? liveResult : openF1IsNewer ? liveResult : result;
     const shownRows = shown ? (shown.rows || []).map(row => `<tr><td class="num">${row.position}</td><td><span class="f1-team-mark" style="background:#${escapeAttr(row.team_colour || '888888')}"></span><b>${escapeAttr(row.code || row.name || row.number)}</b></td><td>${escapeAttr(row.team || '')}</td><td class="num">${escapeAttr(row.time || '—')}</td><td class="num">${row.position === 1 ? '—' : escapeAttr(row.gap || '—')}</td><td class="num">${row.laps || '—'}</td></tr>`).join('') : '';
     const schedule = `${current ? `<b style="color:#e10600">Live now: ${escapeAttr(current.name)}</b><br>Ends ${escapeAttr(f1Time(current.end))}${next ? '<br>' : ''}` : ''}${next ? `<b>Next: ${escapeAttr(next.name)}</b><br>${escapeAttr(f1Time(next.start))}` : ''}`;
-    const status = isLive ? `${escapeAttr(current.name)} — live provisional order` : shown ? `${escapeAttr(shown.session)} — final classification` : 'Session classification';
-    const sourceLine = isLive ? `OpenF1 · ${shown && shown.weather && shown.weather.air_c != null ? `Air ${escapeAttr(shown.weather.air_c)}°C · Track ${escapeAttr(shown.weather.track_c)}°C` : 'timing is populating'}` : shown ? `${escapeAttr(f1Time(shown.end))}${shown.weather && shown.weather.air_c ? ` · Air ${escapeAttr(shown.weather.air_c)}°C · Track ${escapeAttr(shown.weather.track_c)}°C` : ''}` : '';
+    const status = isLive ? `${escapeAttr(current.name)} — live provisional order` : shown ? `${escapeAttr(shown.session)} — ${shown.provisional ? 'provisional classification' : 'final classification'}` : 'Session classification';
+    const sourceLine = shown ? `${escapeAttr(shown.source || (isLive ? 'OpenF1' : ''))}${shown.end ? ` · ${escapeAttr(f1Time(shown.end))}` : ''}${shown.weather && shown.weather.air_c != null ? ` · Air ${escapeAttr(shown.weather.air_c)}°C · Track ${escapeAttr(shown.weather.track_c)}°C` : ''}` : isLive ? 'OpenF1 · timing is populating' : '';
     const table = shownRows ? `<div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Best</th><th class="num">Gap</th><th class="num">Laps</th></tr></thead><tbody>${shownRows}</tbody></table></div>` : `<p class="empty">${isLive ? 'Live timing will appear as completed laps arrive.' : 'The first completed session classification will appear here.'}</p>`;
     sessionHtml = `<section class="f1-panel f1-session-panel"><div class="f1-session-top"><div><h2>${escapeAttr(weekend.meeting || 'Race weekend')}</h2><div class="f1-panel-sub">${escapeAttr(weekend.circuit || '')}${weekend.country ? ` · ${escapeAttr(weekend.country)}` : ''}</div></div>${schedule ? `<div class="f1-next">${schedule}</div>` : ''}</div><h3>${status}</h3><div class="f1-panel-sub">${sourceLine}</div>${table}</section>`;
   }
-  el.innerHTML = `<div class="f1-desk-head"><div><div class="f1-desk-meta">Formula 1 race desk</div><h1>${weekend ? escapeAttr(weekend.meeting) : 'Championship & results'}</h1></div><div class="f1-desk-meta">Updated ${escapeAttr(updated)}${data.stale ? ' · cached' : ''}</div></div><div class="f1-panels">${sessionHtml}</div>`;
+  el.innerHTML = `<div class="f1-desk-head"><div><div class="f1-desk-meta">Formula 1 race desk</div><h1>${weekend ? escapeAttr(weekend.meeting) : 'Championship & results'}</h1></div><div class="f1-desk-meta">Updated ${escapeAttr(updated)}${data.stale ? ' · cached' : ''}</div></div>`;
+  const sessionSlot = document.getElementById('f1-session-slot');
+  if (sessionSlot) sessionSlot.innerHTML = sessionHtml;
   const standingsSlot = document.getElementById('f1-standings-slot');
   if (standingsSlot) standingsSlot.innerHTML = standingsHtml;
 }
@@ -2223,6 +2230,7 @@ function render() {
     document.getElementById('section-hero').innerHTML = '';
     document.getElementById('section-grid').className = 'f1-news-sections';
     document.getElementById('section-grid').innerHTML =
+      '<div id="f1-session-slot" class="f1-session-slot"></div>' +
       storySection('Race desk', 'Updates · Strategy · Personnel · Technical · News', raceDesk) +
       storySection('Paddock & off-track', 'Interviews · Personal · Rumours · Tangential', paddock);
     document.getElementById('rail-list').innerHTML = '<div id="f1-standings-slot"></div>';

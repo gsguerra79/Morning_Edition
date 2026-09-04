@@ -101,7 +101,10 @@ def _openf1_snapshot(now):
         return None
     session = sessions[-1]
     start, end = _iso(session.get("date_start")), _iso(session.get("date_end"))
-    if not start or not end or not start - timedelta(minutes=30) <= now <= end + timedelta(minutes=30):
+    # `latest` remains useful after the 30-minute live-data window: it is often
+    # finalized by OpenF1 before Formula 1's static archive publishes. Ignore
+    # only a future session that has not entered the live window yet.
+    if not start or not end or now < start - timedelta(minutes=30):
         return None
     key = session.get("session_key")
     drivers = _openf1_json("drivers", session_key=key)

@@ -85,12 +85,30 @@ class F1ServiceTests(unittest.TestCase):
         self.assertEqual("1:20.125", result["rows"][0]["time"])
         self.assertEqual(12, result["rows"][0]["laps"])
 
-    def test_openf1_snapshot_ignores_non_live_window(self):
-        now = datetime(2026, 9, 5, 14, 30, tzinfo=timezone.utc)
+    def test_openf1_snapshot_ignores_future_session_before_live_window(self):
+        now = datetime(2026, 9, 4, 12, 0, tzinfo=timezone.utc)
         sessions = [{"session_key": 123, "date_start": "2026-09-04T14:00:00+00:00",
                      "date_end": "2026-09-04T15:00:00+00:00"}]
         with patch.object(f1_service, "_openf1_json", return_value=sessions):
             self.assertIsNone(f1_service._openf1_snapshot(now))
+
+    def test_openf1_final_result_remains_available_after_live_window(self):
+        now = datetime(2026, 9, 5, 14, 30, tzinfo=timezone.utc)
+        payloads = {
+            "sessions": [{"session_key": 123, "session_name": "Practice 2",
+                "date_start": "2026-09-04T14:00:00+00:00",
+                "date_end": "2026-09-04T15:00:00+00:00"}],
+            "drivers": [{"driver_number": 63, "name_acronym": "RUS"}],
+            "session_result": [{"driver_number": 63, "position": 1,
+                                "duration": 80.125, "number_of_laps": 28}],
+            "weather": [],
+        }
+        with patch.object(f1_service, "_openf1_json",
+                          side_effect=lambda endpoint, **params: payloads[endpoint]):
+            result = f1_service._openf1_snapshot(now)
+        self.assertFalse(result["provisional"])
+        self.assertEqual("Practice 2", result["session"])
+        self.assertEqual("RUS", result["rows"][0]["code"])
 
     def test_openf1_404_result_falls_back_to_live_laps(self):
         now = datetime(2026, 9, 4, 14, 30, tzinfo=timezone.utc)

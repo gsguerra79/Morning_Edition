@@ -164,7 +164,7 @@ class BaselineRegressionTests(unittest.TestCase):
 
     def test_f1_page_has_single_session_frame_sticky_standings_and_news_tiers(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
-        self.assertIn("const shown = isLive ? liveResult : result", html)
+        self.assertIn("const shown = isLive ? liveResult : openF1IsNewer ? liveResult : result", html)
         self.assertIn("f1-session-panel", html)
         self.assertIn("f1-standings-rail", html)
         self.assertIn(".rail-col { min-width:0; position:sticky", html)
