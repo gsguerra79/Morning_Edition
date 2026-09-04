@@ -19,6 +19,11 @@ detailed working state belongs here.
 
 Last reconciled: 2026-09-03
 
+Release status: **v1.0.0 complete — owner accepted 2026-09-03.** The accepted
+v1 boundary is the commissioned rolling reader recorded in the progress ledger.
+Stages 2–6 remain visible below as a post-v1 roadmap; they are deferred, not
+falsely represented as completed work.
+
 ## Delivery doctrine
 
 Engineering gates protect production quality; they are not the product. A
@@ -113,7 +118,7 @@ Owner inspection:
 
 ### Stage 1 — Editorial calibration and direct feedback
 
-Status: Owner inspection
+Status: Closed — owner accepted as v1.0.0 on 2026-09-03
 
 Deliver in the reader:
 
@@ -145,7 +150,7 @@ Owner inspection:
 
 ### Stage 2 — Complete all named source connectors
 
-Status: Not started
+Status: Deferred to post-v1 roadmap
 
 Deliver in the reader:
 
@@ -180,7 +185,7 @@ Owner inspection:
 
 ### Stage 3 — Finite morning newspaper
 
-Status: Not started
+Status: Deferred to post-v1 roadmap
 
 Deliver in the reader:
 
@@ -198,7 +203,7 @@ Owner inspection:
 
 ### Stage 4 — Non-repetitive afternoon update
 
-Status: Not started
+Status: Deferred to post-v1 roadmap
 
 Deliver in the reader:
 
@@ -214,7 +219,7 @@ Owner inspection:
 
 ### Stage 5 — Source-appropriate presentation
 
-Status: Not started
+Status: Deferred to post-v1 roadmap
 
 Deliver in the reader:
 
@@ -232,7 +237,7 @@ Owner inspection:
 
 ### Stage 6 — Cross-device and operational acceptance
 
-Status: Not started
+Status: Deferred to post-v1 roadmap
 
 Deliver in the reader:
 
@@ -976,6 +981,7 @@ session to verify the claim.
 | 2026-09-03 | Stage 1 weather desk deployed | Commissioned a dedicated Weather view and a true issue-generation timestamp in the masthead. Houston includes current conditions, seven daily cards, 24 hourly cards, active NWS alerts, animated KHGX radar, and NWS/NHC storm reporting; Rio is intentionally limited to one current-condition card. | The live Pi returned fresh data with seven daily periods, 24 hourly periods, four storm/hurricane items, Rio conditions, and zero upstream errors. Desktop 1440px and phone 390px renders were visually inspected; radar, article links, responsive forecast strips, and both timestamps are visible. Sixty-three tests pass locally and on the Pi. | Return Stage 1 to `Owner inspection`. Gabriel judges the complete reader, including weather, before closure. |
 | 2026-09-03 | Stage 1 owner tweaks — metric weather, read visibility, source ownership, LEGO | Gabriel requested Celsius, optional rather than compulsory hide-after-open behavior, routine source/topic management inside The Forge Daily instead of Notion, and visible LEGO coverage. | The fresh Notion query still contains the same 33 baseline sources, including Brickset and The Brothers Brick. The live reader now reconciles those with nine additional runtime source variants for 42 managed sources. Sources owns Inventory, Manage sources, and Topics; Settings retains only operational/display controls. Opened stories remain visible by default with a synced opt-in to hide. Weather is metric end-to-end. Technology protects one current Brickset and one Brothers Brick item, while Brickset random-daily filler is rejected. The live 43-feed refresh retained 49 stories including both LEGO sources; fresh metric weather returned without errors; 67 tests pass and desktop/phone renders were inspected. | Keep Stage 1 at `Owner inspection`. Gabriel judges the four changes in the ordinary reader. |
 | 2026-09-03 | Stage 1 All-page gaps and comic-card repair | Gabriel reported holes even in the 49-story rolling All page and blank-looking cards for both comic subscriptions. | The story count was not the cause. Truncated HTML in several feed summaries escaped the intended card and became invisible full-size grid children. Ingestion now reduces fallback summaries to plain text, rendering escapes all summaries and link data, and topic grids use dense flow as a final guard. GiantITP and Wilde Life page artwork is extracted and shown as a deliberate top-biased crop; a host-and-path allow-listed same-origin relay defeats GiantITP hotlink blocking without creating an open proxy. The live desktop grid now has complete rows of 3/4/3/5/2/4/5 columns and phone reflows to single-card rows. Both comic images load at their native dimensions. Seventy-two tests pass locally and on the Pi. | Keep Stage 1 at `Owner inspection`. Gabriel judges the filled All page and comic-card aesthetics in the ordinary reader. |
+| 2026-09-03 | v1.0.0 owner acceptance | Gabriel explicitly accepted the repaired reader and instructed that it be saved to GitHub as “v1 complete.” | Stage 1 is closed. The commissioned 49-story rolling reader, metric weather desk, in-product source/topic management, optional read hiding, LEGO coverage, complete All-page rows, and two artwork-backed comic cards form the accepted v1.0.0 boundary. Unfinished expansion stages remain documented as post-v1 roadmap rather than being mislabeled complete. | Commit the release record, create annotated tag `v1.0.0`, push commit and tag through `gsguerra@4-main-pi`, and verify the remote tag resolves to the release commit. |
 
 ## Session reconciliation checklist
 

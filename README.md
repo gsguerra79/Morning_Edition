@@ -1,5 +1,7 @@
 # Morning Edition
 
+**Current release: v1.0.0 — The Forge Daily owner-accepted reader.**
+
 Morning Edition is a private, self-hosted newspaper that turns approved reading
 sources into a finite morning edition and a non-repetitive afternoon update.
 It organizes stories by reader topic rather than publisher, consolidates
@@ -15,6 +17,7 @@ and copyright notice are preserved in [LICENSE](LICENSE).
   shadow environment, and recovery tooling.
 - `freshrss/` — optional FreshRSS ingestion deployment.
 - `PRODUCT.md` — governing product contract.
+- `CHANGELOG.md` — release history and the accepted v1 product boundary.
 - `EXECUTION-PLAN.md` — phased implementation, decisions, problems, gates, and
   verified progress.
 - `EXISTING-SOLUTIONS.md` — alternatives and foundation evaluation.
