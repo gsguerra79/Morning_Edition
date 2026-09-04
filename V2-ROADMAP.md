@@ -80,7 +80,30 @@ becomes as useful and legible as the accepted rolling reader.
 **Acceptance:** Gabriel can read and compare a real same-day pair on desktop
 and phone and understand every afternoon inclusion without technical tools.
 
-## Priority 4 — Add topic-specific cards where structure adds value
+## Priority 4 — Offer selectable visual identities
+
+**Outcome:** Gabriel can choose among coherent publication styles without
+changing the underlying stories, ranking, source rules, or reader behavior.
+
+- Keep the accepted **Modern Magazine** identity as the default.
+- Add a **Traditional Broadsheet** identity with stronger column structure,
+  classical newspaper typography, rules, folios, and denser headline hierarchy.
+- Add an **Editorial Journal** identity with restrained spacing, larger imagery,
+  and a calmer long-form reading emphasis.
+- Add a **Newsroom Dashboard** identity with higher information density, compact
+  cards, faster scanning, and stronger live-status treatment.
+- Retain light/dark mode within each identity where contrast and legibility can
+  be maintained honestly.
+- Store the selected identity as a synchronized preference and apply it to the
+  rolling issue, topic pages, weather, sources, editions, feedback, and settings.
+- Build the identities from shared design tokens and layout components so new
+  features cannot drift into four unrelated interfaces.
+
+**Acceptance:** Gabriel can switch among all four identities in the normal
+reader on desktop and phone; every view remains complete, readable, responsive,
+and functionally identical, and the choice persists across devices.
+
+## Priority 5 — Add topic-specific cards where structure adds value
 
 **Outcome:** structured subjects stop looking like generic articles.
 
@@ -97,7 +120,7 @@ and phone and understand every afternoon inclusion without technical tools.
 **Acceptance:** real examples of each structured format are visibly more useful
 than the ordinary article card and remain clean on desktop and phone.
 
-## Priority 5 — Optional connector-quality upgrades
+## Priority 6 — Optional connector-quality upgrades
 
 These are upgrades to active coverage, not blockers and not a reason to delay
 the priorities above.
@@ -111,7 +134,7 @@ the priorities above.
 - Financial Times and World Surf League require monitoring, not replacement,
   while their current first-party connections remain healthy.
 
-## Priority 6 — Operational finish
+## Priority 7 — Operational finish
 
 **Outcome:** recovery and failures are owner-visible and routinely proven.
 
@@ -144,5 +167,5 @@ The following work is already delivered in v1 or the post-release source fix:
 ## Execution order
 
 Start with Priority 1. Complete one owner-verifiable slice at a time and obtain
-explicit acceptance before opening the next priority. Priority 5 may be
+explicit acceptance before opening the next priority. Priority 6 may be
 investigated opportunistically but must not displace owner-facing work.
