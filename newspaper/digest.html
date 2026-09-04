@@ -2262,7 +2262,9 @@ async function renderCoverage() {
           return `<article class="coverage-source">
             <div class="coverage-source-head">
               <span class="coverage-source-name">${coverageText(source.source)}</span>
+              ${(source.topics || []).length > 1 ? `<span class="coverage-chip">${coverageText(source.topics.join(' · '))}</span>` : ''}
               <span class="coverage-chip ${live ? 'live' : 'gap'}">${live ? 'Adapter active' : coverageText(source.adapter_state)}</span>
+              ${source.active_adapters > 1 ? `<span class="coverage-chip live">${source.active_adapters} feeds</span>` : ''}
               <span class="coverage-chip ${loaded ? 'live' : 'warn'}">${loaded ? 'Loaded in reader' : coverageText(source.ingestion_state)}</span>
               <span class="coverage-chip ${source.health_state === 'healthy' || source.health_state === 'healthy-no-recent-items' ? 'live' : 'warn'}">${coverageText(source.health_state).replaceAll('-', ' ')}</span>
               ${source.current_items ? `<span class="coverage-chip">${source.current_items} current items</span>` : ''}

@@ -30,7 +30,14 @@ SOURCE_ALIASES = {
     "bbc football": "BBC", "bbc formula 1": "BBC",
     "financial times us": "Financial Times",
     "financial times world": "Financial Times",
+    "ge flamengo": "Globo",
+    "medium technology": "Medium",
 }
+
+
+def _canonical_source(value):
+    source = str(value or "").strip()
+    return SOURCE_ALIASES.get(source.casefold(), source)
 
 
 def _url(value):
@@ -92,7 +99,7 @@ def build(registry, feeds, digest=None, rules=None):
     for article in (digest or {}).get("articles", []):
         if isinstance(article, dict):
             raw = str(article.get("editorial_source") or article.get("source") or "")
-            article_counts[SOURCE_ALIASES.get(raw.casefold(), raw)] += 1
+            article_counts[_canonical_source(raw)] += 1
 
     rows = []
     for source in sources:
@@ -157,7 +164,7 @@ def build(registry, feeds, digest=None, rules=None):
         url = _url(feed.get("url"))
         if not url or url in registry_urls:
             continue
-        source = str(feed.get("source") or "").strip()
+        source = _canonical_source(feed.get("source"))
         if not source:
             continue
         item = runtime_only.setdefault(source, {"urls": [], "category": feed.get("category")})
@@ -188,10 +195,53 @@ def build(registry, feeds, digest=None, rules=None):
             "origin": "reader",
         })
 
+    # Runtime endpoints may use a descriptive label (BBC US & Canada, FT World,
+    # GE Flamengo) while the editorial registry holds the owner's canonical
+    # source and its guidance. Merge those records here: one owner-facing source,
+    # all working endpoints, and the detailed editorial instructions preserved.
+    consolidated = {}
+    health_priority = {
+        "fetch-failed": 5, "not-checked": 4, "healthy": 3,
+        "healthy-no-recent-items": 2, "waiting-for-connector": 1,
+    }
+    for row in rows:
+        name = _canonical_source(row.get("source"))
+        existing = consolidated.get(name)
+        if existing is None:
+            item = dict(row)
+            item["source"] = name
+            item["topics"] = list(dict.fromkeys(row.get("topics") or []))
+            consolidated[name] = item
+            continue
+        existing["topics"] = list(dict.fromkeys(
+            (existing.get("topics") or []) + (row.get("topics") or [])))
+        for field in ("what_i_read", "must_include", "avoid", "sufficiency"):
+            if not existing.get(field) and row.get(field):
+                existing[field] = row[field]
+        existing["active_adapters"] += row.get("active_adapters") or 0
+        existing["configured_adapters"] += row.get("configured_adapters") or 0
+        existing["adapter_state"] = (
+            "active" if existing["active_adapters"] else existing["adapter_state"])
+        if existing["active_adapters"]:
+            existing["ingestion_state"] = (
+                "loaded" if existing["configured_adapters"] == existing["active_adapters"]
+                else "partial" if existing["configured_adapters"] else "not-loaded")
+        if row.get("active_adapters") and health_priority.get(
+                row.get("health_state"), 0) > health_priority.get(existing.get("health_state"), 0):
+            existing["health_state"] = row["health_state"]
+        existing["current_items"] = max(
+            existing.get("current_items") or 0, row.get("current_items") or 0)
+        if row.get("origin") == "editorial-registry":
+            existing["origin"] = "editorial-registry"
+    rows = list(consolidated.values())
+
+    # A source is one inventory record even when it serves several paper pages.
+    # Its full topic list remains on the card; the first owner topic determines
+    # where that single card is filed.
     pages = {}
     for row in rows:
-        for topic in row["topics"] or ["Unassigned"]:
-            pages.setdefault(topic, []).append(row)
+        topic = (row["topics"] or ["Unassigned"])[0]
+        pages.setdefault(topic, []).append(row)
     pages = [{"page": name, "sources": sorted(items, key=lambda item: item["source"].casefold())}
              for name, items in sorted(pages.items())]
     rule_state = _rule_state(rules)

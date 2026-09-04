@@ -59,6 +59,61 @@ class SourceCoverageTests(unittest.TestCase):
         self.assertEqual("reader", rows[0]["origin"])
         self.assertEqual("healthy", rows[0]["health_state"])
 
+    def test_runtime_alias_is_merged_into_detailed_canonical_source(self):
+        result = build(
+            {"generated_at": "2026-08-30T00:00:00Z", "sources": [{
+                "source": "Financial Times", "topics": ["World News"],
+                "what_i_read": "World and US news", "must_include": "Major events",
+                "adapters": [{"type": "connector", "status": "planned"}],
+            }]},
+            [
+                {"url": "https://ft.test/us", "source": "Financial Times US",
+                 "category": "worldnews"},
+                {"url": "https://ft.test/world", "source": "Financial Times World",
+                 "category": "worldnews"},
+            ],
+            {"articles": [{"source": "Financial Times US"}], "feed_health": [
+                {"url": "https://ft.test/us", "status": "fetched", "items": 1},
+                {"url": "https://ft.test/world", "status": "fetched", "items": 2},
+            ]},
+            {"sources": {}},
+        )
+        rows = [row for page in result["pages"] for row in page["sources"]]
+        self.assertEqual(1, len(rows))
+        self.assertEqual("Financial Times", rows[0]["source"])
+        self.assertEqual("World and US news", rows[0]["what_i_read"])
+        self.assertEqual("Major events", rows[0]["must_include"])
+        self.assertEqual("active", rows[0]["adapter_state"])
+        self.assertEqual("loaded", rows[0]["ingestion_state"])
+        self.assertEqual(2, rows[0]["active_adapters"])
+        self.assertEqual(1, rows[0]["current_items"])
+        self.assertEqual(1, result["summary"]["sources"])
+        self.assertEqual(0, result["summary"]["connector_gaps"])
+
+    def test_multi_topic_source_appears_as_one_inventory_card(self):
+        result = build(
+            {"sources": [{
+                "source": "BBC", "topics": ["World News"],
+                "adapters": [{"type": "rss", "status": "active",
+                              "url": "https://bbc.test/world"}],
+            }]},
+            [
+                {"url": "https://bbc.test/world", "source": "BBC",
+                 "category": "worldnews"},
+                {"url": "https://bbc.test/football", "source": "BBC Football",
+                 "category": "sports"},
+            ],
+            {"feed_health": [
+                {"url": "https://bbc.test/world", "status": "fetched", "items": 1},
+                {"url": "https://bbc.test/football", "status": "fetched", "items": 1},
+            ]},
+            {"sources": {}},
+        )
+        rows = [row for page in result["pages"] for row in page["sources"]]
+        self.assertEqual(1, len(rows))
+        self.assertEqual(["World News", "Sports"], rows[0]["topics"])
+        self.assertEqual(2, rows[0]["active_adapters"])
+
 
 if __name__ == "__main__":
     unittest.main()

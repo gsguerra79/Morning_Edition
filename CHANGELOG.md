@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Consolidate descriptive runtime feed labels into their canonical source record
+  in Sources, preserving editorial guidance while showing every active endpoint.
+- Keep each canonical source to one inventory card even when it serves multiple
+  paper pages; show its page assignments and feed count on that card.
+- Reconcile the existing Notion source rows with current connection status and
+  page assignments without creating duplicate records.
+
 ## v1.0.0 — 2026-09-03
 
 First owner-accepted release of The Forge Daily.
