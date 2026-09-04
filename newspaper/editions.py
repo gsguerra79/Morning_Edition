@@ -138,6 +138,48 @@ def latest():
     return load(items[0]['id']) if items else None
 
 
+def today(now=None):
+    """Return the stable front page: morning plus marked PM additions."""
+    now = now or datetime.now(ZoneInfo(TIMEZONE))
+    morning = load(edition_id('morning', now))
+    afternoon = load(edition_id('afternoon', now))
+    if not morning:
+        items = list_editions()
+        if not items:
+            return None
+        carried_date = items[0].get('date')
+        carried_now = datetime.fromisoformat(f'{carried_date}T12:00:00').replace(
+            tzinfo=ZoneInfo(TIMEZONE))
+        carried_morning = load(edition_id('morning', carried_now))
+        result = today(carried_now) if carried_morning else dict(latest())
+        result['carried_from_previous'] = True
+        result['edition_message'] = 'The latest published edition remains on the front page.'
+        result['generated_at'] = result.get('published_at')
+        return result
+
+    morning_articles = [dict(article, edition_part='morning')
+                        for article in morning.get('articles', [])]
+    additions = [dict(article, edition_part='afternoon')
+                 for article in (afternoon or {}).get('articles', [])]
+    seen = {article.get('story_fingerprint') or article.get('cluster_id') or article.get('id')
+            for article in morning_articles}
+    additions = [article for article in additions
+                 if (article.get('story_fingerprint') or article.get('cluster_id') or article.get('id')) not in seen]
+    published_at = (afternoon or morning).get('published_at')
+    return {
+        'id': 'today', 'kind': 'today', 'date': now.date().isoformat(),
+        'published_at': published_at, 'generated_at': published_at,
+        'morning_published_at': morning.get('published_at'),
+        'afternoon_published_at': (afternoon or {}).get('published_at'),
+        'afternoon_count': len(additions),
+        'article_count': len(morning_articles) + len(additions),
+        'articles': morning_articles + additions,
+        'stable': True,
+        'edition_message': ('Morning Edition with afternoon additions.' if afternoon
+                            else 'Morning Edition. The front page stays fixed until the afternoon update.'),
+    }
+
+
 def list_editions():
     try:
         names = sorted((n[:-5] for n in os.listdir(EDITIONS_DIR)

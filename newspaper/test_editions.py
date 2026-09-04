@@ -135,6 +135,45 @@ class EditionTests(unittest.TestCase):
         self.assertLessEqual(afternoon['article_count'], 15)
         self.assertEqual(30, afternoon['selection_report']['material_change']['new_stories'])
 
+    def test_today_is_stable_morning_before_afternoon(self):
+        morning = editions.publish({'articles': [
+            {'id': 'am', 'title': 'Morning', 'url': 'https://example.com/am',
+             'source': 'Reuters', 'category': 'worldnews', 'cluster_rep': True, 'score': 9},
+        ]}, 'morning', self.now)
+        result = editions.today(self.now)
+        self.assertTrue(result['stable'])
+        self.assertEqual(morning['published_at'], result['generated_at'])
+        self.assertEqual(['morning'], [item['edition_part'] for item in result['articles']])
+        self.assertEqual(0, result['afternoon_count'])
+
+    def test_today_keeps_morning_and_appends_afternoon_additions(self):
+        editions.publish({'articles': [
+            {'id': 'am', 'title': 'Morning', 'url': 'https://example.com/am',
+             'source': 'Reuters', 'category': 'worldnews', 'cluster_rep': True, 'score': 9},
+        ]}, 'morning', self.now)
+        editions.publish({'articles': [
+            {'id': 'pm', 'title': 'Distinct afternoon development', 'url': 'https://example.com/pm',
+             'source': 'BBC World', 'category': 'worldnews', 'cluster_rep': True, 'score': 10},
+        ]}, 'afternoon', self.now)
+        result = editions.today(self.now)
+        self.assertEqual(['am', 'pm'], [item['id'] for item in result['articles']])
+        self.assertEqual(['morning', 'afternoon'], [item['edition_part'] for item in result['articles']])
+        self.assertEqual(1, result['afternoon_count'])
+
+    def test_today_carries_complete_previous_issue_before_morning(self):
+        editions.publish({'articles': [
+            {'id': 'am', 'title': 'Morning', 'url': 'https://example.com/am',
+             'source': 'Reuters', 'category': 'worldnews', 'cluster_rep': True, 'score': 9},
+        ]}, 'morning', self.now)
+        editions.publish({'articles': [
+            {'id': 'pm', 'title': 'Afternoon', 'url': 'https://example.com/pm',
+             'source': 'BBC World', 'category': 'worldnews', 'cluster_rep': True, 'score': 10},
+        ]}, 'afternoon', self.now)
+        next_day = self.now.replace(day=25, hour=6, minute=0)
+        result = editions.today(next_day)
+        self.assertTrue(result['carried_from_previous'])
+        self.assertEqual(['am', 'pm'], [item['id'] for item in result['articles']])
+
 
 if __name__ == '__main__':
     unittest.main()

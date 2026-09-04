@@ -18,6 +18,7 @@ Endpoints:
   GET  /status                live pipeline status (running/phase/last run)
   GET  /weather               cached Houston forecast/radar/alerts + Rio current weather
   GET  /f1                    cached standings + finalized race-weekend timing
+  GET  /hot-metal             current consequential breaking headlines
   GET  /comic-image           allow-listed relay for subscribed comic artwork
   GET  /card-image            allow-listed relay for FT/Reuters card artwork
   POST /refresh               trigger a pipeline run now
@@ -37,6 +38,7 @@ from urllib.parse import urlparse, parse_qs
 
 import pipeline
 import editions
+import pressing_news as hot_metal
 import settings
 import source_coverage
 import weather_service
@@ -788,25 +790,20 @@ class StateHandler(BaseHTTPRequestHandler):
             self._serve_digest()
             return
         if path == '/editions':
-            archive = editions.list_editions()
+            self._json(200, editions.list_editions())
+            return
+        if path == '/hot-metal':
             try:
                 with open(DIGEST_FILE, encoding='utf-8') as fh:
-                    live = editions.preview(json.load(fh))
-                preview_item = {k: live.get(k) for k in (
-                    'id', 'kind', 'date', 'published_at', 'article_count', 'preview')}
-                archive.insert(0, preview_item)
+                    item = hot_metal.select(json.load(fh))
             except (OSError, json.JSONDecodeError):
-                pass
-            self._json(200, archive)
+                item = None
+            self._json(200, item) if item else self._json(503, {'error': 'Current ingest unavailable'})
             return
         if path.startswith('/editions/'):
             edition_name = path.rsplit('/', 1)[-1]
-            if edition_name == 'live-preview':
-                try:
-                    with open(DIGEST_FILE, encoding='utf-8') as fh:
-                        item = editions.preview(json.load(fh))
-                except (OSError, json.JSONDecodeError):
-                    item = None
+            if edition_name == 'today':
+                item = editions.today()
             else:
                 item = editions.load(edition_name)
             self._json(200, item) if item else self._json(404, {'error': 'Edition not found'})

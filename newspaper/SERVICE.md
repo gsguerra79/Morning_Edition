@@ -10,12 +10,17 @@ authentication, transport security, and an explicit threat review.
 - Edition files are immutable unless an operator deliberately forces recovery.
 - The home page groups stories by topic; sources appear as provenance.
 - Deterministic summaries and title-token clustering work with AI disabled.
-- The Editions view begins with a bounded **Live Preview** built from the
-  current digest. It updates after ingestion and never writes or replaces an
-  immutable edition file.
-- Home reads that finite selected preview rather than exposing the raw retained
-  ingestion pool. If a saved category filter no longer exists, Home safely
-  resets to All instead of appearing empty.
+- **Home is a stable published paper.** It loads the immutable morning issue at
+  07:30. After 16:30 it keeps every morning story and appends only new or
+  materially changed afternoon stories, marked **Afternoon addition**. Browser
+  refreshes do not reshuffle Home between those publication events.
+- **Hot Metal** is separate from Home and reads the current ingest. Its strict
+  gate admits only recent consequential world/Brazil headlines—catastrophes,
+  major conflict or political developments, pivotal public addresses, and
+  exceptional institutional events—from a major outlet or corroborated cluster.
+  It is deliberately allowed to be empty rather than padded with ordinary news.
+- If a saved category filter no longer exists, Home safely resets to All instead
+  of appearing empty.
 - Corpus admission preserves the best live story from each contributing source
   before filling remaining capacity under a per-source ceiling. Same-publisher
   clusters receive no corroboration boost. Durable pages use cadence-appropriate
@@ -71,7 +76,8 @@ volume; later in-app changes survive image rebuilds.
 
 - `/status` — ingestion health
 - `/editions` — archive index
-- `/editions/live-preview` — non-persistent bounded issue from the current digest
+- `/editions/today` — stable current front page (morning plus afternoon additions)
+- `/hot-metal` — strictly selected consequential headlines from the current ingest
 - `/source-coverage` — reader-ready source-scope and ingestion reconciliation
 - `/weather` — cached Houston weather desk and Rio current observation
 - `/f1` — cached championships and finalized race-weekend session results

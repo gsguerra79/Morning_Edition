@@ -118,6 +118,13 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertNotIn("whyLine(", html)
         self.assertIn("why_selected", (Path(__file__).parent / "pipeline.py").read_text())
 
+    def test_home_is_stable_and_hot_metal_is_separate(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("const DIGEST_URL        = '/editions/today'", html)
+        self.assertIn("const HOT_METAL_URL     = '/hot-metal'", html)
+        self.assertIn('Hot Metal', html)
+        self.assertNotIn('Live Preview', html)
+
     def test_ft_and_reuters_have_source_art_when_story_image_is_absent(self):
         root = Path(__file__).parent
         html = (root / "digest.html").read_text(encoding="utf-8")

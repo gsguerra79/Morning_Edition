@@ -494,6 +494,15 @@
 
     /* ── History and Later shared list styles ───────────── */
     .list-view { max-width: 800px; margin-top: 28px; }
+    .hot-metal-desk { margin-top: 30px; }
+    .hot-metal-head { max-width: 780px; margin-bottom: 28px; }
+    .hot-metal-head h1 { font-family: var(--font-head); font-size: clamp(34px, 6vw, 64px); line-height: .95; letter-spacing: -.045em; margin: 8px 0 12px; }
+    .hot-metal-dek { color: var(--text2); font-size: 16px; line-height: 1.55; max-width: 680px; }
+    .hot-metal-meta { color: var(--text3); font-size: 12px; margin-top: 10px; }
+    .hot-metal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:30px 26px; }
+    .hot-reason { display:inline-block; margin:0 0 8px; color:var(--brand); font-family:var(--font-head); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+    .edition-status { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:22px 0 10px; padding:10px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); color:var(--text2); font-size:12px; }
+    .edition-part { color:var(--brand); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
     .list-meta { font-size: 12px; color: var(--text3); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
     .list-clear { background: transparent; border: 1px solid var(--border2); border-radius: 20px; padding: 3px 12px; font-size: 11px; color: var(--text3); cursor: pointer; font-family: var(--font-body); }
     .list-clear:hover { color: var(--text); border-color: var(--text3); }
@@ -832,6 +841,9 @@
     <button class="viewnav-tab active" onclick="switchView('digest')" id="vnav-digest">
       Home <span class="vbadge" id="badge-digest"></span>
     </button>
+    <button class="viewnav-tab" onclick="switchView('hotmetal')" id="vnav-hotmetal">
+      Hot Metal
+    </button>
     <button class="viewnav-tab" onclick="switchView('weather')" id="vnav-weather">
       Weather
     </button>
@@ -871,6 +883,7 @@
   <div class="view active" id="view-digest">
     <section id="search-results" class="list-view" style="display:none;"></section>
     <div id="digest-magazine">
+      <div id="edition-status" class="edition-status"></div>
       <section id="f1-desk" class="f1-desk"></section>
       <section id="section-hero" class="hero"></section>
       <div class="cols">
@@ -884,6 +897,10 @@
         </aside>
       </div>
     </div>
+  </div>
+
+  <div class="view" id="view-hotmetal">
+    <div class="hot-metal-desk" id="hot-metal-content"><p class="empty">Heating the press…</p></div>
   </div>
 
   <div class="view" id="view-weather">
@@ -938,7 +955,8 @@ function toggleTheme() {
 }
 
 /* ── Config ───────────────────────────────────────────── */
-const DIGEST_URL        = '/editions/live-preview';
+const DIGEST_URL        = '/editions/today';
+const HOT_METAL_URL     = '/hot-metal';
 const EDITIONS_URL      = '/editions';
 const STATE_URL         = '/state';
 const WEATHER_URL       = '/weather';
@@ -1224,7 +1242,8 @@ function rerenderActiveView() {
   buildCatNav();
   updateCatCounts();
   updateBadges();
-  if (currentView === 'history') renderHistory();
+  if (currentView === 'hotmetal') renderHotMetal(false);
+  else if (currentView === 'history') renderHistory();
   else if (currentView === 'weather') renderWeather();
   else if (currentView === 'feedback') renderFeedback();
   else if (currentView === 'editions') renderEditions();
@@ -1261,6 +1280,18 @@ async function refreshFromRemote() {
 let currentCat = 'all';
 let currentView = 'digest';
 let digestCat = 'all';
+let hotMetalArticles = [];
+let hotMetalPayload = null;
+
+function articleById(id) {
+  return allArticles.find(a => a.id === id) || hotMetalArticles.find(a => a.id === id);
+}
+
+function articleUniverse() {
+  const items = new Map(allArticles.map(a => [a.id, a]));
+  hotMetalArticles.forEach(a => items.set(a.id, a));
+  return [...items.values()];
+}
 
 /* ── View switching ───────────────────────────────────── */
 
@@ -1278,7 +1309,7 @@ function setActiveView(view) {
   const search = document.getElementById('digest-search');
   if (search) search.style.display = (view === 'digest') ? '' : 'none';
   const catbar = document.getElementById('catbar');
-  if (catbar) catbar.style.display = (view === 'weather') ? 'none' : '';
+  if (catbar) catbar.style.display = (view === 'weather' || view === 'hotmetal') ? 'none' : '';
 }
 
 function switchView(view) {
@@ -1298,6 +1329,7 @@ function switchView(view) {
   buildCatNav();
 
   if (view === 'history')  renderHistory();
+  if (view === 'hotmetal') renderHotMetal(true);
   if (view === 'weather')  renderWeather();
   if (view === 'feedback') renderFeedback();
   if (view === 'later')    renderLater();
@@ -1547,7 +1579,8 @@ function kicker(a) {
   const kinds = {results_updates:'Session / results', technical:'Technical', preview_forecast:'Preview', news:'News', rumor_interview:'Rumor / interview'};
   const presentation = a.category === 'formula1' ? f1ArticleClass(a) : null;
   const kind = presentation ? `<span class="f1-kind">${escapeAttr(presentation.label)}</span>` : a.f1_kind ? `<span class="f1-kind">${kinds[a.f1_kind] || escapeAttr(a.f1_kind)}</span>` : '';
-  return `<span class="kicker" style="color:${cat.c}"><span class="cdot" style="background:${cat.c}"></span>${cat.label || a.category}${kind}</span>`;
+  const editionPart = a.edition_part === 'afternoon' ? '<span class="edition-part">Afternoon addition</span>' : '';
+  return `<span class="kicker" style="color:${cat.c}"><span class="cdot" style="background:${cat.c}"></span>${cat.label || a.category}${kind}${editionPart}</span>`;
 }
 
 function articleDate(article) {
@@ -1719,10 +1752,10 @@ window.resetLearning = function() {
 // leaves Home as a single unit — Done on the card, opening any member, or
 // saving the representative to Later all retire the whole cluster.
 function markClusterRead(id) {
-  const a = allArticles.find(x => x.id === id);
+  const a = articleById(id);
   if (!a) return;
   const cid = a.cluster_id || a.id;
-  allArticles.forEach(x => { if ((x.cluster_id || x.id) === cid) sharedState.readIds.add(x.id); });
+  articleUniverse().forEach(x => { if ((x.cluster_id || x.id) === cid) sharedState.readIds.add(x.id); });
 }
 
 // Summarise a representative's cluster — the other articles semantically about
@@ -1751,7 +1784,7 @@ function clusterDisclosure(a) {
 }
 
 window.openClusterMember = function(repId, memberId, url) {
-  const member = allArticles.find(a => a.id === memberId);
+  const member = articleById(memberId);
   if (member) {
     if (!sharedState.history.find(h => h.id === memberId)) {
       sharedState.history.push({
@@ -1775,7 +1808,7 @@ window.openClusterMember = function(repId, memberId, url) {
 /* ── Dismiss ──────────────────────────────────────────── */
 window.dismiss = function(id, internal = false) {
   if (!internal) {
-    const article = allArticles.find(a => a.id === id);
+    const article = articleById(id);
     if (article) recordInteraction(article.source, 'dismiss');
   }
   sharedState.readIds.add(id);
@@ -1798,7 +1831,7 @@ const FEEDBACK_REASONS = {
 let feedbackTargetId = null;
 
 window.openFeedbackPanel = function(id) {
-  const article = allArticles.find(a => a.id === id);
+  const article = articleById(id);
   if (!article) return;
   feedbackTargetId = id;
   document.getElementById('feedback-story').textContent = article.title;
@@ -1814,10 +1847,10 @@ window.closeFeedbackPanel = function() {
 };
 
 window.submitFeedback = function(reason) {
-  const article = allArticles.find(a => a.id === feedbackTargetId);
+  const article = articleById(feedbackTargetId);
   if (!article || !FEEDBACK_REASONS[reason]) return;
   const cid = article.cluster_id || article.id;
-  const storyIds = allArticles
+  const storyIds = articleUniverse()
     .filter(a => (a.cluster_id || a.id) === cid)
     .map(a => a.id);
   if (!sharedState.feedback) sharedState.feedback = [];
@@ -1852,7 +1885,7 @@ window.undoFeedback = function(id) {
 
 /* ── Open article ─────────────────────────────────────── */
 function openArticle(id, url) {
-  const article = allArticles.find(a => a.id === id);
+  const article = articleById(id);
   if (article) {
     if (!sharedState.history.find((h) => h.id === id)) {
       sharedState.history.push({
@@ -1880,7 +1913,7 @@ function openArticle(id, url) {
 
 /* ── Save for later ───────────────────────────────────── */
 function saveForLater(id) {
-  const article = allArticles.find(a => a.id === id);
+  const article = articleById(id);
   if (!article) return;
   if (!sharedState.later.find((a) => a.id === id)) {
     sharedState.later.push({
@@ -2366,15 +2399,54 @@ function gridCardHTML(a) {
     </article>`;
 }
 
+function hotMetalCardHTML(a) {
+  return `<article class="article-wrap card" id="wrap-${a.id}" style="max-height:9999px;">
+      ${thumbBlock(a)}
+      <span class="hot-reason">${escapeAttr(a.hot_metal_reason || 'Consequential breaking news')}</span>
+      <h3 class="card-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
+      ${a.summary ? `<p class="card-summary">${escapeAttr(a.summary)}</p>` : ''}
+      ${clusterDisclosure(a)}
+      <div class="card-foot">${srcLine(a)} ${cardActions(a)}</div>
+    </article>`;
+}
+
+async function renderHotMetal(refresh = true) {
+  const el = document.getElementById('hot-metal-content');
+  if (refresh || !hotMetalPayload) {
+    el.innerHTML = '<p class="empty">Heating the press…</p>';
+    try {
+      const response = await fetch(HOT_METAL_URL, {cache:'no-store'});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      hotMetalPayload = await response.json();
+      hotMetalArticles = hotMetalPayload.articles || [];
+    } catch (error) {
+      el.innerHTML = '<p class="empty">Hot Metal is temporarily unavailable.</p>';
+      return;
+    }
+  }
+  const updated = hotMetalPayload.generated_at
+    ? `Current ingest checked ${formatDateTime(hotMetalPayload.generated_at)}` : 'Current ingest';
+  const inLater = laterIdSet();
+  const items = hotMetalArticles.filter(a => !inLater.has(a.id));
+  el.innerHTML = `<header class="hot-metal-head">
+      <p class="sec-label">Interrupt the edition</p>
+      <h1>Hot Metal</h1>
+      <p class="hot-metal-dek">Consequential headlines worth reading now: major world events, catastrophes, pivotal public addresses, and developments leading the serious news outlets.</p>
+      <p class="hot-metal-meta">${updated} · refreshed from the live news ingest</p>
+    </header>` + (items.length
+      ? `<div class="hot-metal-grid">${items.map(hotMetalCardHTML).join('')}</div>`
+      : '<p class="empty">No headline currently clears the Hot Metal threshold. The stable edition remains current.</p>');
+}
+
 async function renderEditions() {
   const el = document.getElementById('editions-content');
   el.innerHTML = '<p class="empty">Loading editions…</p>';
   try {
     const list = await (await fetch(EDITIONS_URL, {cache:'no-store'})).json();
     if (!list.length) { el.innerHTML = '<p class="empty">The first edition has not been published yet.</p>'; return; }
-    el.innerHTML = `<p class="sec-label">Read Now</p>` + list.map(e => `
+    el.innerHTML = `<p class="sec-label">Published Archive</p>` + list.map(e => `
       <button class="rail-more" style="display:block;width:100%;text-align:left;margin:8px 0"
-        onclick="openEdition('${e.id}')">${e.preview ? 'Live Preview' : `${e.date} · ${e.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`} · ${e.article_count} stories${e.preview ? ' · updates automatically' : ''}</button>`).join('');
+        onclick="openEdition('${e.id}')">${e.date} · ${e.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'} · ${e.article_count} stories</button>`).join('');
   } catch (e) { el.innerHTML = '<p class="empty">Could not load the archive.</p>'; }
 }
 
@@ -2481,9 +2553,7 @@ window.openEdition = async function(id) {
   const edition = await (await fetch(`${EDITIONS_URL}/${id}`, {cache:'no-store'})).json();
   applyDigestData(edition);
   switchView('digest');
-  document.getElementById('header-date').textContent = edition.preview
-    ? `${edition.date} · Live Preview · ${edition.article_count} stories`
-    : `${edition.date} · ${edition.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`;
+  document.getElementById('header-date').textContent = `${edition.date} · ${edition.kind === 'morning' ? 'Morning Edition' : 'Afternoon Update'}`;
 };
 
 function renderGrid(cards) {
@@ -3973,6 +4043,17 @@ function applyDigestData(data) {
     timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
   });
   document.getElementById('header-date').textContent = `— ${issueDay} · Updated ${issueTime}`;
+  const status = document.getElementById('edition-status');
+  if (status) {
+    if (data.kind === 'today') {
+      const label = data.afternoon_published_at
+        ? `Today’s Edition · Morning paper + ${data.afternoon_count || 0} afternoon addition${data.afternoon_count === 1 ? '' : 's'}`
+        : 'Today’s Edition · Morning paper';
+      status.innerHTML = `<strong>${label}</strong><span>${escapeAttr(data.edition_message || '')}</span>`;
+    } else {
+      status.innerHTML = `<strong>Published archive</strong><span>${data.kind === 'afternoon' ? 'Afternoon Update' : 'Morning Edition'}</span>`;
+    }
+  }
 }
 
 function refreshRunPill(running, phase) {
@@ -4037,7 +4118,10 @@ async function pollStatus() {
   // surfaces a run the moment it lands or fails).
   if (currentView === 'settings' && settingsTab === 'runs') refreshRuns();
   // A run just finished — see if it produced a fresh digest to surface.
-  if (lastRunning && !running) await checkForNewDigest();
+  if (lastRunning && !running) {
+    await checkForNewDigest();
+    if (currentView === 'hotmetal') await renderHotMetal(true);
+  }
   lastRunning = running;
   // Poll fast while a run is active, slow when idle.
   scheduleStatusPoll(running ? 3000 : 25000);
@@ -4086,7 +4170,7 @@ async function loadDigest() {
     if (!CATS[digestCat]) digestCat = 'all';
     sharedState.viewState = { ...sharedState.viewState, currentCat, digestCat };
     const requestedView = location.hash.replace(/^#/, '');
-    if (['digest', 'weather', 'later', 'history', 'feedback', 'editions', 'coverage', 'settings'].includes(requestedView)) {
+    if (['digest', 'hotmetal', 'weather', 'later', 'history', 'feedback', 'editions', 'coverage', 'settings'].includes(requestedView)) {
       currentView = requestedView;
       sharedState.viewState = { ...sharedState.viewState, currentView };
     }
@@ -4099,7 +4183,8 @@ async function loadDigest() {
     buildCatNav();
     updateCatCounts();
     updateBadges();
-    if (currentView === 'history')       renderHistory();
+    if (currentView === 'hotmetal')      renderHotMetal(true);
+    else if (currentView === 'history')  renderHistory();
     else if (currentView === 'weather')  renderWeather();
     else if (currentView === 'feedback') renderFeedback();
     else if (currentView === 'later')    renderLater();
