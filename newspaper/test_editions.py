@@ -89,6 +89,35 @@ class EditionTests(unittest.TestCase):
         self.assertEqual(2, issue['selection_report']['selected_stories'])
         self.assertTrue(all(item['why_selected'] for item in issue['articles']))
 
+    def test_publish_preserves_article_level_us_world_routing(self):
+        original_registry = editions.EDITORIAL_REGISTRY_FILE
+        try:
+            registry_path = os.path.join(self.tmp.name, 'registry.json')
+            with open(registry_path, 'w', encoding='utf-8') as fh:
+                import json
+                json.dump({'sources': [
+                    {'source': 'BBC', 'topics': ['World News']},
+                    {'source': 'Reuters', 'topics': ['World News', 'US News']},
+                ]}, fh)
+            editions.EDITORIAL_REGISTRY_FILE = registry_path
+            issue = editions.publish({'articles': [
+                {'id': 'bbc-us', 'cluster_id': 'bbc-us', 'cluster_rep': True,
+                 'title': 'US court issues national ruling', 'source': 'BBC US & Canada',
+                 'category': 'usnews', 'score': 9},
+                {'id': 'reuters-us', 'cluster_id': 'reuters-us', 'cluster_rep': True,
+                 'title': 'Texas lawmakers pass statewide measure', 'source': 'Reuters',
+                 'category': 'usnews', 'score': 8},
+                {'id': 'reuters-world', 'cluster_id': 'reuters-world', 'cluster_rep': True,
+                 'title': 'European leaders agree security pact', 'source': 'Reuters',
+                 'category': 'worldnews', 'score': 8},
+            ]}, 'morning', self.now)
+            by_id = {item['id']: item['category'] for item in issue['articles']}
+            self.assertEqual('usnews', by_id['bbc-us'])
+            self.assertEqual('usnews', by_id['reuters-us'])
+            self.assertEqual('worldnews', by_id['reuters-world'])
+        finally:
+            editions.EDITORIAL_REGISTRY_FILE = original_registry
+
     def test_material_afternoon_update_links_to_morning_story(self):
         morning = editions.publish({'articles': [{
             'id': 'am', 'title': 'Ferrari rumored to sign Brazilian driver',

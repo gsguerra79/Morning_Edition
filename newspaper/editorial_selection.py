@@ -169,10 +169,14 @@ def select_issue(articles, registry=None, rules=None, max_stories=80,
         mandatory = _matches(text, source_rules.get("must_any"))
         item = dict(article)
         item["editorial_source"] = canonical
+        # The ingestion pipeline owns article-level routing.  This matters for
+        # multi-desk publishers (Reuters, BBC, FT, NYT): a source-level ledger
+        # topic is only a fallback for old/unclassified input and must never
+        # overwrite an explicit US/World assignment during edition publishing.
         topics = (record or {}).get("topics") or []
-        if topics:
+        if not item.get("category") and topics:
             item["category"] = _page_key(topics[0])
-        if source_rules.get("category"):
+        if not item.get("category") and source_rules.get("category"):
             item["category"] = _page_key(source_rules["category"])
         item["editorial_must_include"] = mandatory
         if item.get("category") in ("formula1", "f1"):

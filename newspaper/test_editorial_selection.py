@@ -47,6 +47,27 @@ class EditorialSelectionTests(unittest.TestCase):
                                    max_stories=10, source_share=1)
         self.assertEqual(["a-2"], [item["id"] for item in selected])
 
+    def test_source_ledger_never_overwrites_article_level_news_desk(self):
+        items = [
+            article(1, source="BBC US & Canada", category="usnews",
+                    title="US court issues national ruling"),
+            article(2, source="Reuters", category="usnews",
+                    title="Texas lawmakers pass statewide measure"),
+            article(3, source="Reuters", category="worldnews",
+                    title="European leaders agree security pact"),
+        ]
+        registry = {"sources": [
+            {"source": "BBC", "topics": ["World News"]},
+            {"source": "Reuters", "topics": ["World News", "US News"]},
+        ]}
+        selected, _ = select_issue(items, registry=registry, max_stories=10,
+                                   source_share=1,
+                                   page_caps={"worldnews": 10, "usnews": 10})
+        by_id = {item["id"]: item["category"] for item in selected}
+        self.assertEqual("usnews", by_id["a-1"])
+        self.assertEqual("usnews", by_id["a-2"])
+        self.assertEqual("worldnews", by_id["a-3"])
+
     def test_required_scope_defaults_to_empty_instead_of_filler(self):
         items = [article(1, source="Globo", title="Weather today in Brasília"),
                  article(2, source="Globo", title="Federal government announces national policy")]
