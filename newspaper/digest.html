@@ -805,6 +805,7 @@
     .forecast-icon { display:flex; align-items:center; min-height:48px; font-size:42px; margin:5px 0 2px; }
     .forecast-temps { font-size:18px; font-weight:700; margin:5px 0; }
     .forecast-copy { color:var(--text2); font-size:12px; line-height:1.35; }
+    .forecast-detail { display:grid; grid-template-columns:minmax(0,1fr) 40px; gap:8px; align-items:end; }
     .hourly-strip { display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:thin; }
     .hour-card { flex:0 0 112px; border:1px solid var(--border); padding:11px; text-align:center; }
     .hour-time { color:var(--text3); font-size:11px; text-transform:uppercase; }
@@ -812,9 +813,11 @@
     .hour-temp { font-family:var(--font-head); font-size:22px; font-weight:700; }
     .weather-glyph { display:inline-flex; width:1em; height:1em; vertical-align:-.16em; }
     .weather-glyph svg { display:block; width:100%; height:100%; overflow:visible; }
-    .hour-rain { position:relative; height:22px; margin-top:8px; overflow:hidden; border:1px solid rgba(36,116,140,.35); border-radius:11px; background:rgba(36,116,140,.10); color:#173f50; font-size:10px; font-weight:800; line-height:20px; }
-    .hour-rain-fill { position:absolute; inset:0 auto 0 0; min-width:0; border-radius:10px; background:linear-gradient(90deg,#62b8df,#1681b2); }
-    .hour-rain-label { position:relative; z-index:1; display:block; text-align:center; text-shadow:0 1px 0 rgba(255,255,255,.65); }
+    .rain-gauge { width:40px; margin:8px auto 0; text-align:center; }
+    .rain-meter-caption { display:block; margin-bottom:3px; color:var(--text3); font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+    .rain-meter { position:relative; width:38px; height:52px; overflow:hidden; border:1px solid rgba(36,116,140,.45); border-radius:0; background:rgba(36,116,140,.10); color:#173f50; font-size:10px; font-weight:800; }
+    .rain-meter-fill { position:absolute; inset:auto 0 0; height:0; border-radius:0; background:linear-gradient(180deg,#59b9e1,#147eae); }
+    .rain-meter-label { position:absolute; z-index:1; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; text-shadow:0 1px 0 rgba(255,255,255,.75); }
     .weather-lower { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr); gap:28px; align-items:start; }
     .radar-frame { border:1px solid var(--border); background:#d8e0e2; padding:8px; }
     .radar-frame img { display:block; width:100%; height:auto; }
@@ -1391,6 +1394,11 @@ function weatherPercent(value) {
   return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : 0;
 }
 
+function rainGauge(value) {
+  const rain = weatherPercent(value);
+  return `<div class="rain-gauge"><span class="rain-meter-caption">Rain</span><div class="rain-meter" aria-label="Chance of rain ${rain} percent"><span class="rain-meter-fill" style="height:${rain}%"></span><span class="rain-meter-label">${rain}%</span></div></div>`;
+}
+
 /* ── Formula 1 race desk ─────────────────────────────── */
 function f1Time(value) {
   if (!value) return '—';
@@ -1499,12 +1507,9 @@ function drawWeather(data) {
       : day.low == null
         ? `High ${Math.round(day.high)}°C`
         : `${Math.round(day.high)}° <span style="color:var(--text3);font-weight:500">/ ${Math.round(day.low)}°C</span>`;
-    return `<div class="forecast-day"><b>${escapeAttr(label)}</b><div class="forecast-icon">${weatherIcon(day.forecast)}</div><div class="forecast-temps">${temperatures}</div><div class="forecast-copy">${escapeAttr(day.forecast || '')}${day.precipitation ? ` · ${day.precipitation}% rain` : ''}</div></div>`;
+    return `<div class="forecast-day"><b>${escapeAttr(label)}</b><div class="forecast-icon">${weatherIcon(day.forecast)}</div><div class="forecast-temps">${temperatures}</div><div class="forecast-detail"><div class="forecast-copy">${escapeAttr(day.forecast || '')}</div>${rainGauge(day.precipitation)}</div></div>`;
   }).join('');
-  const hourlyHtml = hourly.map(hour => {
-    const rain = weatherPercent(hour.precipitation);
-    return `<div class="hour-card"><div class="hour-time">${weatherTime(hour.start, {hour:'numeric'})}</div><div class="hour-icon">${weatherIcon(hour.forecast)}</div><div class="hour-temp">${hour.temperature == null ? '—' : Math.round(hour.temperature) + '°C'}</div><div class="hour-rain" aria-label="Chance of rain ${rain} percent"><span class="hour-rain-fill" style="width:${rain}%"></span><span class="hour-rain-label">${rain}%</span></div></div>`;
-  }).join('');
+  const hourlyHtml = hourly.map(hour => `<div class="hour-card"><div class="hour-time">${weatherTime(hour.start, {hour:'numeric'})}</div><div class="hour-icon">${weatherIcon(hour.forecast)}</div><div class="hour-temp">${hour.temperature == null ? '—' : Math.round(hour.temperature) + '°C'}</div>${rainGauge(hour.precipitation)}</div>`).join('');
   const rioHtml = rio
     ? `<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil · now</div><div class="weather-temp">${Math.round(rio.temperature)}°C</div><div class="weather-condition">${weatherIcon(rio.condition)} ${escapeAttr(rio.condition)}</div><div class="weather-detail">Feels ${Math.round(rio.feels_like)}°C · Humidity ${rio.humidity}% · Wind ${Math.round(rio.wind_mph)} mph</div><div class="weather-detail"><a href="${safeExternalUrl(rio.source_url)}" target="_blank" rel="noopener">${escapeAttr(rio.source)}</a></div></div>`
     : '<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil</div><p class="empty">Current observation unavailable.</p></div>';
