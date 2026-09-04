@@ -169,9 +169,11 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn('class="weather-glyph weather-${kind}"', html)
         self.assertIn('class="forecast-icon"', html)
         self.assertIn('class="rain-meter-fill" style="height:${rain}%"', html)
-        self.assertIn('class="rain-meter-label">${rain}%', html)
+        self.assertIn('class="rain-meter-label${labelClass}">${rain}%', html)
         self.assertIn('function rainGauge(value)', html)
         self.assertIn('border-radius:0', html)
+        self.assertIn('background:transparent', html)
+        self.assertIn('text-shadow:none', html)
         self.assertIn('function weatherPercent(value)', html)
 
     def test_sources_owns_feed_and_topic_management(self):

@@ -815,9 +815,10 @@
     .weather-glyph svg { display:block; width:100%; height:100%; overflow:visible; }
     .rain-gauge { width:40px; margin:8px auto 0; text-align:center; }
     .rain-meter-caption { display:block; margin-bottom:3px; color:var(--text3); font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
-    .rain-meter { position:relative; width:38px; height:52px; overflow:hidden; border:1px solid rgba(36,116,140,.45); border-radius:0; background:rgba(36,116,140,.10); color:#173f50; font-size:10px; font-weight:800; }
+    .rain-meter { position:relative; width:38px; height:52px; overflow:hidden; border:0; border-radius:0; background:transparent; font-size:10px; font-weight:800; }
     .rain-meter-fill { position:absolute; inset:auto 0 0; height:0; border-radius:0; background:linear-gradient(180deg,#59b9e1,#147eae); }
-    .rain-meter-label { position:absolute; z-index:1; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; text-shadow:0 1px 0 rgba(255,255,255,.75); }
+    .rain-meter-label { position:absolute; z-index:1; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text); text-align:center; text-shadow:none; }
+    .rain-meter-label.on-fill { color:#fff; }
     .weather-lower { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr); gap:28px; align-items:start; }
     .radar-frame { border:1px solid var(--border); background:#d8e0e2; padding:8px; }
     .radar-frame img { display:block; width:100%; height:auto; }
@@ -1396,7 +1397,8 @@ function weatherPercent(value) {
 
 function rainGauge(value) {
   const rain = weatherPercent(value);
-  return `<div class="rain-gauge"><span class="rain-meter-caption">Rain</span><div class="rain-meter" aria-label="Chance of rain ${rain} percent"><span class="rain-meter-fill" style="height:${rain}%"></span><span class="rain-meter-label">${rain}%</span></div></div>`;
+  const labelClass = rain >= 50 ? ' on-fill' : '';
+  return `<div class="rain-gauge"><span class="rain-meter-caption">Rain</span><div class="rain-meter" aria-label="Chance of rain ${rain} percent"><span class="rain-meter-fill" style="height:${rain}%"></span><span class="rain-meter-label${labelClass}">${rain}%</span></div></div>`;
 }
 
 /* ── Formula 1 race desk ─────────────────────────────── */
