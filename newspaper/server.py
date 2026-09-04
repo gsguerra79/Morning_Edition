@@ -36,7 +36,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
 
 import pipeline
 import editions
@@ -102,6 +102,7 @@ STORY_ARTICLE_HOSTS = {
 STORY_IMAGE_PATHS = {
     'images.ft.com': ('/v3/image/',),
     'www.reuters.com': ('/resizer/',),
+    'cloudfront-us-east-2.images.arcpublishing.com': ('/reuters/',),
     'media.formula1.com': ('/image/upload/',),
     'storage.ghost.io': ('/',),
     'www.racefans.net': ('/wp-content/',),
@@ -482,6 +483,93 @@ def _direct_story_image(article_url, timeout=10):
                      any(parsed_image.path.startswith(p) for p in paths)) else None
 
 
+def _decode_google_news_article(article_url, timeout=10):
+    """Resolve one exact Google News feed item to its publisher URL.
+
+    This does not search by headline. The signed article id embedded in the
+    original feed URL is exchanged for the one source URL associated with that
+    exact feed item.
+    """
+    parsed = urlparse(article_url or '')
+    if (parsed.scheme != 'https' or parsed.hostname != 'news.google.com' or
+            not parsed.path.startswith('/rss/articles/')):
+        return None
+    req = urllib.request.Request(article_url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        page = resp.read(700000).decode('utf-8', errors='replace')
+    match = re.search(
+        r'data-n-a-id="([^"]+)"[^>]*data-n-a-ts="([^"]+)"[^>]*data-n-a-sg="([^"]+)"',
+        page,
+    )
+    if not match:
+        return None
+    article_id, timestamp, signature = match.groups()
+    rpc = [
+        'garturlreq',
+        [['X', 'X', ['X', 'X'], None, None, 1, 1, 'US:en', None, 1,
+          None, None, None, None, None, 0, 1],
+         'X', 'X', 1, [1, 1, 1], 1, 1, None, 0, 0, None, 0],
+        article_id, int(timestamp), signature,
+    ]
+    body = urlencode({'f.req': json.dumps([[['Fbv4je', json.dumps(rpc)]]])}).encode()
+    req = urllib.request.Request(
+        'https://news.google.com/_/DotsSplashUi/data/batchexecute', data=body,
+        headers={'User-Agent': 'Mozilla/5.0',
+                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        response = resp.read(200000).decode('utf-8', errors='replace')
+    for line in response.splitlines():
+        if not line.startswith('[['):
+            continue
+        try:
+            envelope = json.loads(line)
+            decoded = json.loads(envelope[0][2])[1]
+        except (IndexError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+        target = urlparse(decoded)
+        if target.scheme == 'https' and target.hostname in ('www.reuters.com', 'reuters.com'):
+            return decoded
+    return None
+
+
+def _reuters_mobile_story_image(article_url, _expected_title, timeout=10):
+    """Return artwork attached to this exact Reuters article record."""
+    parsed = urlparse(article_url or '')
+    if (parsed.scheme != 'https' or parsed.hostname not in
+            ('www.reuters.com', 'reuters.com') or not parsed.path.startswith('/world/')):
+        return None
+    mobile_url = 'https://www.reuters.com/mobile/v1' + parsed.path
+    req = urllib.request.Request(mobile_url, headers={
+        'User-Agent': 'ReutersNews/7.41.0 Android',
+        'Accept': 'application/json',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        blocks = json.loads(resp.read(800000).decode('utf-8', errors='replace'))
+    for block in blocks if isinstance(blocks, list) else []:
+        if block.get('type') != 'article_detail':
+            continue
+        article = ((block.get('data') or {}).get('article') or {})
+        canonical_path = article.get('canonical_url') or article.get('shared_url')
+        if canonical_path != parsed.path:
+            continue
+        # Reuters may rewrite a headline after the feed item was published.
+        # The exact canonical path is the durable association; do not discard
+        # its own artwork merely because the publisher updated the title.
+        thumb = article.get('thumbnail') or {}
+        thumb_label = ' '.join(str(thumb.get(key) or '') for key in
+                               ('alt_text', 'subtitle', 'slug')).casefold()
+        if 'reuters logo' in thumb_label or 'default_topic_thumbnail' in thumb_label:
+            return None
+        image = thumb.get('resizer_url') or thumb.get('url')
+        image_parsed = urlparse(image or '')
+        paths = _story_image_paths(image_parsed.hostname)
+        if (image_parsed.scheme == 'https' and paths and
+                any(image_parsed.path.startswith(prefix) for prefix in paths)):
+            return image
+    return None
+
+
 def _fetch_story_image_bytes(image_url, timeout=12):
     parsed = urlparse(image_url or '')
     paths = _story_image_paths(parsed.hostname)
@@ -519,6 +607,12 @@ def fetch_story_image(source, title, article_url):
     if cached:
         return cached
     image_url = _direct_story_image(article_url)
+    if not image_url and source_key == 'reuters':
+        canonical_url = article_url
+        if (urlparse(article_url or '').hostname or '').lower() == 'news.google.com':
+            canonical_url = _decode_google_news_article(article_url)
+        if canonical_url:
+            image_url = _reuters_mobile_story_image(canonical_url, title)
     if not image_url:
         raise ValueError('No article-specific artwork was found')
     result = _fetch_story_image_bytes(image_url)
