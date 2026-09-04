@@ -1398,8 +1398,11 @@ function thumb(a) {
   const cat = catMeta(a.category);
   const tint = `color-mix(in srgb, ${cat.c} 22%, var(--surface2))`;
   const ph = `<div class="ph">${cat.label || a.category}</div>`;
-  const im = a.image
-    ? `<img src="${a.image}" alt="" loading="lazy" onerror="this.style.display='none'">`
+  const imageURL = a.image && a.category === 'comics'
+    ? `/comic-image?url=${encodeURIComponent(a.image)}`
+    : a.image;
+  const im = imageURL
+    ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy" onerror="this.style.display='none'">`
     : '';
   // Count badge when this card rolls up duplicates — clearly visible on the image.
   const others = (a._clusterOthers || []).length;

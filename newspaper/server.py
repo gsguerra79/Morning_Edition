@@ -17,6 +17,7 @@ Endpoints:
   GET  /models                installed Ollama models (for the model pickers)
   GET  /status                live pipeline status (running/phase/last run)
   GET  /weather               cached Houston forecast/radar/alerts + Rio current weather
+  GET  /comic-image           allow-listed relay for subscribed comic artwork
   POST /refresh               trigger a pipeline run now
 """
 import concurrent.futures
@@ -72,6 +73,12 @@ STATIC_TYPES = {
 # Icon files served at the root, by exact name (no path traversal).
 ICON_FILES = ('favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png',
               'apple-touch-icon.png', 'logo-mark.png')
+
+COMIC_IMAGE_PATHS = {
+    'i.giantitp.com': ('/comics/oots/',),
+    'www.wildelifecomic.com': ('/comics/',),
+}
+COMIC_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 
 DEFAULT_STATE = {
     'updatedAt': None,
@@ -362,6 +369,32 @@ def validate_feed_url(url, timeout=10):
     return {'ok': True, 'kind': kind, 'title': title}
 
 
+def fetch_comic_image(url, timeout=10):
+    """Fetch artwork only from the two subscribed comic image directories."""
+    parsed = urlparse(url)
+    allowed_paths = COMIC_IMAGE_PATHS.get((parsed.hostname or '').lower())
+    if parsed.scheme != 'https' or not allowed_paths or not any(
+            parsed.path.startswith(prefix) for prefix in allowed_paths):
+        raise ValueError('Comic image URL is not allow-listed')
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 The Forge Daily (comic preview)',
+        'Accept': 'image/avif,image/webp,image/png,image/jpeg,image/*',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        final = urlparse(resp.geturl())
+        final_paths = COMIC_IMAGE_PATHS.get((final.hostname or '').lower())
+        if final.scheme != 'https' or not final_paths or not any(
+                final.path.startswith(prefix) for prefix in final_paths):
+            raise ValueError('Comic image redirect is not allow-listed')
+        content_type = (resp.headers.get_content_type() or '').lower()
+        if not content_type.startswith('image/'):
+            raise ValueError('Comic image source did not return an image')
+        data = resp.read(COMIC_IMAGE_MAX_BYTES + 1)
+    if len(data) > COMIC_IMAGE_MAX_BYTES:
+        raise ValueError('Comic image is too large')
+    return data, content_type
+
+
 def normalize_feed_payload(payload):
     if not isinstance(payload, dict):
         return None, 'Payload must be an object'
@@ -645,6 +678,25 @@ class StateHandler(BaseHTTPRequestHandler):
                 self._json(200, weather_service.get_weather(force=(qs.get('refresh') == ['1'])))
             except Exception as exc:
                 self._json(502, {'error': f'Weather sources unavailable: {exc}'})
+            return
+        if path == '/comic-image':
+            qs = parse_qs(urlparse(self.path).query)
+            url = (qs.get('url') or [''])[0]
+            try:
+                data, content_type = fetch_comic_image(url)
+            except ValueError as exc:
+                self._json(400, {'error': str(exc)})
+                return
+            except Exception:
+                self._json(502, {'error': 'Comic artwork is temporarily unavailable'})
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(data)
             return
         if path == '/runs':
             self._json(200, pipeline.get_runs())

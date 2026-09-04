@@ -85,6 +85,13 @@ class BaselineRegressionTests(unittest.TestCase):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
         self.assertIn("comic-card .thumb img", html)
         self.assertIn("a.category === 'comics' ? ' comic-card'", html)
+        self.assertIn("/comic-image?url=", html)
+
+    def test_comic_image_relay_rejects_non_subscribed_hosts(self):
+        with self.assertRaisesRegex(ValueError, "not allow-listed"):
+            server.fetch_comic_image("https://example.com/comics/page.png")
+        with self.assertRaisesRegex(ValueError, "not allow-listed"):
+            server.fetch_comic_image("http://i.giantitp.com/comics/oots/page.png")
 
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
