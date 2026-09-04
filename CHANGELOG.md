@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Remove the visible “Why it’s here” paragraph from story cards while retaining
+  the selection explanation in edition data for audit and future detail views.
+- Replace Reuters' image-less Google News discovery with its first-party news
+  sitemap and route FT/Reuters artwork through a tightly allow-listed same-origin
+  image relay.
 - Replace the inherited abstract browser icon with a Forge Daily hammer-and-anvil
   favicon, including SVG, PNG, ICO, and Apple touch variants plus cache-busted
   browser references.

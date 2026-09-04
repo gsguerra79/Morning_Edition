@@ -13,8 +13,8 @@ adapter experiment or passing test is evidence, not delivery.
 - The source inventory contains 33 unique canonical sources across seven pages.
 - 32 sources are active and loaded. Kickstarter is the only genuine connector
   gap.
-- Financial Times and World Surf League use working first-party sources.
-- ATP Tour, Reuters, and Medium are live through compliant discovery feeds;
+- Financial Times, Reuters, and World Surf League use working first-party
+  sources. ATP Tour and Medium are live through compliant discovery feeds;
   better native integrations remain optional quality upgrades, not missing
   coverage.
 - The production service already publishes immutable 07:30 morning and 16:30
@@ -127,8 +127,8 @@ the priorities above.
 
 - Replace ATP discovery with a first-party structured news/schedule/results
   integration if a reliable compliant endpoint is available.
-- Use Reuters Connect only if Gabriel's authorized access supports the required
-  programmatic workflow; otherwise retain the current Reuters-only discovery.
+- Consider Reuters Connect only if Gabriel's authorized access would add useful
+  licensed metadata beyond the current first-party news sitemap.
 - Replace Medium public topic feeds with Gabriel's authenticated followed-topic
   stream only if it can be accessed reliably and compliantly.
 - Financial Times and World Surf League require monitoring, not replacement,

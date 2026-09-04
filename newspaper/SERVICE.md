@@ -37,6 +37,10 @@ authentication, transport security, and an explicit threat review.
   Weather data is cached for 15 minutes in the production volume. If an
   upstream service is temporarily unavailable, the last successful payload is
   shown and marked cached rather than blanking the page.
+- Financial Times and Reuters card images are delivered through a same-origin
+  relay restricted to their approved image-CDN paths. Reuters story URLs and
+  artwork come from Reuters' public first-party news sitemap rather than
+  article-page scraping or a generic Google News placeholder.
 - Opening a story always records it in History. Whether opening also hides its
   Home card is a synced preference under **Settings → Display** and defaults to
   off; explicit Read Later and Not for me actions still retire cards.

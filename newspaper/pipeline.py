@@ -324,6 +324,34 @@ def parse_wsl_homepage(html_text, source, category, cutoff):
     return out
 
 
+def parse_reuters_sitemap(xml, source, category, cutoff):
+    """Extract current Reuters world stories and images from its news sitemap."""
+    out, seen = [], set()
+    for match in re.finditer(r'<url\b[^>]*>([\s\S]*?)</url>', xml or '', re.IGNORECASE):
+        block = match.group(1)
+        url = html_lib.unescape(extract_field(block, 'loc')).strip()
+        parsed = urllib.parse.urlparse(url)
+        if (parsed.scheme != 'https' or parsed.hostname not in
+                ('www.reuters.com', 'reuters.com') or not parsed.path.startswith('/world/')):
+            continue
+        pub = parse_date(extract_field(block, 'news:publication_date')
+                         or extract_field(block, 'lastmod'))
+        if not pub or pub < cutoff or url in seen:
+            continue
+        title = clean_text(extract_field(block, 'news:title'))
+        if not title:
+            continue
+        image = html_lib.unescape(extract_field(block, 'image:loc')).strip()
+        seen.add(url)
+        item = {'title': title, 'url': url, 'source': source,
+                'feed_summary': '', 'category': category,
+                'published_at': pub.isoformat()}
+        if image.startswith('https://'):
+            item['feed_image'] = image
+        out.append(item)
+    return out
+
+
 def stable_id(url):
     """Deterministic 8-char hex id from the URL (stable within a digest)."""
     h = 0
@@ -502,6 +530,7 @@ def _embed(text, embed_model=EMBED_MODEL):
 def enrich(article, chat_model, embed_model, system_prompt, valid_cats):
     """Fetch page, score/summarise, and embed one article."""
     image, excerpt = _fetch_page(article['url'])
+    image = article.get('feed_image') or image
     score, summary, category, score_ok, score_ms = _score(
         article, excerpt, chat_model, system_prompt, valid_cats)
     score = round(min(10.0, score + float(article.get('_editorial_boost') or 0)), 1)
@@ -1194,7 +1223,9 @@ def run_once():
             feed_cutoff = run_now - timedelta(hours=_page_window_hours(
                 feed.get('category'), cfg['lookback_hours']))
             parser = {'globo_html': parse_globo_topic_page,
-                      'wsl_html': parse_wsl_homepage}.get(feed.get('format'), parse_feed)
+                      'wsl_html': parse_wsl_homepage,
+                      'reuters_sitemap': parse_reuters_sitemap}.get(
+                          feed.get('format'), parse_feed)
             parsed = parser(body, feed.get('source', ''),
                             feed.get('category', 'tech'), feed_cutoff)
             feed_health[feed.get('url', '')]['items'] = len(parsed)
