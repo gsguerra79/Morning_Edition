@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Correct the Formula 1 page hierarchy: prefer the newest finalized OpenF1
+  session over a lagging archive result, align the compact session card with an
+  unclipped top-right championship rail, and admit only concrete on-track,
+  strategy, personnel, technical, or incident reporting to the Race Desk tier.
+
 - Add an optional authenticated OpenF1 current-session layer to the Formula 1
   race desk. During OpenF1's live window it supplies a compact provisional
   classification and track weather; the existing Formula 1 archive and Jolpica
