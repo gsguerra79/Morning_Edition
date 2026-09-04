@@ -11,6 +11,7 @@ DEFAULT_PAGE_CAPS = {
     "technology": 10, "photography": 5, "outdoors": 5,
     "f1": 12, "world": 8,
 }
+DEFAULT_PAGE_MINIMUMS = {"brazilnews": 6}
 SOURCE_ALIASES = {
     "bbc world": "BBC", "bbc science & environment": "BBC",
     "bbc technology": "BBC", "bbc formula 1": "BBC",
@@ -27,6 +28,8 @@ REQUIRED_PAGE_SOURCES = {
     "worldnews": ("bbc world", "financial times world", "reuters", "new york times world"),
     "usnews": ("bbc us & canada", "financial times us", "reuters",
                "new york times us", "washington post", "houston chronicle"),
+    "brazilnews": ("globo", "agência brasil", "agência pública",
+                   "((o))eco", "rioonwatch"),
     "sports": ("atp tour", "world surf league"),
     "comics": ("giantitp", "wilde life"),
     "formula1": ("formula 1", "motorsport", "autosport"),
@@ -120,9 +123,10 @@ def _reason(article, source_record, mandatory=False):
 
 
 def select_issue(articles, registry=None, rules=None, max_stories=80,
-                 source_share=0.20, page_caps=None):
+                 source_share=0.20, page_caps=None, page_minimums=None):
     """Return ``(selected, report)``; one representative per story cluster."""
     page_caps = {**DEFAULT_PAGE_CAPS, **(page_caps or {})}
+    page_minimums = {**DEFAULT_PAGE_MINIMUMS, **(page_minimums or {})}
     source_limit = max(1, math.ceil(max_stories * source_share))
     index = _registry_index(registry)
     rule_map = (rules or {}).get("sources", {}) if isinstance(rules, dict) else {}
@@ -265,6 +269,24 @@ def select_issue(articles, registry=None, rules=None, max_stories=80,
             raw_source = str(item.get("source") or "").casefold()
             if raw_source_counts.get(raw_source, 0) >= RAW_SOURCE_LIMITS.get(raw_source, max_stories):
                 continue
+            add(item)
+
+    # A global issue limit must not starve a promised desk merely because its
+    # stories rank below high-volume technology or sports feeds. Reserve each
+    # configured page floor before the ordinary global score pass.
+    for page, minimum in page_minimums.items():
+        for item in (candidate for candidate in candidates
+                     if (candidate.get("category") or "other") == page):
+            if page_counts.get(page, 0) >= minimum or len(selected) >= max_stories:
+                break
+            raw_source = str(item.get("source") or "").casefold()
+            source = item["editorial_source"]
+            if source_counts.get(source, 0) >= source_limit:
+                continue
+            if raw_source_counts.get(raw_source, 0) >= RAW_SOURCE_LIMITS.get(raw_source, max_stories):
+                continue
+            if page_counts.get(page, 0) >= page_caps.get(page, max_stories):
+                break
             add(item)
 
     for item in candidates:

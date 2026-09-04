@@ -50,6 +50,13 @@ class NewsDeskTests(unittest.TestCase):
         self.assertEqual(('worldnews', 'BBC World'),
                          (canada['category'], canada['source']))
 
+    def test_agencia_brasil_sports_are_routed_out_of_brazil_news(self):
+        sport = self.article(source='Agência Brasil', category='brazilnews',
+                             title='Brasil conquista quatro medalhas',
+                             url='https://agenciabrasil.ebc.com.br/esportes/noticia/2026-09/item')
+        pipeline.route_news_article(sport)
+        self.assertEqual('sports', sport['category'])
+
     def test_news_page_does_not_fill_with_same_source_same_person(self):
         rows = []
         sources = ('BBC World', 'Financial Times World', 'Reuters', 'New York Times World')
@@ -77,6 +84,48 @@ class NewsDeskTests(unittest.TestCase):
                            url='https://g1.globo.com/rj/rio-de-janeiro/noticia/item.ghtml')
         self.assertFalse(pipeline.apply_news_desk_scope(acre))
         self.assertTrue(pipeline.apply_news_desk_scope(rio))
+
+    def test_slow_brazil_specialists_receive_bounded_seven_day_window(self):
+        self.assertEqual(168, pipeline._source_window_hours(
+            'RioOnWatch', 'brazilnews', 24))
+        self.assertEqual(168, pipeline._source_window_hours(
+            'Agência Pública', 'brazilnews', 24))
+        self.assertEqual(72, pipeline._source_window_hours(
+            'Globo', 'brazilnews', 24))
+
+    def test_brazil_issue_protects_sources_and_editorial_lanes(self):
+        rows = [
+            self.article(id='g1', cluster_id='g1', source='Globo',
+                         category='brazilnews', title='Congresso debate política nacional', score=20),
+            self.article(id='ab', cluster_id='ab', source='Agência Brasil',
+                         category='brazilnews', title='Banco Central anuncia nova decisão', score=19),
+            self.article(id='ap', cluster_id='ap', source='Agência Pública',
+                         category='brazilnews', title='STF entra no centro das eleições', score=18),
+            self.article(id='eco', cluster_id='eco', source='((o))eco',
+                         category='brazilnews', title='Restauração avança na Amazônia', score=17),
+            self.article(id='rio', cluster_id='rio', source='RioOnWatch',
+                         category='brazilnews', title='Rio debate transporte metropolitano', score=16),
+            self.article(id='exports', cluster_id='exports', source='Agência Brasil',
+                         category='brazilnews', title='Exportação brasileira cresce em agosto', score=15),
+            self.article(id='ap2', cluster_id='ap2', source='Agência Pública',
+                         category='brazilnews', title='Congresso enfrenta nova investigação', score=14.9),
+            self.article(id='ap3', cluster_id='ap3', source='Agência Pública',
+                         category='brazilnews', title='Senado abre nova comissão nacional', score=14.8),
+            self.article(id='eco2', cluster_id='eco2', source='((o))eco',
+                         category='brazilnews', title='Mata Atlântica sofre com poluição', score=14.7),
+            self.article(id='sports', cluster_id='sports', source='Agência Brasil',
+                         category='brazilnews', title='Seleção vence torneio amistoso', score=14),
+        ]
+        selected, _ = pipeline.select_balanced_issue(rows)
+        brazil = [item for item in selected if item['category'] == 'brazilnews']
+        self.assertGreaterEqual(len(brazil), 6)
+        self.assertEqual({'Globo', 'Agência Brasil', 'Agência Pública', '((o))eco', 'RioOnWatch'},
+                         {item['source'] for item in brazil})
+        self.assertNotIn('sports', {item['id'] for item in brazil})
+        self.assertLessEqual(sum(item['source'] == 'Agência Pública' for item in brazil), 2)
+        self.assertNotIn('ap3', {item['id'] for item in brazil})
+        self.assertTrue({'national', 'rio', 'environment'} <=
+                        {pipeline.brazil_story_lane(item) for item in brazil})
 
     def test_houston_routine_filler_is_rejected_but_civic_news_is_kept(self):
         food = self.article(source='Houston Chronicle', category='usnews',

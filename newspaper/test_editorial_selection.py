@@ -194,6 +194,20 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertEqual(page_counts, report["page_counts"])
         self.assertFalse(any(item["code"] == "page_cap" for item in report["rejected"]))
 
+    def test_global_issue_limit_cannot_starve_brazil_below_floor(self):
+        items = [article(i, source=f'High {i}', category='technology', score=100-i/100)
+                 for i in range(60)]
+        brazil_sources = ('Globo', 'Agência Brasil', 'Agência Pública',
+                          '((o))eco', 'RioOnWatch', 'Agência Brasil')
+        items.extend(article(100+i, source=source, category='brazilnews', score=1-i/100)
+                     for i, source in enumerate(brazil_sources))
+        selected, report = select_issue(items, max_stories=60, source_share=1,
+                                        page_caps={'technology': 60, 'brazilnews': 8})
+        self.assertEqual(60, len(selected))
+        self.assertEqual(6, report['page_counts']['brazilnews'])
+        self.assertTrue(set(brazil_sources) <=
+                        {item['source'] for item in selected if item['category'] == 'brazilnews'})
+
     def test_f1_selection_reserves_results_technical_preview_and_news(self):
         titles = [
             "Practice results from Monza", "Qualifying classification", "Updated standings",

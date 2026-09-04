@@ -16,9 +16,16 @@ class PipelineDiversityTests(unittest.TestCase):
                           if page == "comics" else
                           ("Formula 1", "Motorsport", "Autosport", "RaceFans")[i % 4]
                           if page == "formula1" else f"{page}-source-{i % 4}")
+                title = f"{page} story {i}"
+                if page == "brazilnews":
+                    source = ("Globo", "Agência Brasil", "Agência Pública",
+                              "((o))eco", "RioOnWatch")[i % 5]
+                    title = ("Congresso debate política nacional", "Banco Central anuncia decisão",
+                             "STF entra no centro das eleições", "Amazônia recebe restauração",
+                             "Rio de Janeiro debate transporte")[i % 5]
                 items.append({"id": f"{page}-{i}", "cluster_id": f"{page}-{i}",
                               "cluster_rep": True, "source": source, "category": page,
-                              "title": f"{page} story {i}", "score": 6,
+                              "title": title, "score": 6,
                               "published_at": now})
         for i, source in enumerate(("BBC World", "Financial Times World", "Reuters", "New York Times World")):
             items.append({"id": f"world-required-{i}",

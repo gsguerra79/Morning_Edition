@@ -120,10 +120,21 @@ PAGE_REQUIRED_SOURCES = {
     'worldnews': ('bbc world', 'financial times world', 'reuters', 'new york times world'),
     'usnews': ('bbc us & canada', 'financial times us', 'reuters',
                'new york times us', 'washington post', 'houston chronicle'),
+    'brazilnews': ('globo', 'agência brasil', 'agência pública',
+                   '((o))eco', 'rioonwatch'),
     'sports': ('atp tour', 'world surf league'),
     'technology': ('brickset', 'the brothers brick'),
     'formula1': ('formula 1', 'motorsport', 'autosport'),
 }
+SOURCE_LOOKBACK_HOURS = {
+    # These specialist desks publish less often than wire services. Their
+    # latest reporting remains current longer than the 72-hour general-news
+    # window, while the normal ranking still favors genuinely newer stories.
+    'agência pública': 24 * 7,
+    '((o))eco': 24 * 7,
+    'rioonwatch': 24 * 7,
+}
+BRAZIL_LANE_MINIMUMS = {'national': 3, 'rio': 1, 'environment': 1}
 
 NEWS_DESK_SOURCES = {
     'worldnews': {'bbc world', 'financial times world', 'reuters', 'new york times world'},
@@ -163,6 +174,11 @@ F1_KIND_MINIMUMS = {'results_updates': 3, 'technical': 2,
 
 def _page_window_hours(category, default):
     return max(default, PAGE_LOOKBACK_HOURS.get(str(category or '').casefold(), default))
+
+
+def _source_window_hours(source, category, default):
+    return max(_page_window_hours(category, default),
+               SOURCE_LOOKBACK_HOURS.get(str(source or '').casefold(), default))
 
 # Live run status, polled by the UI via GET /status. Updated as run_once moves
 # through its phases so the frontend can show an "Updating…" indicator and
@@ -537,6 +553,13 @@ def route_news_article(article):
     source = str(article.get('source') or '')
     source_key = source.casefold()
     title = str(article.get('title') or '').casefold()
+    path = urllib.parse.urlparse(str(article.get('url') or '')).path.casefold()
+    # Agência Brasil's all-news feed mixes national reporting with sport. The
+    # latter belongs on the existing Sports desk and must not satisfy Brazil's
+    # national-news floor merely because its title contains "Brasil".
+    if category == 'brazilnews' and source_key == 'agência brasil' and '/esportes/' in path:
+        article['category'] = 'sports'
+        return article
     if category == 'worldnews' and any(term in title for term in US_DOMESTIC_TERMS):
         article['category'] = 'usnews'
         article['source'] = {
@@ -571,14 +594,45 @@ def news_entity_tokens(article):
     return {token.casefold() for token in tokens if token not in generic}
 
 
+def brazil_story_lane(article):
+    """Auditable Brazil desk lane; generic culture/sports filler is `other`."""
+    source = str(article.get('source') or '').casefold()
+    text = ' '.join(str(article.get(key) or '') for key in
+                    ('title', 'summary', 'feed_summary')).casefold()
+    path = urllib.parse.urlparse(str(article.get('url') or '')).path.casefold()
+    if source == 'rioonwatch' or path.startswith('/rj/') or any(term in text for term in (
+            'rio de janeiro', 'estado do rio', 'carioca', 'fluminense', 'niterói',
+            'baixada fluminense')):
+        return 'rio'
+    if source == '((o))eco' or any(term in text for term in (
+            'amazônia', 'mata atlântica', 'pantanal', 'cerrado', 'meio ambiente',
+            'ambiental', 'desmatamento', 'clima', 'fauna', 'floresta',
+            'biodiversidade', 'conservação', 'poluição')):
+        return 'environment'
+    if any(term in text for term in (
+            'governo federal', 'presidente', 'presidência', 'congresso', 'câmara',
+            'senado', 'stf', 'supremo', 'ministério', 'ministro', 'eleição',
+            'economia', 'inflação', 'selic', 'banco central', 'exportação',
+            'diretor do bc', 'presidente do bc', 'polícia federal', 'operação da pf',
+            'emprego', 'desemprego', 'justiça', 'política nacional', 'brasil')):
+        return 'national'
+    if any(term in text for term in (
+            'catástrofe', 'desastre', 'enchente', 'seca', 'emergência', 'epidemia',
+            'apagão', 'crise nacional')):
+        return 'major'
+    return 'other'
+
+
 def apply_headline_priority(article, feed_rank):
     """Respect publisher ordering for US/World desks without replacing score."""
     article['feed_rank'] = int(feed_rank)
-    if article.get('category') in ('worldnews', 'usnews'):
+    if article.get('category') in ('worldnews', 'usnews', 'brazilnews'):
         # RSS/news sitemaps are publisher-curated. Their first items deserve a
         # meaningful but bounded lift so key headlines survive generic scoring.
         article['_editorial_boost'] = float(article.get('_editorial_boost') or 0)
-        article['_editorial_boost'] += max(0.0, 2.0 - 0.25 * int(feed_rank))
+        ceiling, step = ((1.5, 0.15) if article.get('category') == 'brazilnews'
+                         else (2.0, 0.25))
+        article['_editorial_boost'] += max(0.0, ceiling - step * int(feed_rank))
         article['_desk_locked'] = True
     return article
 
@@ -1362,6 +1416,22 @@ def select_balanced_issue(articles):
                 gaps.append({'page': page, 'source': source,
                              'required': 1, 'available': 0})
 
+    # Brazil needs a balanced national desk, not a wire-service pile. Reserve
+    # its core editorial lanes before generic score order fills the page.
+    brazil = [a for a in reps if a.get('category') == 'brazilnews']
+    for lane, minimum in BRAZIL_LANE_MINIMUMS.items():
+        matches = [a for a in brazil if brazil_story_lane(a) == lane]
+        present = sum(1 for a in selected if a.get('category') == 'brazilnews'
+                      and brazil_story_lane(a) == lane)
+        for article in matches:
+            if present >= minimum:
+                break
+            if add(article):
+                present += 1
+        if len(matches) < minimum:
+            gaps.append({'page': 'brazilnews', 'lane': lane,
+                         'required': minimum, 'available': len(matches)})
+
     # Comics are subscriptions, not a news quota: retain exactly the newest
     # available installment from each requested series, even when one series
     # has not published inside the normal news lookback window.
@@ -1446,11 +1516,14 @@ def select_balanced_issue(articles):
             if current >= maximum:
                 break
             source = str(article.get('source') or '').casefold()
-            if page in ('worldnews', 'usnews') and source_counts.get(source, 0) >= 3:
+            source_cap = 2 if page == 'brazilnews' else 3
+            if page in ('worldnews', 'usnews', 'brazilnews') and source_counts.get(source, 0) >= source_cap:
                 continue
             entities = news_entity_tokens(article)
-            if (page in ('worldnews', 'usnews') and entities
+            if (page in ('worldnews', 'usnews', 'brazilnews') and entities
                     and entities & source_entities.get(source, set())):
+                continue
+            if page == 'brazilnews' and brazil_story_lane(article) == 'other':
                 continue
             if add(article):
                 current += 1
@@ -1559,8 +1632,8 @@ def run_once():
         # Parse + dedup + blocklist.
         seen, fresh = set(), []
         for body, feed in bodies:
-            feed_cutoff = run_now - timedelta(hours=_page_window_hours(
-                feed.get('category'), cfg['lookback_hours']))
+            feed_cutoff = run_now - timedelta(hours=_source_window_hours(
+                feed.get('source'), feed.get('category'), cfg['lookback_hours']))
             parser = {'globo_html': parse_globo_topic_page,
                       'wsl_html': parse_wsl_homepage,
                       'reuters_sitemap': parse_reuters_sitemap,
