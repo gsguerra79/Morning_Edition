@@ -167,7 +167,7 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("const shown = isLive ? liveResult : result", html)
         self.assertIn("f1-session-panel", html)
         self.assertIn("f1-standings-rail", html)
-        self.assertIn("position:sticky", html)
+        self.assertIn(".rail-col { min-width:0; position:sticky", html)
         self.assertIn("grid-template-columns:1fr", html)
         self.assertIn("'Race desk'", html)
         self.assertIn("'Paddock & off-track'", html)
