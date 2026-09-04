@@ -26,7 +26,6 @@ Endpoints:
   POST /refresh               trigger a pipeline run now
 """
 import concurrent.futures
-import html as html_lib
 import json
 import os
 import re
@@ -37,7 +36,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs, quote
+from urllib.parse import urlparse, parse_qs
 
 import pipeline
 import editions
@@ -460,54 +459,6 @@ def _story_image_paths(hostname):
     return STORY_IMAGE_PATHS.get(host)
 
 
-def _clean_embedded_url(value):
-    return html_lib.unescape((value or '')
-        .replace('\\/', '/')
-        .replace('\\u003d', '=')
-        .replace('\\u0026', '&')
-        .replace('\\u0025', '%')).strip()
-
-
-def _google_news_story_image(title, source, timeout=12):
-    """Locate the publisher-owned image paired with an exact FT/Reuters title.
-
-    This is used only when FT blocks server-side metadata or an immutable old
-    Reuters edition still contains a Google News wrapper. Generic thumbnails
-    and images owned by any other publisher are rejected.
-    """
-    source_key = (source or '').casefold()
-    if source_key.startswith('financial times'):
-        domain, image_prefix = 'ft.com', 'https://images.ft.com/'
-    elif source_key == 'reuters':
-        domain, image_prefix = 'reuters.com', 'https://www.reuters.com/resizer/'
-    else:
-        return None
-    clean_title = re.sub(r'\s+-\s+Reuters\s*$', '', title or '', flags=re.IGNORECASE).strip()
-    if len(clean_title) < 8:
-        return None
-    search_url = ('https://news.google.com/search?q=' +
-                  quote(f'"{clean_title}" site:{domain}') +
-                  '&hl=en-US&gl=US&ceid=US:en')
-    req = urllib.request.Request(search_url, headers={
-        'User-Agent': 'Mozilla/5.0 The Forge Daily (article artwork lookup)',
-        'Accept': 'text/html',
-    })
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        page = resp.read(4 * 1024 * 1024).decode('utf-8', errors='replace')
-    occurrences = [m.start() for m in re.finditer(re.escape(clean_title), page, re.IGNORECASE)]
-    for position in reversed(occurrences):
-        chunk = page[max(0, position - 2500):position + 9000]
-        match = re.search(re.escape(image_prefix) + r'[^"\s<]+', chunk, re.IGNORECASE)
-        if not match:
-            continue
-        candidate = _clean_embedded_url(match.group(0)).rstrip('],')
-        parsed = urlparse(candidate)
-        paths = _story_image_paths(parsed.hostname)
-        if parsed.scheme == 'https' and paths and any(parsed.path.startswith(p) for p in paths):
-            return candidate
-    return None
-
-
 def _direct_story_image(article_url, timeout=10):
     parsed = urlparse(article_url or '')
     if parsed.scheme != 'https' or (parsed.hostname or '').lower() not in STORY_ARTICLE_HOSTS:
@@ -518,6 +469,9 @@ def _direct_story_image(article_url, timeout=10):
         'Accept': 'text/html',
     })
     with urllib.request.urlopen(req, timeout=timeout) as resp:
+        final = urlparse(resp.geturl())
+        if final.scheme != 'https' or (final.hostname or '').lower() not in STORY_ARTICLE_HOSTS:
+            return None
         page = resp.read(400000).decode('utf-8', errors='replace')
     image = pipeline._page_image(page, article_url)
     if not image:
@@ -553,24 +507,18 @@ def _fetch_story_image_bytes(image_url, timeout=12):
 
 
 def fetch_story_image(source, title, article_url):
-    """Resolve and cache article-specific artwork; never return source logos."""
+    """Relay only artwork declared by the exact publisher article page."""
     source_key = (source or '').casefold()
     permitted = (source_key.startswith('financial times') or source_key == 'reuters' or
                  source_key in {'formula 1', 'motorsport', 'autosport', 'racefans', 'the race'})
     if not permitted:
         raise ValueError('Source is not eligible for artwork recovery')
-    cache_key = (source_key, title or '', article_url or '')
+    cache_key = (source_key, article_url or '')
     with _story_image_lock:
         cached = _story_image_cache.get(cache_key)
     if cached:
         return cached
-    image_url = None
-    try:
-        image_url = _direct_story_image(article_url)
-    except Exception:
-        pass
-    if not image_url and (source_key.startswith('financial times') or source_key == 'reuters'):
-        image_url = _google_news_story_image(title, source)
+    image_url = _direct_story_image(article_url)
     if not image_url:
         raise ValueError('No article-specific artwork was found')
     result = _fetch_story_image_bytes(image_url)

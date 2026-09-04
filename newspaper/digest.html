@@ -311,6 +311,7 @@
 
     /* ── Score dot ──────────────────────────────────────── */
     .thumb-frame { position: relative; }
+    .thumb-frame.image-missing { display: none; }
     .score-chip {
       position: absolute; top: 9px; right: 9px; z-index: 6;
       display: inline-flex; align-items: center; gap: 5px;
@@ -1571,7 +1572,7 @@ function thumb(a) {
   const recoverableSource = source.startsWith('financial times') || source === 'reuters' ||
     ['formula 1','motorsport','autosport','racefans','the race'].includes(source);
   const recoveredImage = recoverableSource
-    ? `/story-image?source=${encodeURIComponent(a.source || '')}&title=${encodeURIComponent(a.title || '')}&url=${encodeURIComponent(a.url || '')}`
+    ? `/story-image?policy=publisher-only-v2&source=${encodeURIComponent(a.source || '')}&title=${encodeURIComponent(a.title || '')}&url=${encodeURIComponent(a.url || '')}`
     : '';
   const imageURL = a.image && a.category === 'comics'
     ? `/comic-image?url=${encodeURIComponent(a.image)}`
@@ -1579,7 +1580,7 @@ function thumb(a) {
       ? `/card-image?url=${encodeURIComponent(a.image)}`
       : a.image || recoveredImage;
   const im = imageURL
-    ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy" onerror="this.closest('.thumb-frame').classList.add('image-missing')">`
     : '';
   // Count badge when this card rolls up duplicates — clearly visible on the image.
   const others = (a._clusterOthers || []).length;

@@ -143,13 +143,15 @@ class BaselineRegressionTests(unittest.TestCase):
         root = Path(__file__).parent
         html = (root / "digest.html").read_text(encoding="utf-8")
         dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
-        self.assertIn("`/story-image?source=${encodeURIComponent", html)
+        self.assertIn("`/story-image?policy=publisher-only-v2&source=${encodeURIComponent", html)
         self.assertNotIn('/ft-card.svg', html)
         self.assertNotIn('/reuters-card.svg', html)
         self.assertNotIn('ft-card.svg', server.ICON_FILES)
         self.assertNotIn('reuters-card.svg', server.ICON_FILES)
         self.assertNotIn('ft-card.svg', dockerfile)
         self.assertNotIn('reuters-card.svg', dockerfile)
+        self.assertIn('.thumb-frame.image-missing { display: none; }', html)
+        self.assertIn("this.closest('.thumb-frame').classList.add('image-missing')", html)
 
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
