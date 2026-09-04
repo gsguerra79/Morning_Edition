@@ -389,7 +389,9 @@
     .main-col, .rail-col { min-width: 0; }
     @media (min-width: 901px) { .rail-col { border-left: 1px solid var(--border); padding-left: 30px; } }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px,1fr)); gap: 30px 26px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px,1fr)); gap: 30px 26px; }
+    .topic-sections { display: block; }
+    .topic-section { padding: 18px 0 34px; margin-top: 12px; }
     .card { display: flex; flex-direction: column; }
     .card .thumb { aspect-ratio: 16/10; margin-bottom: 13px; }
     .card .kicker { margin-bottom: 9px; }
@@ -1891,19 +1893,21 @@ function render() {
     key, articles: inbox.filter(a => a.category === key)
   })).filter(s => s.articles.length || coverageGaps.some(g => g.page === s.key));
   if (sections.length && currentCat === 'all') {
+    document.getElementById('section-hero').className = 'topic-sections';
     document.getElementById('section-hero').innerHTML = sections.map(section => {
-      const lead = section.articles[0], rest = section.articles.slice(1, 5);
       const gaps = coverageGaps.filter(g => g.page === section.key);
       const warning = gaps.length ? `<p class="empty" style="border:1px solid #a52a2a;padding:10px;margin:8px 0 14px">Coverage incomplete: ${gaps.map(g => g.subtopic ? `${g.subtopic} (${g.available}/${g.required})` : `${g.available}/${g.required} stories`).join(', ')}.</p>` : '';
-      return `<section style="border-top:3px solid ${catMeta(section.key).c};padding:18px 0 28px;margin-top:12px">
+      return `<section class="topic-section" style="border-top:3px solid ${catMeta(section.key).c}">
         <p class="sec-label">${catMeta(section.key).label}</p>
-        ${warning}<div class="grid">${[lead, ...rest].filter(Boolean).map(gridCardHTML).join('')}</div>
+        ${warning}<div class="grid">${section.articles.map(gridCardHTML).join('')}</div>
       </section>`;
     }).join('');
     document.getElementById('section-grid').innerHTML = '';
     document.getElementById('rail-list').innerHTML = '';
     return;
   }
+
+  document.getElementById('section-hero').className = 'hero';
 
   let front = today;
   if (front.length < FRONT_MIN) front = front.concat(earlier.slice(0, FRONT_MIN - front.length));

@@ -71,6 +71,12 @@ class BaselineRegressionTests(unittest.TestCase):
         normalized = server.normalize_payload({"readIds": [], "obsolete": 1})
         self.assertNotIn("obsolete", normalized)
 
+    def test_home_topics_use_full_width_reflow_and_render_every_selected_card(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("className = 'topic-sections'", html)
+        self.assertIn("section.articles.map(gridCardHTML)", html)
+        self.assertNotIn("section.articles.slice(1, 5)", html)
+
 
 if __name__ == "__main__":
     unittest.main()

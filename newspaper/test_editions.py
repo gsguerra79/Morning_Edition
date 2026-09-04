@@ -19,7 +19,7 @@ class EditionTests(unittest.TestCase):
         result = editions.preview(digest, now=self.now)
         self.assertEqual('live-preview', result['id'])
         self.assertTrue(result['preview'])
-        self.assertLessEqual(result['article_count'], 40)
+        self.assertLessEqual(result['article_count'], 60)
         self.assertEqual(before, list(os.listdir(self.tmp.name)))
 
     def setUp(self):

@@ -58,7 +58,7 @@ def publish(digest, kind, now=None, force=False):
             morning.get('candidate_story_index') or morning.get('articles', []))
     max_stories = int(os.environ.get(
         'MORNING_MAX_STORIES' if kind == 'morning' else 'AFTERNOON_MAX_STORIES',
-        '40' if kind == 'morning' else '15'))
+        '60' if kind == 'morning' else '15'))
     source_share = float(os.environ.get('SOURCE_SHARE_CAP', '0.20'))
     articles, selection_report = select_issue(
         articles,
@@ -89,7 +89,7 @@ def preview(digest, now=None):
     """Build a bounded current issue without mutating the edition archive."""
     now = now or datetime.now(ZoneInfo(TIMEZONE))
     articles = [annotate(article) for article in (digest.get('articles') or [])]
-    max_stories = int(os.environ.get('MORNING_MAX_STORIES', '40'))
+    max_stories = int(os.environ.get('MORNING_MAX_STORIES', '60'))
     source_share = float(os.environ.get('SOURCE_SHARE_CAP', '0.20'))
     selected, selection_report = select_issue(
         articles,

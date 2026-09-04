@@ -64,7 +64,7 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertEqual(first_report, second_report)
 
     def test_representative_morning_fixture_is_in_target_band(self):
-        caps = {"technology": 8, "photography": 5, "outdoors": 5,
+        caps = {"technology": 10, "photography": 5, "outdoors": 5,
                 "f1": 6, "world": 8, "comics": 2}
         items = []
         number = 0
@@ -135,6 +135,31 @@ class EditorialSelectionTests(unittest.TestCase):
         selected, _ = select_issue(items, max_stories=10, source_share=1,
                                    page_caps={"comics": 2})
         self.assertEqual({"a-2", "a-4"}, {item["id"] for item in selected})
+
+    def test_default_page_caps_match_balanced_retained_issue(self):
+        page_counts = {"brazilnews": 6, "worldnews": 8, "formula1": 6,
+                       "technology": 10, "comics": 2, "sports": 12, "ideas": 5}
+        items = []
+        number = 0
+        for page, count in page_counts.items():
+            for offset in range(count):
+                if page == "comics":
+                    source = ("GiantITP", "Wilde Life")[offset]
+                elif page == "worldnews":
+                    source = ("BBC US & Canada" if offset < 3 else
+                              "Reuters" if offset < 7 else "Financial Times US")
+                elif page == "sports":
+                    source = ("World Surf League" if offset < 3 else
+                              "ATP Tour" if offset < 5 else f"Sports Source {offset}")
+                else:
+                    source = f"{page} Source {offset}"
+                items.append(article(number, source=source, category=page,
+                                     score=100-number/100))
+                number += 1
+        selected, report = select_issue(items)
+        self.assertEqual(49, len(selected))
+        self.assertEqual(page_counts, report["page_counts"])
+        self.assertFalse(any(item["code"] == "page_cap" for item in report["rejected"]))
 
 
 if __name__ == "__main__":

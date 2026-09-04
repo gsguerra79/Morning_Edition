@@ -6,9 +6,9 @@ from datetime import datetime
 
 DEFAULT_PAGE_CAPS = {
     "brazilnews": 6, "worldnews": 8, "formula1": 6,
-    "technologythings": 8, "comics": 2, "sports": 5, "ideas": 5,
+    "technologythings": 10, "comics": 2, "sports": 12, "ideas": 5,
     # Legacy keys remain bounded while carried articles are being remapped.
-    "technology": 8, "photography": 5, "outdoors": 5,
+    "technology": 10, "photography": 5, "outdoors": 5,
     "f1": 6, "world": 8,
 }
 SOURCE_ALIASES = {
@@ -26,12 +26,12 @@ REQUIRED_PAGE_SOURCES = {
     "comics": ("giantitp", "wilde life"),
 }
 RAW_SOURCE_LIMITS = {
-    "bbc us & canada": 1,
+    "bbc us & canada": 3,
     "financial times us": 2,
     "financial times world": 2,
-    "reuters": 3,
+    "reuters": 4,
     "atp tour": 2,
-    "world surf league": 2,
+    "world surf league": 3,
     "giantitp": 1,
     "wilde life": 1,
 }
@@ -87,7 +87,7 @@ def _reason(article, source_record, mandatory=False):
     return f"Selected as timely coverage of {category} from {source}."
 
 
-def select_issue(articles, registry=None, rules=None, max_stories=40,
+def select_issue(articles, registry=None, rules=None, max_stories=60,
                  source_share=0.20, page_caps=None):
     """Return ``(selected, report)``; one representative per story cluster."""
     page_caps = {**DEFAULT_PAGE_CAPS, **(page_caps or {})}
@@ -211,6 +211,9 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
     for item in candidates:
         if len(selected) >= max_stories and not item["editorial_must_include"]:
             break
+        identity = item.get("id") or item.get("cluster_id")
+        if identity in selected_ids:
+            continue
         if item["editorial_must_include"]:
             continue
         source = item["editorial_source"]
