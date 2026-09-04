@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img" aria-label="Reuters story">
+  <rect width="800" height="450" fill="#171717"/>
+  <g fill="#ff8000">
+    <circle cx="171" cy="225" r="10"/><circle cx="193" cy="184" r="9"/><circle cx="193" cy="266" r="9"/>
+    <circle cx="226" cy="155" r="8"/><circle cx="226" cy="295" r="8"/><circle cx="268" cy="143" r="7"/>
+    <circle cx="268" cy="307" r="7"/><circle cx="303" cy="166" r="6"/><circle cx="303" cy="284" r="6"/>
+    <circle cx="321" cy="205" r="5"/><circle cx="321" cy="245" r="5"/>
+  </g>
+  <text x="380" y="250" fill="#f5f5f5" font-family="Arial,sans-serif" font-size="82" font-weight="700" letter-spacing="3">REUTERS</text>
+</svg>

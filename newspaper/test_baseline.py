@@ -118,6 +118,16 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertNotIn("whyLine(", html)
         self.assertIn("why_selected", (Path(__file__).parent / "pipeline.py").read_text())
 
+    def test_ft_and_reuters_have_source_art_when_story_image_is_absent(self):
+        root = Path(__file__).parent
+        html = (root / "digest.html").read_text(encoding="utf-8")
+        dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("'/ft-card.svg?v=1'", html)
+        self.assertIn("'/reuters-card.svg?v=1'", html)
+        self.assertIn('ft-card.svg', server.ICON_FILES)
+        self.assertIn('reuters-card.svg', server.ICON_FILES)
+        self.assertIn('ft-card.svg reuters-card.svg', dockerfile)
+
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
         self.assertIn('id="vnav-weather"', html)

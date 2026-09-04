@@ -74,7 +74,8 @@ STATIC_TYPES = {
 
 # Icon files served at the root, by exact name (no path traversal).
 ICON_FILES = ('favicon.svg', 'favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png',
-              'apple-touch-icon.png', 'logo-mark.png')
+              'apple-touch-icon.png', 'logo-mark.png', 'ft-card.svg',
+              'reuters-card.svg')
 
 COMIC_IMAGE_PATHS = {
     'i.giantitp.com': ('/comics/oots/',),
