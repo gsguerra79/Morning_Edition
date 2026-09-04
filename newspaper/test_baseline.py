@@ -164,6 +164,14 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("Rio de Janeiro, Brazil", html)
         self.assertIn("Updated ${issueTime}", html)
 
+    def test_weather_icons_are_colored_svg_and_hourly_rain_is_proportional(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn('class="weather-glyph weather-${kind}"', html)
+        self.assertIn('class="forecast-icon"', html)
+        self.assertIn('class="hour-rain-fill" style="width:${rain}%"', html)
+        self.assertIn('class="hour-rain-label">${rain}%', html)
+        self.assertIn('function weatherPercent(value)', html)
+
     def test_sources_owns_feed_and_topic_management(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
         self.assertIn("['feeds', 'Manage sources']", html)
