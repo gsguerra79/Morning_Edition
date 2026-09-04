@@ -10,8 +10,9 @@ adapter experiment or passing test is evidence, not delivery.
 ## Starting point
 
 - v1.0.0 is owner-accepted and remains the immutable release baseline.
-- The source inventory contains 33 unique canonical sources across seven pages.
-- 32 sources are active and loaded. Kickstarter is the only genuine connector
+- The source inventory contains 34 unique canonical sources across seven pages
+  after commissioning Autosport for the Formula 1 race desk.
+- 33 sources are active and loaded. Kickstarter is the only genuine connector
   gap.
 - Financial Times, Reuters, and World Surf League use working first-party
   sources. ATP Tour and Medium are live through compliant discovery feeds;
