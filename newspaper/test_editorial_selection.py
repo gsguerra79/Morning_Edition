@@ -65,7 +65,7 @@ class EditorialSelectionTests(unittest.TestCase):
 
     def test_representative_morning_fixture_is_in_target_band(self):
         caps = {"technology": 10, "photography": 5, "outdoors": 5,
-                "f1": 6, "world": 8, "comics": 2}
+                "f1": 12, "world": 8, "comics": 2}
         items = []
         number = 0
         for page, cap in caps.items():
@@ -75,8 +75,8 @@ class EditorialSelectionTests(unittest.TestCase):
                 items.append(article(number, source=source,
                                      category=page, score=100-number/100))
                 number += 1
-        selected, report = select_issue(items, max_stories=40, source_share=.20)
-        self.assertGreaterEqual(len(selected), 30)
+        selected, report = select_issue(items, max_stories=60, source_share=.20)
+        self.assertGreaterEqual(len(selected), 40)
         self.assertLessEqual(len(selected), 45)
         self.assertEqual(caps, report["page_counts"])
         self.assertLessEqual(max(report["source_counts"].values()), 8)
@@ -137,7 +137,7 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertEqual({"a-2", "a-4"}, {item["id"] for item in selected})
 
     def test_default_page_caps_match_balanced_retained_issue(self):
-        page_counts = {"brazilnews": 6, "worldnews": 8, "formula1": 6,
+        page_counts = {"brazilnews": 6, "worldnews": 8, "formula1": 12,
                        "technology": 10, "comics": 2, "sports": 12, "ideas": 5}
         items = []
         number = 0
@@ -157,9 +157,26 @@ class EditorialSelectionTests(unittest.TestCase):
                                      score=100-number/100))
                 number += 1
         selected, report = select_issue(items)
-        self.assertEqual(49, len(selected))
+        self.assertEqual(55, len(selected))
         self.assertEqual(page_counts, report["page_counts"])
         self.assertFalse(any(item["code"] == "page_cap" for item in report["rejected"]))
+
+    def test_f1_selection_reserves_results_technical_preview_and_news(self):
+        titles = [
+            "Practice results from Monza", "Qualifying classification", "Updated standings",
+            "Ferrari engine upgrade", "New floor technical analysis", "Weekend weather preview",
+            "Team principal appointed", "Driver signing confirmed", "Rules bulletin published",
+            "Why driver expects a difficult race", "Interview reveals future", "Paddock rumor",
+        ]
+        sources = ["Formula 1", "Motorsport", "Autosport", "RaceFans", "The Race"]
+        items = [article(i, source=sources[i % len(sources)], category="formula1",
+                         score=20-i, title=title) for i, title in enumerate(titles)]
+        selected, report = select_issue(items, max_stories=60, source_share=1)
+        self.assertEqual(12, len(selected))
+        self.assertGreaterEqual(report["f1_kind_counts"].get("results_updates", 0), 3)
+        self.assertGreaterEqual(report["f1_kind_counts"].get("technical", 0), 2)
+        self.assertGreaterEqual(report["f1_kind_counts"].get("preview_forecast", 0), 1)
+        self.assertLessEqual(report["f1_kind_counts"].get("rumor_interview", 0), 3)
 
 
 if __name__ == "__main__":

@@ -106,7 +106,7 @@ PAGE_LOOKBACK_HOURS = {
 }
 
 PAGE_BUDGETS = {
-    'brazilnews': (4, 6), 'worldnews': (5, 8), 'formula1': (4, 6),
+    'brazilnews': (4, 6), 'worldnews': (5, 8), 'formula1': (8, 12),
     'technology': (8, 10), 'comics': (2, 2), 'sports': (8, 12),
     'ideas': (3, 5),
 }
@@ -118,7 +118,12 @@ PAGE_REQUIRED_SOURCES = {
     'worldnews': ('bbc us & canada', 'financial times us', 'reuters'),
     'sports': ('atp tour', 'world surf league'),
     'technology': ('brickset', 'the brothers brick'),
+    'formula1': ('formula 1', 'motorsport', 'autosport'),
 }
+F1_SOURCE_MAXIMUMS = {'formula 1': 3, 'motorsport': 3, 'autosport': 3,
+                      'racefans': 2, 'the race': 2}
+F1_KIND_MINIMUMS = {'results_updates': 3, 'technical': 2,
+                    'preview_forecast': 1, 'news': 2}
 
 
 def _page_window_hours(category, default):
@@ -1038,6 +1043,25 @@ def sports_subtopic(article):
     return 'other'
 
 
+def f1_story_kind(article):
+    text = ' '.join(str(article.get(k) or '') for k in
+                    ('title', 'summary', 'feed_summary')).casefold()
+    if re.search(r'\b(results?|classification|standings|practice\s*[123]?|fp[123]|qualifying|'
+                 r'sprint(?:\s+race)?|grid|penalt(?:y|ies)|race result|live coverage|as it happened)\b', text):
+        return 'results_updates'
+    if any(x in text for x in ('technical', 'technology', 'upgrade', 'engine', 'power unit',
+                               'aero', 'regulation', 'rule', 'tyre', 'tire', 'battery',
+                               'chassis', 'floor', 'wing', 'design', 'top speed')):
+        return 'technical'
+    if any(x in text for x in ('preview', 'forecast', 'weather', 'heat', 'what to expect',
+                               'prediction', 'chances', 'weekend', 'grand prix', ' gp ')):
+        return 'preview_forecast'
+    if any(x in text for x in ('rumor', 'rumour', 'interview', 'reveals', 'admits', 'warns',
+                               'says', 'why ', 'future', 'contract', 'driver market')):
+        return 'rumor_interview'
+    return 'news'
+
+
 def select_balanced_issue(articles):
     """Select a finite issue without allowing one interest to evict another."""
     reps, seen = [], set()
@@ -1107,8 +1131,43 @@ def select_balanced_issue(articles):
         if add(article):
             sports_counts[topic] = sports_counts.get(topic, 0) + 1
 
+    f1 = [a for a in reps if a.get('category') == 'formula1']
+    f1_counts = {}
+    f1_source_counts = {}
+    for article in selected:
+        if article.get('category') != 'formula1':
+            continue
+        kind = f1_story_kind(article)
+        source = str(article.get('source') or '').casefold()
+        article['f1_kind'] = kind
+        f1_counts[kind] = f1_counts.get(kind, 0) + 1
+        f1_source_counts[source] = f1_source_counts.get(source, 0) + 1
+    for kind, minimum in F1_KIND_MINIMUMS.items():
+        for article in (item for item in f1 if f1_story_kind(item) == kind):
+            if f1_counts.get(kind, 0) >= minimum:
+                break
+            source = str(article.get('source') or '').casefold()
+            if f1_source_counts.get(source, 0) >= F1_SOURCE_MAXIMUMS.get(source, 12):
+                continue
+            article['f1_kind'] = kind
+            if add(article):
+                f1_counts[kind] = f1_counts.get(kind, 0) + 1
+                f1_source_counts[source] = f1_source_counts.get(source, 0) + 1
+
+    # Finish the twelve-story desk with source diversity; the ordinary page
+    # loop below skips Formula 1 because it has already been shaped here.
+    for article in f1:
+        if sum(1 for item in selected if item.get('category') == 'formula1') >= PAGE_BUDGETS['formula1'][1]:
+            break
+        source = str(article.get('source') or '').casefold()
+        if f1_source_counts.get(source, 0) >= F1_SOURCE_MAXIMUMS.get(source, 12):
+            continue
+        article['f1_kind'] = f1_story_kind(article)
+        if add(article):
+            f1_source_counts[source] = f1_source_counts.get(source, 0) + 1
+
     for page, (minimum, maximum) in PAGE_BUDGETS.items():
-        if page in ('sports', 'comics'):
+        if page in ('sports', 'comics', 'formula1'):
             continue
         candidates = [a for a in reps if a.get('category') == page]
         current = sum(1 for a in selected if a.get('category') == page)

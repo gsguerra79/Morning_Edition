@@ -13,7 +13,9 @@ class PipelineDiversityTests(unittest.TestCase):
                 continue
             for i in range(minimum + 3):
                 source = (("GiantITP", "Wilde Life")[i % 2]
-                          if page == "comics" else page)
+                          if page == "comics" else
+                          ("Formula 1", "Motorsport", "Autosport", "RaceFans")[i % 4]
+                          if page == "formula1" else page)
                 items.append({"id": f"{page}-{i}", "cluster_id": f"{page}-{i}",
                               "cluster_rep": True, "source": source, "category": page,
                               "title": f"{page} story {i}", "score": 6,
@@ -51,6 +53,27 @@ class PipelineDiversityTests(unittest.TestCase):
             self.assertGreaterEqual(counts.get(page, 0), minimum)
             self.assertLessEqual(counts.get(page, 0), maximum)
         self.assertEqual([], gaps)
+
+    def test_f1_desk_balances_sources_and_reporting_kinds(self):
+        now = datetime.now(timezone.utc).isoformat()
+        rows = []
+        titles = [
+            "Italian GP practice results", "Qualifying live classification", "Updated F1 standings",
+            "Ferrari engine upgrade explained", "How the new floor changes aero",
+            "Weather forecast for the Grand Prix weekend", "Team announces new principal",
+            "Driver contract confirmed", "Race director issues bulletin", "Paddock analysis",
+            "Driver reveals future plans", "Interview: why the season matters",
+        ]
+        sources = ["Formula 1", "Motorsport", "Autosport", "RaceFans", "The Race"]
+        for i, title in enumerate(titles):
+            rows.append({"id": f"f1-{i}", "cluster_id": f"f1-{i}", "cluster_rep": True,
+                         "source": sources[i % len(sources)], "category": "formula1",
+                         "title": title, "score": 20-i, "published_at": now})
+        selected, _ = pipeline.select_balanced_issue(rows)
+        kinds = {item.get("f1_kind") for item in selected}
+        self.assertEqual(12, len(selected))
+        self.assertTrue({"results_updates", "technical", "preview_forecast", "news"} <= kinds)
+        self.assertLessEqual(sum(item["source"] == "Formula 1" for item in selected), 3)
 
     def test_balanced_issue_reports_missing_sports_subtopic(self):
         now = datetime.now(timezone.utc).isoformat()

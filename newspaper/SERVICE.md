@@ -41,6 +41,12 @@ authentication, transport security, and an explicit threat review.
   relay restricted to their approved image-CDN paths. Reuters story URLs and
   artwork come from Reuters' public first-party news sitemap rather than
   article-page scraping or a generic Google News placeholder.
+- The Formula 1 topic opens with a structured race desk. Jolpica provides the
+  current driver and constructor championships; Formula 1's public static timing
+  archive provides the latest finalized race-weekend session classification,
+  circuit weather and next-session time. The payload is cached for five minutes
+  and falls back to the last successful copy. The dedicated page carries twelve
+  balanced stories; the All page intentionally carries only its strongest six.
 - Opening a story always records it in History. Whether opening also hides its
   Home card is a synced preference under **Settings → Display** and defaults to
   off; explicit Read Later and Not for me actions still retire cards.
@@ -66,6 +72,7 @@ volume; later in-app changes survive image rebuilds.
 - `/editions/live-preview` — non-persistent bounded issue from the current digest
 - `/source-coverage` — reader-ready source-scope and ingestion reconciliation
 - `/weather` — cached Houston weather desk and Rio current observation
+- `/f1` — cached championships and finalized race-weekend session results
 - `/editions/YYYY-MM-DD-morning` — immutable issue
 - `/editions/YYYY-MM-DD-afternoon` — immutable update
 - `/feeds` and `/categories` — active source/topic configuration

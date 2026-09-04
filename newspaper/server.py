@@ -17,6 +17,7 @@ Endpoints:
   GET  /models                installed Ollama models (for the model pickers)
   GET  /status                live pipeline status (running/phase/last run)
   GET  /weather               cached Houston forecast/radar/alerts + Rio current weather
+  GET  /f1                    cached standings + finalized race-weekend timing
   GET  /comic-image           allow-listed relay for subscribed comic artwork
   GET  /card-image            allow-listed relay for FT/Reuters card artwork
   POST /refresh               trigger a pipeline run now
@@ -39,6 +40,7 @@ import editions
 import settings
 import source_coverage
 import weather_service
+import f1_service
 
 STATE_FILE  = os.environ.get('STATE_FILE', '/data/state.json')
 DIGEST_FILE = os.environ.get('DIGEST_FILE', '/data/digest.json')
@@ -711,6 +713,13 @@ class StateHandler(BaseHTTPRequestHandler):
                 self._json(200, weather_service.get_weather(force=(qs.get('refresh') == ['1'])))
             except Exception as exc:
                 self._json(502, {'error': f'Weather sources unavailable: {exc}'})
+            return
+        if path == '/f1':
+            qs = parse_qs(urlparse(self.path).query)
+            try:
+                self._json(200, f1_service.get_f1(force=(qs.get('refresh') == ['1'])))
+            except Exception as exc:
+                self._json(502, {'error': f'Formula 1 data unavailable: {exc}'})
             return
         if path == '/comic-image':
             qs = parse_qs(urlparse(self.path).query)

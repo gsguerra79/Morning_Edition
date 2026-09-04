@@ -1,6 +1,6 @@
 # The Forge Daily — v2 Roadmap
 
-Last reconciled: 2026-09-03
+Last reconciled: 2026-09-04
 
 This is the canonical post-v1 backlog. It replaces the deferred Stage 2–6 list
 in `EXECUTION-PLAN.md`, which had become inaccurate as v1 work closed several
@@ -109,8 +109,12 @@ and functionally identical, and the choice persists across devices.
 
 - **ATP and WSL:** event status, upcoming schedule, results, ranking/standings
   context, and relevant Brazilian competitors when available.
-- **Formula 1:** fact, analysis, rumor, or informed-speculation labels plus
-  driver, team, and event context.
+- **Formula 1:** commissioned in the first v2 slice with driver and constructor
+  championship tables, finalized latest-session classification during race
+  weekends, next-session timing, twelve balanced dedicated-page stories, six
+  on Home, reporting-type labels, and protected Motorsport/Autosport coverage.
+  Further live-session telemetry would require authenticated F1 timing access
+  and is optional; the commissioned desk intentionally uses finalized data.
 - **Crowdfunding and development-stage gear:** campaign status, evidence,
   maker record, readiness, delivery risk, support outlook, and landed-cost
   concerns when the source supports them. This follows Priority 2.

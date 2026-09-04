@@ -31,6 +31,38 @@
     "RaceFans": {
       "exclude_any": ["indycar", "formula e", "wec", "motogp"]
     },
+    "Formula 1": {
+      "category": "formula1",
+      "priority_any": [
+        "practice", "qualifying", "race", "sprint", "results", "standings",
+        "technical", "upgrade", "engine", "power unit", "aero", "regulation",
+        "tyre", "battery", "weather", "preview"
+      ],
+      "priority_match_boost": 2.0,
+      "exclude_any": [
+        "betting", "odds", "fan event", "music", "helmet design", "fragrance ambassador"
+      ]
+    },
+    "Motorsport": {
+      "category": "formula1",
+      "priority_any": [
+        "practice", "qualifying", "race", "sprint", "results", "standings",
+        "technical", "upgrade", "engine", "power unit", "aero", "regulation",
+        "tyre", "battery", "weather", "preview"
+      ],
+      "priority_match_boost": 2.0,
+      "exclude_any": ["motogp", "indycar", "nascar", "formula e"]
+    },
+    "Autosport": {
+      "category": "formula1",
+      "priority_any": [
+        "practice", "qualifying", "race", "sprint", "results", "standings",
+        "technical", "upgrade", "engine", "power unit", "aero", "regulation",
+        "tyre", "battery", "weather", "preview"
+      ],
+      "priority_match_boost": 2.0,
+      "exclude_any": ["motogp", "indycar", "nascar", "formula e"]
+    },
     "BBC": {
       "exclude_any": ["cricket", "county championship"]
     },

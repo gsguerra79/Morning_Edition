@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Rebuild Formula 1 as a race desk: current driver and constructor championship
+  tables, the latest finalized race-weekend session classification, next-session
+  timing, and twelve balanced dedicated-page stories while Home remains capped
+  at six. Add Autosport, protect Motorsport and Autosport representation, label
+  reporting type, and limit rumor/interview filler.
 - Remove the visible “Why it’s here” paragraph from story cards while retaining
   the selection explanation in edition data for audit and future detail views.
 - Replace Reuters' image-less Google News discovery with its first-party news

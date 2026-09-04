@@ -5,11 +5,11 @@ import re
 from datetime import datetime
 
 DEFAULT_PAGE_CAPS = {
-    "brazilnews": 6, "worldnews": 8, "formula1": 6,
+    "brazilnews": 6, "worldnews": 8, "formula1": 12,
     "technologythings": 10, "comics": 2, "sports": 12, "ideas": 5,
     # Legacy keys remain bounded while carried articles are being remapped.
     "technology": 10, "photography": 5, "outdoors": 5,
-    "f1": 6, "world": 8,
+    "f1": 12, "world": 8,
 }
 SOURCE_ALIASES = {
     "bbc world": "BBC", "bbc science & environment": "BBC",
@@ -18,12 +18,14 @@ SOURCE_ALIASES = {
     "financial times us": "Financial Times",
     "financial times world": "Financial Times",
     "motorsport f1": "Motorsport", "g1 brasil": "Globo",
+    "autosport f1": "Autosport",
     "the order of the stick": "GiantITP",
 }
 REQUIRED_PAGE_SOURCES = {
     "worldnews": ("bbc us & canada", "financial times us", "reuters"),
     "sports": ("atp tour", "world surf league"),
     "comics": ("giantitp", "wilde life"),
+    "formula1": ("formula 1", "motorsport", "autosport"),
 }
 RAW_SOURCE_LIMITS = {
     "bbc us & canada": 3,
@@ -34,7 +36,33 @@ RAW_SOURCE_LIMITS = {
     "world surf league": 3,
     "giantitp": 1,
     "wilde life": 1,
+    "formula 1": 3,
+    "motorsport": 3,
+    "autosport": 3,
+    "racefans": 2,
+    "the race": 2,
 }
+F1_KIND_MINIMUMS = {"results_updates": 3, "technical": 2,
+                    "preview_forecast": 1, "news": 2}
+F1_KIND_MAXIMUMS = {"rumor_interview": 3}
+
+
+def f1_kind(article):
+    text = _text(article)
+    if re.search(r"\b(results?|classification|standings|practice\s*[123]?|fp[123]|qualifying|"
+                 r"sprint(?:\s+race)?|grid|penalt(?:y|ies)|race result|live coverage|as it happened)\b", text):
+        return "results_updates"
+    if _matches(text, ("technical", "technology", "upgrade", "engine", "power unit",
+                       "aero", "regulation", "rule", "tyre", "tire", "battery",
+                       "chassis", "floor", "wing", "design", "top speed")):
+        return "technical"
+    if _matches(text, ("preview", "forecast", "weather", "heat", "what to expect",
+                       "prediction", "chances", "weekend", "grand prix", " gp ")):
+        return "preview_forecast"
+    if _matches(text, ("rumor", "rumour", "interview", "reveals", "admits", "warns",
+                       "says", "why ", "future", "contract", "driver market")):
+        return "rumor_interview"
+    return "news"
 
 
 def _text(article):
@@ -143,6 +171,8 @@ def select_issue(articles, registry=None, rules=None, max_stories=60,
         if source_rules.get("category"):
             item["category"] = _page_key(source_rules["category"])
         item["editorial_must_include"] = mandatory
+        if item.get("category") in ("formula1", "f1"):
+            item["f1_kind"] = f1_kind(item)
         item["selection_score"] = round(_score(item), 4)
         item["why_selected"] = _reason(item, record, mandatory)
         corroborating = []
@@ -165,7 +195,7 @@ def select_issue(articles, registry=None, rules=None, max_stories=60,
         not item["editorial_must_include"], -item["selection_score"],
         -_published_rank(item), str(item.get("id") or "")))
     selected, selected_ids = [], set()
-    source_counts, raw_source_counts, page_counts = {}, {}, {}
+    source_counts, raw_source_counts, page_counts, f1_kind_counts = {}, {}, {}, {}
 
     def add(item):
         identity = item.get("id") or item.get("cluster_id")
@@ -179,6 +209,9 @@ def select_issue(articles, registry=None, rules=None, max_stories=60,
         source_counts[source] = source_counts.get(source, 0) + 1
         raw_source_counts[raw_source] = raw_source_counts.get(raw_source, 0) + 1
         page_counts[page] = page_counts.get(page, 0) + 1
+        if page in ("formula1", "f1"):
+            kind = item.get("f1_kind") or f1_kind(item)
+            f1_kind_counts[kind] = f1_kind_counts.get(kind, 0) + 1
         return True
 
     for item in candidates:
@@ -208,6 +241,24 @@ def select_issue(articles, registry=None, rules=None, max_stories=60,
         if item and len(selected) < max_stories:
             add(item)
 
+    # A race desk needs reporting modes, not twelve variants of the same quote.
+    # Reserve results/live updates, engineering, previews and straight news
+    # before generic score order fills the remaining Formula 1 slots.
+    f1_candidates = [item for item in candidates
+                     if item.get("category") in ("formula1", "f1")]
+    for kind, minimum in F1_KIND_MINIMUMS.items():
+        for item in (candidate for candidate in f1_candidates
+                     if candidate.get("f1_kind") == kind):
+            if f1_kind_counts.get(kind, 0) >= minimum or len(selected) >= max_stories:
+                break
+            page = item.get("category") or "formula1"
+            if page_counts.get(page, 0) >= page_caps.get(page, max_stories):
+                break
+            raw_source = str(item.get("source") or "").casefold()
+            if raw_source_counts.get(raw_source, 0) >= RAW_SOURCE_LIMITS.get(raw_source, max_stories):
+                continue
+            add(item)
+
     for item in candidates:
         if len(selected) >= max_stories and not item["editorial_must_include"]:
             break
@@ -230,6 +281,12 @@ def select_issue(articles, registry=None, rules=None, max_stories=60,
             rejected.append({"id": item.get("id"), "code": "source_variant_cap",
                              "source": item.get("source")})
             continue
+        if page in ("formula1", "f1"):
+            kind = item.get("f1_kind") or f1_kind(item)
+            if f1_kind_counts.get(kind, 0) >= F1_KIND_MAXIMUMS.get(kind, max_stories):
+                rejected.append({"id": item.get("id"), "code": "f1_kind_cap",
+                                 "kind": kind})
+                continue
         if page_counts.get(page, 0) >= page_caps.get(page, max_stories):
             rejected.append({"id": item.get("id"), "code": "page_cap", "page": page})
             continue
@@ -241,5 +298,6 @@ def select_issue(articles, registry=None, rules=None, max_stories=60,
         "mandatory_stories": sum(1 for item in selected if item["editorial_must_include"]),
         "source_limit": source_limit, "source_counts": source_counts,
         "page_counts": page_counts, "rejected": rejected,
+        "f1_kind_counts": f1_kind_counts,
     }
     return selected, report
