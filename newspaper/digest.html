@@ -411,8 +411,9 @@
     .f1-desk-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; border-bottom:3px solid #e10600; padding:8px 0 13px; margin-bottom:20px; }
     .f1-desk-head h1 { font-family:var(--font-head); font-size:30px; line-height:1; margin-top:4px; }
     .f1-desk-meta { color:var(--text3); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
-    .f1-panels { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(330px,.65fr); gap:24px; align-items:start; }
+    .f1-panels { display:block; }
     .f1-panel { border:1px solid var(--border); background:var(--surface); padding:18px; min-width:0; }
+    .f1-session-panel { width:100%; }
     .f1-panel h2 { font-family:var(--font-head); font-size:20px; margin:0 0 4px; }
     .f1-panel-sub { color:var(--text3); font-size:12px; margin-bottom:14px; }
     .f1-session-top { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; }
@@ -423,11 +424,22 @@
     .f1-table td { padding:6px 5px; border-bottom:1px solid var(--border); white-space:nowrap; }
     .f1-table .num { text-align:right; }
     .f1-team-mark { display:inline-block; width:3px; height:12px; margin-right:6px; vertical-align:-2px; }
-    .f1-standings-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .f1-standings-rail { position:sticky; top:18px; }
+    .f1-standings-grid { display:grid; grid-template-columns:1fr; gap:22px; }
     .f1-standings-grid h3 { font-family:var(--font-head); font-size:15px; margin-bottom:7px; }
     .f1-kind { display:inline-flex; margin-left:7px; border:1px solid currentColor; border-radius:999px; padding:1px 6px; font-size:8px; line-height:1.4; letter-spacing:.04em; vertical-align:1px; opacity:.78; }
-    @media (max-width:900px) { .f1-panels { grid-template-columns:1fr; } }
-    @media (max-width:640px) { .f1-desk-head,.f1-session-top { align-items:flex-start; flex-direction:column; } .f1-next { text-align:left; } .f1-standings-grid { grid-template-columns:1fr; } .f1-panel { padding:14px 10px; } }
+    .f1-news-sections { display:grid; gap:38px; }
+    .f1-news-section { min-width:0; }
+    .f1-news-section + .f1-news-section { border-top:1px solid var(--border2); padding-top:28px; }
+    .f1-news-head { margin-bottom:16px; }
+    .f1-news-head h2 { font-family:var(--font-head); font-size:22px; margin-bottom:4px; }
+    .f1-news-head p { color:var(--text3); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+    .f1-news-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    #digest-magazine.f1-mode .cols { grid-template-columns:minmax(0,1fr) 370px; gap:28px; }
+    #digest-magazine.f1-mode .rail-col { min-width:0; }
+    @media (max-width:1100px) { .f1-news-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:900px) { .f1-standings-rail { position:static; } #digest-magazine.f1-mode .cols { grid-template-columns:1fr; } }
+    @media (max-width:640px) { .f1-desk-head,.f1-session-top { align-items:flex-start; flex-direction:column; } .f1-next { text-align:left; } .f1-panel { padding:14px 10px; } .f1-news-grid { grid-template-columns:1fr; } }
 
     /* ── Earlier rail (right column) ────────────────────── */
     .rail-day { font-family: var(--font-head); font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; padding: 16px 0 4px; }
@@ -859,11 +871,11 @@
       <section id="section-hero" class="hero"></section>
       <div class="cols">
         <main class="main-col">
-          <p class="sec-label">Latest</p>
+          <p class="sec-label" id="main-col-label">Latest</p>
           <div id="section-grid" class="grid"></div>
         </main>
         <aside class="rail-col">
-          <p class="sec-label">Earlier this week</p>
+          <p class="sec-label" id="rail-col-label">Earlier this week</p>
           <div id="rail-list"></div>
         </aside>
       </div>
@@ -1326,6 +1338,21 @@ function f1Points(value) {
   return Number.isInteger(number) ? String(number) : number.toFixed(1);
 }
 
+function f1ArticleClass(a) {
+  const title = String(a.title || '').toLowerCase();
+  const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
+  if (/\b(rumou?r|speculat|could join|linked with|tipped for|may replace)\b/.test(text)) return {tier:'paddock', label:'Rumour'};
+  if (/\b(wedding|girlfriend|boyfriend|family|lifestyle|holiday|vacation|social media|off.track|personal life|health|injur|recovery|recovers)\b/.test(text)) return {tier:'paddock', label:'Personal'};
+  if (/\b(celebrity|fashion|film|movie|gaming|sim racing|fan event|live event|three.day event|sponsor activation|merchandise)\b/.test(text)) return {tier:'paddock', label:'Tangential'};
+  if (/\b(interview|says|admits|reveals|warns|opens up|explains why|sets out target|wanted to|why\b)\b/.test(title)) return {tier:'paddock', label:'Interview'};
+  if (/\b(strategy|strategic|undercut|overcut|pit stop|tyre choice|tire choice|degradation|race pace|long run|fuel load|stint)\b/.test(text)) return {tier:'desk', label:'Strategy'};
+  if (/\b(appointed|appointment|signing|signed|confirmed|team principal|driver line.up|personnel|replacement)\b/.test(text)) return {tier:'desk', label:'Personnel'};
+  if (/\b(technical|technology|upgrade|engine|power unit|aero|regulation|rule|tyre|tire|battery|chassis|floor|wing|design|top speed|mj)\b/.test(title)) return {tier:'desk', label:'Technical'};
+  if (a.f1_kind === 'results_updates' || a.f1_kind === 'preview_forecast') return {tier:'desk', label:'Update'};
+  if (a.f1_kind === 'rumor_interview') return {tier:'paddock', label:'Paddock'};
+  return {tier:'desk', label:'News'};
+}
+
 function drawF1(data) {
   const el = document.getElementById('f1-desk');
   if (!el || currentCat !== 'formula1') return;
@@ -1340,16 +1367,21 @@ function drawF1(data) {
   const updated = data.updated_at ? new Intl.DateTimeFormat(undefined, {hour:'numeric', minute:'2-digit', timeZoneName:'short'}).format(new Date(data.updated_at)) : '—';
   const driverRows = drivers.map(row => `<tr><td class="num">${row.position}</td><td><b>${escapeAttr(row.code || row.name)}</b></td><td>${escapeAttr(row.team || '')}</td><td class="num"><b>${f1Points(row.points)}</b></td></tr>`).join('');
   const teamRows = teams.map(row => `<tr><td class="num">${row.position}</td><td><b>${escapeAttr(row.name || '')}</b></td><td class="num"><b>${f1Points(row.points)}</b></td></tr>`).join('');
-  const standingsHtml = `<section class="f1-panel"><h2>2026 Championship</h2><div class="f1-panel-sub">After round ${escapeAttr((standings.drivers || {}).round || '—')} · Jolpica F1</div><div class="f1-standings-grid"><div><h3>Drivers</h3><div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th></tr></thead><tbody>${driverRows}</tbody></table></div></div><div><h3>Constructors</h3><div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Pts</th></tr></thead><tbody>${teamRows}</tbody></table></div></div></div></section>`;
+  const standingsHtml = `<section class="f1-panel f1-standings-rail"><h2>2026 Championship</h2><div class="f1-panel-sub">After round ${escapeAttr((standings.drivers || {}).round || '—')} · Jolpica F1</div><div class="f1-standings-grid"><div><h3>Drivers</h3><div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th></tr></thead><tbody>${driverRows}</tbody></table></div></div><div><h3>Teams</h3><div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Pts</th></tr></thead><tbody>${teamRows}</tbody></table></div></div></div></section>`;
   let sessionHtml = '';
   if (weekend) {
-    const liveRows = liveResult ? (liveResult.rows || []).map(row => `<tr><td class="num">${row.position}</td><td><span class="f1-team-mark" style="background:#${escapeAttr(row.team_colour || '888888')}"></span><b>${escapeAttr(row.code || row.name || row.number)}</b></td><td>${escapeAttr(row.team || '')}</td><td class="num">${escapeAttr(row.time || '—')}</td><td class="num">${row.position === 1 ? '—' : escapeAttr(row.gap || '—')}</td><td class="num">${row.laps || '—'}</td></tr>`).join('') : '';
-    const resultRows = result ? (result.rows || []).map(row => `<tr><td class="num">${row.position}</td><td><span class="f1-team-mark" style="background:#${escapeAttr(row.team_colour || '888888')}"></span><b>${escapeAttr(row.code || row.name || row.number)}</b></td><td>${escapeAttr(row.team || '')}</td><td class="num">${escapeAttr(row.time || '—')}</td><td class="num">${row.position === 1 ? '—' : escapeAttr(row.gap || '—')}</td><td class="num">${row.laps || '—'}</td></tr>`).join('') : '';
+    const isLive = Boolean(current);
+    const shown = isLive ? liveResult : result;
+    const shownRows = shown ? (shown.rows || []).map(row => `<tr><td class="num">${row.position}</td><td><span class="f1-team-mark" style="background:#${escapeAttr(row.team_colour || '888888')}"></span><b>${escapeAttr(row.code || row.name || row.number)}</b></td><td>${escapeAttr(row.team || '')}</td><td class="num">${escapeAttr(row.time || '—')}</td><td class="num">${row.position === 1 ? '—' : escapeAttr(row.gap || '—')}</td><td class="num">${row.laps || '—'}</td></tr>`).join('') : '';
     const schedule = `${current ? `<b style="color:#e10600">Live now: ${escapeAttr(current.name)}</b><br>Ends ${escapeAttr(f1Time(current.end))}${next ? '<br>' : ''}` : ''}${next ? `<b>Next: ${escapeAttr(next.name)}</b><br>${escapeAttr(f1Time(next.start))}` : ''}`;
-    const liveHtml = liveResult && liveRows ? `<h3>${escapeAttr(liveResult.session)} — ${liveResult.provisional ? 'live provisional order' : 'classification'}</h3><div class="f1-panel-sub">OpenF1 · ${liveResult.weather && liveResult.weather.air_c != null ? `Air ${escapeAttr(liveResult.weather.air_c)}°C · Track ${escapeAttr(liveResult.weather.track_c)}°C` : 'current-session data'}</div><div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Best</th><th class="num">Gap</th><th class="num">Laps</th></tr></thead><tbody>${liveRows}</tbody></table></div>` : '';
-    sessionHtml = `<section class="f1-panel"><div class="f1-session-top"><div><h2>${escapeAttr(weekend.meeting || 'Race weekend')}</h2><div class="f1-panel-sub">${escapeAttr(weekend.circuit || '')}${weekend.country ? ` · ${escapeAttr(weekend.country)}` : ''}</div></div>${schedule ? `<div class="f1-next">${schedule}</div>` : ''}</div>${liveHtml}${result ? `<h3>${escapeAttr(result.session)} — final classification</h3><div class="f1-panel-sub">${escapeAttr(f1Time(result.end))}${result.weather && result.weather.air_c ? ` · Air ${escapeAttr(result.weather.air_c)}°C · Track ${escapeAttr(result.weather.track_c)}°C` : ''}</div><div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Best</th><th class="num">Gap</th><th class="num">Laps</th></tr></thead><tbody>${resultRows}</tbody></table></div>` : '<p class="empty">The first completed session classification will appear here.</p>'}</section>`;
+    const status = isLive ? `${escapeAttr(current.name)} — live provisional order` : shown ? `${escapeAttr(shown.session)} — final classification` : 'Session classification';
+    const sourceLine = isLive ? `OpenF1 · ${shown && shown.weather && shown.weather.air_c != null ? `Air ${escapeAttr(shown.weather.air_c)}°C · Track ${escapeAttr(shown.weather.track_c)}°C` : 'timing is populating'}` : shown ? `${escapeAttr(f1Time(shown.end))}${shown.weather && shown.weather.air_c ? ` · Air ${escapeAttr(shown.weather.air_c)}°C · Track ${escapeAttr(shown.weather.track_c)}°C` : ''}` : '';
+    const table = shownRows ? `<div class="f1-table-wrap"><table class="f1-table"><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Best</th><th class="num">Gap</th><th class="num">Laps</th></tr></thead><tbody>${shownRows}</tbody></table></div>` : `<p class="empty">${isLive ? 'Live timing will appear as completed laps arrive.' : 'The first completed session classification will appear here.'}</p>`;
+    sessionHtml = `<section class="f1-panel f1-session-panel"><div class="f1-session-top"><div><h2>${escapeAttr(weekend.meeting || 'Race weekend')}</h2><div class="f1-panel-sub">${escapeAttr(weekend.circuit || '')}${weekend.country ? ` · ${escapeAttr(weekend.country)}` : ''}</div></div>${schedule ? `<div class="f1-next">${schedule}</div>` : ''}</div><h3>${status}</h3><div class="f1-panel-sub">${sourceLine}</div>${table}</section>`;
   }
-  el.innerHTML = `<div class="f1-desk-head"><div><div class="f1-desk-meta">Formula 1 race desk</div><h1>${weekend ? escapeAttr(weekend.meeting) : 'Championship & results'}</h1></div><div class="f1-desk-meta">Updated ${escapeAttr(updated)}${data.stale ? ' · cached' : ''}</div></div><div class="f1-panels">${sessionHtml}${standingsHtml}</div>`;
+  el.innerHTML = `<div class="f1-desk-head"><div><div class="f1-desk-meta">Formula 1 race desk</div><h1>${weekend ? escapeAttr(weekend.meeting) : 'Championship & results'}</h1></div><div class="f1-desk-meta">Updated ${escapeAttr(updated)}${data.stale ? ' · cached' : ''}</div></div><div class="f1-panels">${sessionHtml}</div>`;
+  const standingsSlot = document.getElementById('f1-standings-slot');
+  if (standingsSlot) standingsSlot.innerHTML = standingsHtml;
 }
 
 async function renderF1Desk(force = false) {
@@ -1506,7 +1538,8 @@ function thumb(a) {
 function kicker(a) {
   const cat = catMeta(a.category);
   const kinds = {results_updates:'Session / results', technical:'Technical', preview_forecast:'Preview', news:'News', rumor_interview:'Rumor / interview'};
-  const kind = a.category === 'formula1' && a.f1_kind ? `<span class="f1-kind">${kinds[a.f1_kind] || escapeAttr(a.f1_kind)}</span>` : '';
+  const presentation = a.category === 'formula1' ? f1ArticleClass(a) : null;
+  const kind = presentation ? `<span class="f1-kind">${escapeAttr(presentation.label)}</span>` : a.f1_kind ? `<span class="f1-kind">${kinds[a.f1_kind] || escapeAttr(a.f1_kind)}</span>` : '';
   return `<span class="kicker" style="color:${cat.c}"><span class="cdot" style="background:${cat.c}"></span>${cat.label || a.category}${kind}</span>`;
 }
 
@@ -2157,6 +2190,7 @@ function render() {
   resultsEl.style.display = 'none';
   resultsEl.innerHTML = '';
   magazine.style.display = '';
+  magazine.classList.toggle('f1-mode', currentCat === 'formula1');
   renderF1Desk();
 
   // Bucket and order by effectiveScore = (score + cluster_boost) × source-
@@ -2174,6 +2208,28 @@ function render() {
   const today = inbox.filter(a => isToday(a));
   const earlier = inbox.filter(a => !isToday(a))
     .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+  const mainLabel = document.getElementById('main-col-label');
+  const railLabel = document.getElementById('rail-col-label');
+  if (mainLabel) mainLabel.textContent = currentCat === 'formula1' ? 'Formula 1 reporting' : 'Latest';
+  if (railLabel) railLabel.textContent = currentCat === 'formula1' ? 'Championship' : 'Earlier this week';
+
+  if (currentCat === 'formula1') {
+    const stories = inbox.filter(a => a.category === 'formula1');
+    const raceDesk = stories.filter(a => f1ArticleClass(a).tier === 'desk');
+    const paddock = stories.filter(a => f1ArticleClass(a).tier === 'paddock');
+    const storySection = (title, subtitle, items) => `<section class="f1-news-section"><div class="f1-news-head"><h2>${title}</h2><p>${subtitle}</p></div>${items.length ? `<div class="grid f1-news-grid">${items.map(gridCardHTML).join('')}</div>` : '<p class="empty">No current stories in this tier.</p>'}</section>`;
+    document.getElementById('section-hero').className = 'topic-sections';
+    document.getElementById('section-hero').innerHTML = '';
+    document.getElementById('section-grid').className = 'f1-news-sections';
+    document.getElementById('section-grid').innerHTML =
+      storySection('Race desk', 'Updates · Strategy · Personnel · Technical · News', raceDesk) +
+      storySection('Paddock & off-track', 'Interviews · Personal · Rumours · Tangential', paddock);
+    document.getElementById('rail-list').innerHTML = '<div id="f1-standings-slot"></div>';
+    renderF1Desk();
+    return;
+  }
+  document.getElementById('section-grid').className = 'grid';
 
   // The edition is organized by subject, not by publisher. Each category is
   // a newspaper section with its own lead story and compact supporting cards.

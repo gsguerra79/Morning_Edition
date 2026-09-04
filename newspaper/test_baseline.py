@@ -162,6 +162,18 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertEqual('image/svg+xml', server.STATIC_TYPES['.svg'])
         self.assertIn('favicon.svg favicon.ico', dockerfile)
 
+    def test_f1_page_has_single_session_frame_sticky_standings_and_news_tiers(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("const shown = isLive ? liveResult : result", html)
+        self.assertIn("f1-session-panel", html)
+        self.assertIn("f1-standings-rail", html)
+        self.assertIn("position:sticky", html)
+        self.assertIn("grid-template-columns:1fr", html)
+        self.assertIn("'Race desk'", html)
+        self.assertIn("'Paddock & off-track'", html)
+        self.assertIn("Updates · Strategy · Personnel · Technical · News", html)
+        self.assertIn("Interviews · Personal · Rumours · Tangential", html)
+
 
 if __name__ == "__main__":
     unittest.main()
