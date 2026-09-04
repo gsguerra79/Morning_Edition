@@ -11,6 +11,7 @@ import os
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta, timezone
@@ -105,7 +106,14 @@ def _openf1_snapshot(now):
     key = session.get("session_key")
     drivers = _openf1_json("drivers", session_key=key)
     driver_map = {str(item.get("driver_number")): item for item in drivers}
-    final = _openf1_json("session_result", session_key=key)
+    try:
+        final = _openf1_json("session_result", session_key=key)
+    except urllib.error.HTTPError as exc:
+        # OpenF1 returns 404 until an official classification exists. During a
+        # live session that means "not final yet", not provider failure.
+        if exc.code != 404:
+            raise
+        final = []
     provisional = not bool(final)
     raw_rows = final
     if provisional:

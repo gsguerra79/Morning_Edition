@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -90,6 +91,26 @@ class F1ServiceTests(unittest.TestCase):
                      "date_end": "2026-09-04T15:00:00+00:00"}]
         with patch.object(f1_service, "_openf1_json", return_value=sessions):
             self.assertIsNone(f1_service._openf1_snapshot(now))
+
+    def test_openf1_404_result_falls_back_to_live_laps(self):
+        now = datetime(2026, 9, 4, 14, 30, tzinfo=timezone.utc)
+        payloads = {
+            "sessions": [{"session_key": 123, "session_name": "Practice 2",
+                "date_start": "2026-09-04T14:00:00+00:00",
+                "date_end": "2026-09-04T15:00:00+00:00"}],
+            "drivers": [],
+            "laps": [{"driver_number": 4, "lap_duration": 80.125,
+                      "lap_number": 12}],
+            "weather": [],
+        }
+        def fetch(endpoint, **params):
+            if endpoint == "session_result":
+                raise urllib.error.HTTPError("url", 404, "not ready", {}, None)
+            return payloads[endpoint]
+        with patch.object(f1_service, "_openf1_json", side_effect=fetch):
+            result = f1_service._openf1_snapshot(now)
+        self.assertTrue(result["provisional"])
+        self.assertEqual(1, len(result["rows"]))
 
 
 if __name__ == "__main__":
