@@ -18,6 +18,7 @@ Endpoints:
   GET  /status                live pipeline status (running/phase/last run)
   GET  /weather               cached Houston forecast/radar/alerts + Rio current weather
   GET  /f1                    cached standings + finalized race-weekend timing
+  GET  /live-desks            current F1/Comics payload shared by Home + desks
   GET  /hot-metal             current consequential breaking headlines
   GET  /comic-image           allow-listed relay for subscribed comic artwork
   GET  /card-image            allow-listed relay for FT/Reuters card artwork
@@ -43,6 +44,7 @@ import settings
 import source_coverage
 import weather_service
 import f1_service
+import live_desks
 
 STATE_FILE  = os.environ.get('STATE_FILE', '/data/state.json')
 DIGEST_FILE = os.environ.get('DIGEST_FILE', '/data/digest.json')
@@ -83,7 +85,7 @@ ICON_FILES = ('favicon.svg', 'favicon.ico', 'favicon-16x16.png', 'favicon-32x32.
 
 COMIC_IMAGE_PATHS = {
     'i.giantitp.com': ('/comics/oots/',),
-    'www.wildelifecomic.com': ('/comics/',),
+    'www.wildelifecomic.com': ('/comics/', '/comicsthumbs/'),
 }
 COMIC_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 CARD_IMAGE_PATHS = {
@@ -722,6 +724,14 @@ class StateHandler(BaseHTTPRequestHandler):
                 self._json(200, f1_service.get_f1(force=(qs.get('refresh') == ['1'])))
             except Exception as exc:
                 self._json(502, {'error': f'Formula 1 data unavailable: {exc}'})
+            return
+        if path == '/live-desks':
+            try:
+                with open(DIGEST_FILE, encoding='utf-8') as fh:
+                    item = live_desks.build(json.load(fh), fetch_current_comics=True)
+            except (OSError, json.JSONDecodeError):
+                item = None
+            self._json(200, item) if item else self._json(503, {'error': 'Current ingest unavailable'})
             return
         if path == '/comic-image':
             qs = parse_qs(urlparse(self.path).query)

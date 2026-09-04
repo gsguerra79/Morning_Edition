@@ -307,6 +307,7 @@
     /* ── Section label (with trailing rule) ── */
     .sec-label { font-family: var(--font-head); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--text); display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; }
     .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .live-desk-stamp { font-family:var(--font-body); font-size:10px; font-weight:600; letter-spacing:.02em; text-transform:none; color:var(--brand); white-space:nowrap; }
 
     /* ── Score dot ──────────────────────────────────────── */
     .thumb-frame { position: relative; }
@@ -957,6 +958,7 @@ function toggleTheme() {
 /* ── Config ───────────────────────────────────────────── */
 const DIGEST_URL        = '/editions/today';
 const CURRENT_DIGEST_URL = '/digest.json';
+const LIVE_DESKS_URL    = '/live-desks';
 const HOT_METAL_URL     = '/hot-metal';
 const EDITIONS_URL      = '/editions';
 const STATE_URL         = '/state';
@@ -1012,7 +1014,11 @@ let weatherLoading = false;
 let f1Data = null;
 let f1Loading = false;
 let liveF1Articles = [];
-let liveF1Loading = false;
+let liveComicsArticles = [];
+let liveF1FrontIds = [];
+let liveDeskUpdatedAt = {};
+let liveDesksLoading = false;
+let currentIssueIsArchive = false;
 let sharedState = {
   readIds: new Set(),
   later: [],
@@ -1287,13 +1293,15 @@ let hotMetalArticles = [];
 let hotMetalPayload = null;
 
 function articleById(id) {
-  return liveF1Articles.find(a => a.id === id) || allArticles.find(a => a.id === id)
+  return liveF1Articles.find(a => a.id === id) || liveComicsArticles.find(a => a.id === id)
+    || allArticles.find(a => a.id === id)
     || hotMetalArticles.find(a => a.id === id);
 }
 
 function articleUniverse() {
   const items = new Map(allArticles.map(a => [a.id, a]));
   liveF1Articles.forEach(a => items.set(a.id, a));
+  liveComicsArticles.forEach(a => items.set(a.id, a));
   hotMetalArticles.forEach(a => items.set(a.id, a));
   return [...items.values()];
 }
@@ -1626,7 +1634,21 @@ function historyItems() {
 
 function visible(article) {
   if (sharedState.later.some(a => a.id === article.id)) return false;
+  if (article.category !== 'comics' && sharedState.viewState.hideReadOnOpen
+      && sharedState.readIds.has(article.id)) return false;
   return currentCat === 'all' || article.category === currentCat;
+}
+
+function currentDeskArticlePool() {
+  if (currentIssueIsArchive) return allArticles;
+  let items = allArticles.filter(a => a.category !== 'formula1' && a.category !== 'comics');
+  items = items.concat(liveF1Articles.length
+    ? liveF1Articles
+    : allArticles.filter(a => a.category === 'formula1'));
+  items = items.concat(liveComicsArticles.length
+    ? liveComicsArticles
+    : allArticles.filter(a => a.category === 'comics'));
+  return items;
 }
 
 // The inbox: every unread, not-saved story in the digest, de-duplicated to one
@@ -1636,8 +1658,8 @@ function visible(article) {
 // category counts all derive from this so the numbers match the cards shown.
 function inboxReps() {
   const inLater = laterIdSet();
-  return dedupeToReps(allArticles.filter(
-    a => !sharedState.readIds.has(a.id) && !inLater.has(a.id)));
+  return dedupeToReps(currentDeskArticlePool().filter(a =>
+    (a.category === 'comics' || !sharedState.readIds.has(a.id)) && !inLater.has(a.id)));
 }
 
 function formatTime(isoString) {
@@ -1802,7 +1824,7 @@ window.openClusterMember = function(repId, memberId, url) {
     recordInteraction(member.source, 'open');
   }
   window.open(url, '_blank');
-  if (sharedState.viewState.hideReadOnOpen) {
+  if (sharedState.viewState.hideReadOnOpen && member?.category !== 'comics') {
     dismiss(repId, true);
   } else {
     saveSharedState().catch(() => {});
@@ -1907,7 +1929,9 @@ function openArticle(id, url) {
   }
 
   window.open(url, '_blank');
-  if (sharedState.viewState.hideReadOnOpen) {
+  // Comics are subscriptions: the latest installment of each series remains
+  // visible even when the global "hide stories after opening" option is on.
+  if (sharedState.viewState.hideReadOnOpen && article?.category !== 'comics') {
     // Pass internal=true so dismiss doesn't double-count this as a dismiss —
     // an open is positive signal, while hiding is merely the chosen display behavior.
     dismiss(id, true);
@@ -2060,30 +2084,43 @@ window.setCategory = function(cat) {
   buildCatNav();
   if (currentView === 'digest') {
     render();
-    if (cat === 'formula1') loadLiveF1Articles(true);
+    if (cat === 'formula1' || cat === 'comics') loadLiveDesks(true);
   }
   if (currentView === 'later')   renderLater();
   if (currentView === 'history') renderHistory();
 };
 
-async function loadLiveF1Articles(force = false) {
-  if (liveF1Loading || (liveF1Articles.length && !force)) return;
-  liveF1Loading = true;
+function applyLiveDesks(payload) {
+  const desks = payload?.desks || {};
+  liveF1Articles = desks.formula1?.articles || [];
+  liveComicsArticles = desks.comics?.articles || [];
+  liveF1FrontIds = desks.formula1?.front_page_ids || [];
+  liveDeskUpdatedAt = {
+    formula1: desks.formula1?.updated_at || payload?.source_generated_at || null,
+    comics: desks.comics?.updated_at || payload?.source_generated_at || null,
+  };
+}
+
+async function loadLiveDesks(force = false) {
+  if (liveDesksLoading || ((liveF1Articles.length || liveComicsArticles.length) && !force)) return;
+  liveDesksLoading = true;
   try {
-    const response = await fetch(CURRENT_DIGEST_URL, {cache:'no-store'});
+    const response = await fetch(LIVE_DESKS_URL, {cache:'no-store'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const current = await response.json();
-    liveF1Articles = (current.articles || []).filter(a => a.category === 'formula1');
-    if (currentView === 'digest' && currentCat === 'formula1') {
+    applyLiveDesks(await response.json());
+    if (currentView === 'digest' && !currentIssueIsArchive) {
       buildCatNav();
       render();
     }
   } catch (error) {
-    console.warn('Live F1 articles unavailable; keeping published edition:', error);
+    console.warn('Live desks unavailable; keeping published edition:', error);
   } finally {
-    liveF1Loading = false;
+    liveDesksLoading = false;
   }
 }
+
+// Compatibility alias for the F1 desk refresh call sites.
+const loadLiveF1Articles = loadLiveDesks;
 
 /* ── Badges ───────────────────────────────────────────── */
 function updateBadges() {
@@ -2239,6 +2276,23 @@ function f1MainSelection(items) {
   return chosen;
 }
 
+function f1HomeSelection(items) {
+  if (!liveF1FrontIds.length) return f1MainSelection(items);
+  const byId = new Map(items.map(a => [a.id, a]));
+  const selected = liveF1FrontIds.map(id => byId.get(id)).filter(Boolean);
+  return selected.length ? selected : f1MainSelection(items);
+}
+
+function liveDeskStamp(key) {
+  const value = liveDeskUpdatedAt[key];
+  if (!value) return '';
+  const date = new Date(value);
+  if (isNaN(date)) return '';
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  const age = minutes < 1 ? 'now' : minutes < 60 ? `${minutes}m ago` : `${Math.floor(minutes / 60)}h ago`;
+  return `<span class="live-desk-stamp">Live desk · updated ${age}</span>`;
+}
+
 function render() {
   // Semantic search active: swap the magazine for a ranked results list. The
   // magazine sections are emptied so their card ids don't collide with the
@@ -2261,7 +2315,7 @@ function render() {
   magazine.style.display = '';
   magazine.classList.toggle('f1-mode', currentCat === 'formula1');
   renderF1Desk();
-  if (currentCat === 'formula1' && !liveF1Articles.length) loadLiveF1Articles(false);
+  if (!currentIssueIsArchive && (!liveF1Articles.length || !liveComicsArticles.length)) loadLiveDesks(false);
 
   // Bucket and order by effectiveScore = (score + cluster_boost) × source-
   // affinity so the pipeline-assigned score still dictates the baseline, cross-
@@ -2273,11 +2327,9 @@ function render() {
   // One ranked inbox, split into today (by score) and earlier (carried, by
   // recency). The front page draws today first; if today can't fill it (you've
   // cleared the top), it borrows the best of earlier so no section sits empty.
-  // Home remains the immutable published issue. Only the dedicated Formula 1
-  // desk swaps its article pool for the current ingest during a race weekend.
-  const articlePool = currentCat === 'formula1' && liveF1Articles.length
-    ? allArticles.filter(a => a.category !== 'formula1').concat(liveF1Articles)
-    : allArticles;
+  // Edition desks remain immutable. F1 and Comics are explicit current desks,
+  // and Home consumes the same payload as their dedicated pages.
+  const articlePool = currentDeskArticlePool();
   const inbox = dedupeToReps(articlePool.filter(a => visible(a)))
     .sort((a, b) => effectiveScore(b) - effectiveScore(a));
   const today = inbox.filter(a => isToday(a));
@@ -2286,7 +2338,13 @@ function render() {
 
   const mainLabel = document.getElementById('main-col-label');
   const railLabel = document.getElementById('rail-col-label');
-  if (mainLabel) mainLabel.textContent = currentCat === 'formula1' ? 'Formula 1 reporting' : 'Latest';
+  if (mainLabel) {
+    mainLabel.innerHTML = !currentIssueIsArchive && currentCat === 'formula1'
+      ? `Formula 1 reporting ${liveDeskStamp('formula1')}`
+      : !currentIssueIsArchive && currentCat === 'comics'
+        ? `Latest comics ${liveDeskStamp('comics')}`
+        : 'Latest';
+  }
   if (railLabel) railLabel.textContent = currentCat === 'formula1' ? 'Championship' : 'Earlier this week';
 
   if (currentCat === 'formula1') {
@@ -2311,7 +2369,7 @@ function render() {
   // a newspaper section with its own lead story and compact supporting cards.
   const sections = Object.keys(CATS).filter(k => k !== 'all').map(key => ({
     key, articles: key === 'formula1'
-      ? f1MainSelection(inbox.filter(a => a.category === key))
+      ? f1HomeSelection(inbox.filter(a => a.category === key))
       : inbox.filter(a => a.category === key)
   })).filter(s => s.articles.length || coverageGaps.some(g => g.page === s.key));
   if (sections.length && currentCat === 'all') {
@@ -2320,7 +2378,7 @@ function render() {
       const gaps = coverageGaps.filter(g => g.page === section.key);
       const warning = gaps.length ? `<p class="empty" style="border:1px solid #a52a2a;padding:10px;margin:8px 0 14px">Coverage incomplete: ${gaps.map(g => g.subtopic ? `${g.subtopic} (${g.available}/${g.required})` : `${g.available}/${g.required} stories`).join(', ')}.</p>` : '';
       return `<section class="topic-section" style="border-top:3px solid ${catMeta(section.key).c}">
-        <p class="sec-label">${catMeta(section.key).label}</p>
+        <p class="sec-label">${catMeta(section.key).label}${!currentIssueIsArchive && ['formula1','comics'].includes(section.key) ? liveDeskStamp(section.key) : ''}</p>
         ${warning}<div class="grid topic-grid" style="--topic-cols:${balancedTopicColumns(section.articles.length)}">${section.articles.map(gridCardHTML).join('')}</div>
       </section>`;
     }).join('');
@@ -4068,6 +4126,7 @@ function applyDigestData(data) {
     return ds !== 0 ? ds : b.score - a.score;
   });
   coverageGaps = Array.isArray(data.coverage_gaps) ? data.coverage_gaps : [];
+  currentIssueIsArchive = data.kind !== 'today';
   loadedGeneratedAt = data.generated_at || null;
   const issueUpdatedAt = data.generated_at || data.published_at;
   const genDate = issueUpdatedAt ? new Date(issueUpdatedAt) : new Date();
@@ -4156,7 +4215,7 @@ async function pollStatus() {
   if (lastRunning && !running) {
     await checkForNewDigest();
     if (currentView === 'hotmetal') await renderHotMetal(true);
-    if (currentView === 'digest' && currentCat === 'formula1') await loadLiveF1Articles(true);
+    await loadLiveDesks(true);
   }
   lastRunning = running;
   // Poll fast while a run is active, slow when idle.
@@ -4188,11 +4247,21 @@ async function loadDigest() {
     catch (e) { return null; }
   })();
 
+  const liveDesksPromise = (async () => {
+    try {
+      const r = await fetch(LIVE_DESKS_URL, {cache:'no-store'});
+      return r.ok ? await r.json() : null;
+    } catch (e) { return null; }
+  })();
+
   try {
-    const [data, remoteState, cats] = await Promise.all([digestPromise, statePromise, catsPromise]);
+    const [data, remoteState, cats, liveDesks] = await Promise.all([
+      digestPromise, statePromise, catsPromise, liveDesksPromise
+    ]);
 
     buildCats(cats);   // before any render so nav/colors reflect the config
     applyDigestData(data);
+    if (liveDesks) applyLiveDesks(liveDesks);
 
     // Server is the source of truth. If we got it, replace whatever
     // localStorage had (stale local state was the iPad-resurrection bug).

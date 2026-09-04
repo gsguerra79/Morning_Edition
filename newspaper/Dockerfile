@@ -10,7 +10,7 @@ RUN apt-get update \
 WORKDIR /app
 
 # App code + bundled assets. Mutable data lives on the /data volume, not here.
-COPY server.py pipeline.py settings.py corpus_archive.py editions.py pressing_news.py editorial_selection.py story_identity.py source_coverage.py weather_service.py f1_service.py digest.html \
+COPY server.py pipeline.py settings.py corpus_archive.py editions.py pressing_news.py live_desks.py editorial_selection.py story_identity.py source_coverage.py weather_service.py f1_service.py digest.html \
      favicon.svg favicon.ico favicon-16x16.png favicon-32x32.png apple-touch-icon.png logo-mark.png ft-card.svg reuters-card.svg \
      feeds.sample.json categories.sample.json selection-rules.json ./
 
@@ -23,6 +23,7 @@ ENV STATE_FILE=/data/state.json \
     CATEGORIES_FILE=/data/categories.json \
     WEATHER_CACHE_FILE=/data/weather-cache.json \
     F1_CACHE_FILE=/data/f1-cache.json \
+    LIVE_DESKS_FILE=/data/live-desks.json \
     STATIC_DIR=/app \
     SEED_FEEDS=/app/feeds.sample.json \
     SEED_CATEGORIES=/app/categories.sample.json \
