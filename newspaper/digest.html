@@ -1399,9 +1399,12 @@ function thumb(a) {
   const cat = catMeta(a.category);
   const tint = `color-mix(in srgb, ${cat.c} 22%, var(--surface2))`;
   const ph = `<div class="ph">${cat.label || a.category}</div>`;
+  const source = String(a.source || '').toLowerCase();
   const imageURL = a.image && a.category === 'comics'
     ? `/comic-image?url=${encodeURIComponent(a.image)}`
-    : a.image;
+    : a.image && (source.startsWith('financial times') || source === 'reuters')
+      ? `/card-image?url=${encodeURIComponent(a.image)}`
+      : a.image;
   const im = imageURL
     ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy" onerror="this.style.display='none'">`
     : '';
@@ -2135,9 +2138,6 @@ function cardActions(a) {
       <button class="act reject" onclick="openFeedbackPanel('${a.id}')">Not for me</button>
     </div>`;
 }
-function whyLine(a) {
-  return a.why_selected ? `<p class="card-summary"><strong>Why it’s here:</strong> ${escapeAttr(a.why_selected)}</p>` : '';
-}
 const openLink = (a, inner, trustedHTML = false) => {
   const idArg = escapeAttr(JSON.stringify(String(a.id)));
   const urlArg = escapeAttr(JSON.stringify(String(a.url)));
@@ -2153,7 +2153,6 @@ function renderHero(lead, side) {
       ${kicker(lead)}
       <h2 class="lead-title" title="${escapeAttr(lead.title)}">${openLink(lead, lead.title)}</h2>
       ${lead.summary ? `<p class="lead-summary">${escapeAttr(lead.summary)}</p>` : ''}
-      ${whyLine(lead)}
       ${clusterDisclosure(lead)}
       <div class="lead-foot">${srcLine(lead)} ${cardActions(lead)}</div>
     </article>`;
@@ -2163,7 +2162,6 @@ function renderHero(lead, side) {
       <div>
         ${kicker(a)}
         <h3 class="mini-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
-        ${whyLine(a)}
         ${clusterDisclosure(a)}
         <div class="mini-foot">${srcLine(a)} ${cardActions(a)}</div>
       </div>
@@ -2178,7 +2176,6 @@ function gridCardHTML(a) {
       ${kicker(a)}
       <h3 class="card-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
       ${a.summary && a.category !== 'comics' ? `<p class="card-summary">${escapeAttr(a.summary)}</p>` : ''}
-      ${whyLine(a)}
       ${clusterDisclosure(a)}
       <div class="card-foot">${srcLine(a)} ${cardActions(a)}</div>
     </article>`;

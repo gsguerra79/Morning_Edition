@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -93,6 +94,29 @@ class BaselineRegressionTests(unittest.TestCase):
             server.fetch_comic_image("https://example.com/comics/page.png")
         with self.assertRaisesRegex(ValueError, "not allow-listed"):
             server.fetch_comic_image("http://i.giantitp.com/comics/oots/page.png")
+
+    def test_news_image_relay_only_allows_ft_and_reuters_cdn_paths(self):
+        with self.assertRaisesRegex(ValueError, "not allow-listed"):
+            server.fetch_card_image("https://example.com/photo.jpg")
+        with self.assertRaisesRegex(ValueError, "not allow-listed"):
+            server.fetch_card_image("https://www.reuters.com/world/story")
+
+    def test_reuters_sitemap_feed_format_survives_management_api(self):
+        with mock.patch.object(server, 'allowed_categories', return_value={'world'}):
+            feed, error = server.normalize_feed_payload({
+                'url': 'https://www.reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml',
+                'source': 'Reuters',
+                'category': 'world',
+                'format': 'reuters_sitemap',
+            })
+        self.assertIsNone(error)
+        self.assertEqual('reuters_sitemap', feed['format'])
+
+    def test_visible_cards_omit_selection_explanation(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertNotIn("Why it’s here:", html)
+        self.assertNotIn("whyLine(", html)
+        self.assertIn("why_selected", (Path(__file__).parent / "pipeline.py").read_text())
 
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")

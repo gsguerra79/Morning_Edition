@@ -18,6 +18,7 @@ Endpoints:
   GET  /status                live pipeline status (running/phase/last run)
   GET  /weather               cached Houston forecast/radar/alerts + Rio current weather
   GET  /comic-image           allow-listed relay for subscribed comic artwork
+  GET  /card-image            allow-listed relay for FT/Reuters card artwork
   POST /refresh               trigger a pipeline run now
 """
 import concurrent.futures
@@ -80,6 +81,10 @@ COMIC_IMAGE_PATHS = {
     'www.wildelifecomic.com': ('/comics/',),
 }
 COMIC_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+CARD_IMAGE_PATHS = {
+    'images.ft.com': ('/v3/image/',),
+    'www.reuters.com': ('/resizer/',),
+}
 
 DEFAULT_STATE = {
     'updatedAt': None,
@@ -396,6 +401,32 @@ def fetch_comic_image(url, timeout=10):
     return data, content_type
 
 
+def fetch_card_image(url, timeout=10):
+    """Fetch card artwork only from approved FT and Reuters image paths."""
+    parsed = urlparse(url)
+    allowed_paths = CARD_IMAGE_PATHS.get((parsed.hostname or '').lower())
+    if parsed.scheme != 'https' or not allowed_paths or not any(
+            parsed.path.startswith(prefix) for prefix in allowed_paths):
+        raise ValueError('Card image URL is not allow-listed')
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 The Forge Daily (news card preview)',
+        'Accept': 'image/avif,image/webp,image/png,image/jpeg,image/*',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        final = urlparse(resp.geturl())
+        final_paths = CARD_IMAGE_PATHS.get((final.hostname or '').lower())
+        if final.scheme != 'https' or not final_paths or not any(
+                final.path.startswith(prefix) for prefix in final_paths):
+            raise ValueError('Card image redirect is not allow-listed')
+        content_type = (resp.headers.get_content_type() or '').lower()
+        if not content_type.startswith('image/'):
+            raise ValueError('Card image source did not return an image')
+        data = resp.read(COMIC_IMAGE_MAX_BYTES + 1)
+    if len(data) > COMIC_IMAGE_MAX_BYTES:
+        raise ValueError('Card image is too large')
+    return data, content_type
+
+
 def normalize_feed_payload(payload):
     if not isinstance(payload, dict):
         return None, 'Payload must be an object'
@@ -411,7 +442,7 @@ def normalize_feed_payload(payload):
     if category not in allowed_categories():
         return None, f'Unknown category: {category}'
     feed = {'url': url, 'source': source, 'category': category}
-    if payload.get('format') in ('globo_html', 'wsl_html'):
+    if payload.get('format') in ('globo_html', 'wsl_html', 'reuters_sitemap'):
         feed['format'] = payload['format']
     return feed, None
 
@@ -690,6 +721,25 @@ class StateHandler(BaseHTTPRequestHandler):
                 return
             except Exception:
                 self._json(502, {'error': 'Comic artwork is temporarily unavailable'})
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if path == '/card-image':
+            qs = parse_qs(urlparse(self.path).query)
+            url = (qs.get('url') or [''])[0]
+            try:
+                data, content_type = fetch_card_image(url)
+            except ValueError as exc:
+                self._json(400, {'error': str(exc)})
+                return
+            except Exception:
+                self._json(502, {'error': 'News artwork is temporarily unavailable'})
                 return
             self.send_response(200)
             self.send_header('Content-Type', content_type)
