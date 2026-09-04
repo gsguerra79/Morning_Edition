@@ -2110,6 +2110,30 @@ function renderSearchResults() {
   el.innerHTML = html;
 }
 
+function f1MainSelection(items) {
+  const chosen = [], ids = new Set(), sourceCounts = {};
+  const addKind = (kind) => {
+    const item = items.find(a => !ids.has(a.id) && a.f1_kind === kind &&
+      (sourceCounts[a.source] || 0) < 2);
+    if (!item) return;
+    ids.add(item.id); chosen.push(item);
+    sourceCounts[item.source] = (sourceCounts[item.source] || 0) + 1;
+  };
+  ['results_updates', 'results_updates', 'technical', 'preview_forecast', 'news'].forEach(addKind);
+  for (const item of items) {
+    if (chosen.length >= 6) break;
+    if (ids.has(item.id) || (sourceCounts[item.source] || 0) >= 2) continue;
+    if (item.f1_kind === 'rumor_interview' && chosen.some(a => a.f1_kind === 'rumor_interview')) continue;
+    ids.add(item.id); chosen.push(item);
+    sourceCounts[item.source] = (sourceCounts[item.source] || 0) + 1;
+  }
+  for (const item of items) {
+    if (chosen.length >= 6) break;
+    if (!ids.has(item.id)) { ids.add(item.id); chosen.push(item); }
+  }
+  return chosen;
+}
+
 function render() {
   // Semantic search active: swap the magazine for a ranked results list. The
   // magazine sections are emptied so their card ids don't collide with the
@@ -2151,7 +2175,9 @@ function render() {
   // The edition is organized by subject, not by publisher. Each category is
   // a newspaper section with its own lead story and compact supporting cards.
   const sections = Object.keys(CATS).filter(k => k !== 'all').map(key => ({
-    key, articles: inbox.filter(a => a.category === key).slice(0, key === 'formula1' ? 6 : undefined)
+    key, articles: key === 'formula1'
+      ? f1MainSelection(inbox.filter(a => a.category === key))
+      : inbox.filter(a => a.category === key)
   })).filter(s => s.articles.length || coverageGaps.some(g => g.page === s.key));
   if (sections.length && currentCat === 'all') {
     document.getElementById('section-hero').className = 'topic-sections';
