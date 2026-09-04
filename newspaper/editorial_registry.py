@@ -69,6 +69,8 @@ def _normalize_adapter(raw):
         if not url:
             raise ValueError("rss adapter requires url")
         out["url"] = url
+        if raw.get("label"):
+            out["label"] = str(raw["label"]).strip()[:120]
     else:
         connector = str(raw.get("connector") or "").strip()
         if not connector:

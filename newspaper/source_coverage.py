@@ -24,6 +24,14 @@ PAGE_DEFINITIONS = {
               "interest": "Substantive essays, science, philosophy, psychology and durable explanatory ideas"},
 }
 
+SOURCE_ALIASES = {
+    "bbc world": "BBC", "bbc us & canada": "BBC",
+    "bbc science & environment": "BBC", "bbc technology": "BBC",
+    "bbc football": "BBC", "bbc formula 1": "BBC",
+    "financial times us": "Financial Times",
+    "financial times world": "Financial Times",
+}
+
 
 def _url(value):
     try:
@@ -59,6 +67,8 @@ def runtime_scope(registry):
                 continue
             feeds.append({"url": adapter["url"], "source": source["source"],
                           "category": PAGE_DEFINITIONS[page]["key"]})
+            if adapter.get("label"):
+                feeds[-1]["source"] = adapter["label"]
     feeds.sort(key=lambda item: (item["source"].casefold(), item["url"]))
     return categories, feeds
 
@@ -74,8 +84,8 @@ def build(registry, feeds, digest=None, rules=None):
                    if isinstance(item, dict) and item.get("url")}
     for article in (digest or {}).get("articles", []):
         if isinstance(article, dict):
-            article_counts[str(article.get("editorial_source") or
-                               article.get("source") or "")] += 1
+            raw = str(article.get("editorial_source") or article.get("source") or "")
+            article_counts[SOURCE_ALIASES.get(raw.casefold(), raw)] += 1
 
     rows = []
     for source in sources:

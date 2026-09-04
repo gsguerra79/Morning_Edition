@@ -98,7 +98,7 @@ _stop = threading.Event()
 # Publication cadence differs by owner page. Durable essays and specialist
 # reporting need a wider discovery/retention window than breaking news.
 PAGE_LOOKBACK_HOURS = {
-    'ideas': 24 * 21, 'sports': 24 * 7, 'comics': 24 * 21,
+    'ideas': 24 * 21, 'sports': 24 * 7, 'comics': 24 * 365 * 10,
     'technology': 24 * 5, 'technologythings': 24 * 5,
     'brazilnews': 72, 'formula1': 72, 'worldnews': 48, 'world': 48,
 }
@@ -111,6 +111,11 @@ PAGE_BUDGETS = {
 SPORTS_MINIMUMS = {'football': 3, 'tennis': 1, 'surf': 1, 'mountaineering': 1}
 SPORTS_MAXIMUMS = {'football': 4, 'tennis': 2, 'surf': 2,
                    'mountaineering': 3, 'other': 1}
+COMIC_SOURCES = ('giantitp', 'wilde life')
+PAGE_REQUIRED_SOURCES = {
+    'worldnews': ('bbc us & canada', 'financial times us', 'reuters'),
+    'sports': ('atp tour', 'world surf league'),
+}
 
 
 def _page_window_hours(category, default):
@@ -1004,10 +1009,38 @@ def select_balanced_issue(articles):
             return False
         selected_ids.add(ident); selected.append(article); return True
 
+    # Protect explicitly requested sources before generic page and subtopic
+    # budgets are filled. A source that never reaches the retained digest
+    # cannot be rescued later by the edition selector.
+    for page, required_sources in PAGE_REQUIRED_SOURCES.items():
+        page_articles = [a for a in reps if a.get('category') == page]
+        for source in required_sources:
+            matches = [a for a in page_articles
+                       if str(a.get('source') or '').casefold() == source]
+            if matches:
+                add(max(matches, key=published_rank))
+            else:
+                gaps.append({'page': page, 'source': source,
+                             'required': 1, 'available': 0})
+
+    # Comics are subscriptions, not a news quota: retain exactly the newest
+    # available installment from each requested series, even when one series
+    # has not published inside the normal news lookback window.
+    comics = [a for a in reps if a.get('category') == 'comics']
+    for source in COMIC_SOURCES:
+        matches = [a for a in comics if str(a.get('source') or '').casefold() == source]
+        if matches:
+            add(max(matches, key=published_rank))
+        else:
+            gaps.append({'page': 'comics', 'source': source,
+                         'required': 1, 'available': 0})
+
     sports = [a for a in reps if a.get('category') == 'sports']
     for topic, minimum in SPORTS_MINIMUMS.items():
         matches = [a for a in sports if sports_subtopic(a) == topic]
-        for article in matches[:minimum]:
+        present = sum(1 for a in selected if a.get('category') == 'sports'
+                      and sports_subtopic(a) == topic)
+        for article in matches[:max(0, minimum - present)]:
             add(article)
         if len(matches) < minimum:
             gaps.append({'page': 'sports', 'subtopic': topic,
@@ -1024,7 +1057,7 @@ def select_balanced_issue(articles):
             sports_counts[topic] = sports_counts.get(topic, 0) + 1
 
     for page, (minimum, maximum) in PAGE_BUDGETS.items():
-        if page == 'sports':
+        if page in ('sports', 'comics'):
             continue
         candidates = [a for a in reps if a.get('category') == page]
         current = sum(1 for a in selected if a.get('category') == page)

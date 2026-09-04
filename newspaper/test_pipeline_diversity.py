@@ -12,13 +12,22 @@ class PipelineDiversityTests(unittest.TestCase):
             if page == "sports":
                 continue
             for i in range(minimum + 3):
+                source = (("GiantITP", "Wilde Life")[i % 2]
+                          if page == "comics" else page)
                 items.append({"id": f"{page}-{i}", "cluster_id": f"{page}-{i}",
-                              "cluster_rep": True, "source": page, "category": page,
+                              "cluster_rep": True, "source": source, "category": page,
                               "title": f"{page} story {i}", "score": 6,
                               "published_at": now})
+        for i, source in enumerate(("BBC US & Canada", "Financial Times US", "Reuters")):
+            items.append({"id": f"world-required-{i}",
+                          "cluster_id": f"world-required-{i}", "cluster_rep": True,
+                          "source": source, "category": "worldnews",
+                          "title": f"{source} headline", "score": 6,
+                          "published_at": now})
         sports = [
             ("BBC Football", "football match"), ("BBC Football", "soccer result"),
             ("GE Flamengo", "Flamengo victory"), ("BBC Tennis", "US Open tennis"),
+            ("ATP Tour", "ATP tennis result"),
             ("World Surf League", "WSL surf finals"),
             ("Alpinist", "Alpine mountain expedition"),
             ("BBC Tennis", "ATP tennis draw"),
@@ -48,9 +57,46 @@ class PipelineDiversityTests(unittest.TestCase):
         missing = {gap.get("subtopic") for gap in gaps}
         self.assertTrue({"tennis", "surf", "mountaineering"} <= missing)
 
+    def test_named_sources_are_protected_before_page_budgets(self):
+        now = datetime.now(timezone.utc).isoformat()
+        items = [{"id": f"bbc-{i}", "cluster_id": f"bbc-{i}",
+                  "cluster_rep": True, "source": "BBC", "category": "worldnews",
+                  "title": f"World {i}", "score": 10, "published_at": now}
+                 for i in range(12)]
+        for i, source in enumerate(("BBC US & Canada", "Financial Times US", "Reuters",
+                                    "ATP Tour", "World Surf League")):
+            page = "worldnews" if i < 3 else "sports"
+            items.append({"id": f"named-{i}", "cluster_id": f"named-{i}",
+                          "cluster_rep": True, "source": source, "category": page,
+                          "title": source, "score": 1, "published_at": now})
+        selected, _ = pipeline.select_balanced_issue(items)
+        sources = {item["source"] for item in selected}
+        self.assertTrue({"BBC US & Canada", "Financial Times US", "Reuters",
+                         "ATP Tour", "World Surf League"} <= sources)
+
     def test_durable_pages_receive_longer_windows(self):
         self.assertGreaterEqual(pipeline._page_window_hours("ideas", 36), 24 * 14)
+        self.assertGreaterEqual(pipeline._page_window_hours("comics", 36), 24 * 365)
         self.assertEqual(36, pipeline._page_window_hours("unknown", 36))
+
+    def test_comics_keeps_only_latest_from_each_named_series(self):
+        items = [
+            {"id": "g-old", "cluster_id": "g-old", "cluster_rep": True,
+             "source": "GiantITP", "category": "comics", "title": "Old G",
+             "score": 6, "published_at": "2026-01-01T00:00:00+00:00"},
+            {"id": "g-new", "cluster_id": "g-new", "cluster_rep": True,
+             "source": "GiantITP", "category": "comics", "title": "New G",
+             "score": 6, "published_at": "2026-02-01T00:00:00+00:00"},
+            {"id": "w-old", "cluster_id": "w-old", "cluster_rep": True,
+             "source": "Wilde Life", "category": "comics", "title": "Old W",
+             "score": 6, "published_at": "2025-01-01T00:00:00+00:00"},
+            {"id": "w-new", "cluster_id": "w-new", "cluster_rep": True,
+             "source": "Wilde Life", "category": "comics", "title": "New W",
+             "score": 6, "published_at": "2025-02-01T00:00:00+00:00"},
+        ]
+        selected, gaps = pipeline.select_balanced_issue(items)
+        self.assertEqual({"g-new", "w-new"}, {item["id"] for item in selected})
+        self.assertNotIn("comics", {gap.get("page") for gap in gaps})
 
     def test_same_source_cluster_gets_no_corroboration_boost(self):
         items = [

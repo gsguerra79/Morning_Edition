@@ -2,6 +2,7 @@
 
 import math
 import re
+from datetime import datetime
 
 DEFAULT_PAGE_CAPS = {
     "brazilnews": 6, "worldnews": 8, "formula1": 6,
@@ -13,8 +14,26 @@ DEFAULT_PAGE_CAPS = {
 SOURCE_ALIASES = {
     "bbc world": "BBC", "bbc science & environment": "BBC",
     "bbc technology": "BBC", "bbc formula 1": "BBC",
+    "bbc us & canada": "BBC",
+    "financial times us": "Financial Times",
+    "financial times world": "Financial Times",
     "motorsport f1": "Motorsport", "g1 brasil": "Globo",
     "the order of the stick": "GiantITP",
+}
+REQUIRED_PAGE_SOURCES = {
+    "worldnews": ("bbc us & canada", "financial times us", "reuters"),
+    "sports": ("atp tour", "world surf league"),
+    "comics": ("giantitp", "wilde life"),
+}
+RAW_SOURCE_LIMITS = {
+    "bbc us & canada": 1,
+    "financial times us": 2,
+    "financial times world": 2,
+    "reuters": 3,
+    "atp tour": 2,
+    "world surf league": 2,
+    "giantitp": 1,
+    "wilde life": 1,
 }
 
 
@@ -41,6 +60,13 @@ def _source_record(source, index):
 def _score(article):
     return float(article.get("score") or 0) + float(article.get("cluster_boost") or 0) + \
         float(article.get("taste_boost") or 0)
+
+
+def _published_rank(article):
+    try:
+        return datetime.fromisoformat(str(article.get("published_at") or "").replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError):
+        return 0
 
 
 def _page_key(value):
@@ -89,9 +115,11 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
         if cluster in seen_clusters:
             continue
         seen_clusters.add(cluster)
-        record = _source_record(article.get("source"), index)
-        canonical = (record or {}).get("source") or article.get("source") or "Unknown"
-        source_rules = rule_map.get(canonical, {}) if isinstance(rule_map, dict) else {}
+        source = article.get("source")
+        record = _source_record(source, index)
+        canonical = (record or {}).get("source") or source or "Unknown"
+        source_rules = (rule_map.get(str(source or "")) or rule_map.get(canonical, {})
+                        if isinstance(rule_map, dict) else {})
         text = _text(article)
         excluded = _matches(text, source_rules.get("exclude_any"))
         unless = source_rules.get("exclude_unless_any") or []
@@ -135,9 +163,9 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
 
     candidates.sort(key=lambda item: (
         not item["editorial_must_include"], -item["selection_score"],
-        str(item.get("published_at") or ""), str(item.get("id") or "")))
+        -_published_rank(item), str(item.get("id") or "")))
     selected, selected_ids = [], set()
-    source_counts, page_counts = {}, {}
+    source_counts, raw_source_counts, page_counts = {}, {}, {}
 
     def add(item):
         identity = item.get("id") or item.get("cluster_id")
@@ -146,14 +174,30 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
         selected_ids.add(identity)
         selected.append(item)
         source = item["editorial_source"]
+        raw_source = str(item.get("source") or "").casefold()
         page = item.get("category") or "other"
         source_counts[source] = source_counts.get(source, 0) + 1
+        raw_source_counts[raw_source] = raw_source_counts.get(raw_source, 0) + 1
         page_counts[page] = page_counts.get(page, 0) + 1
         return True
 
     for item in candidates:
         if item["editorial_must_include"]:
             add(item)
+
+    # Named source promises are stronger than a page's generic score order.
+    # Reserve one current card from each before high-volume sources consume the
+    # page cap. Comics are special: one latest card from each series, period.
+    for page, required_sources in REQUIRED_PAGE_SOURCES.items():
+        for raw_source in required_sources:
+            matches = [candidate for candidate in candidates
+                       if (candidate.get("category") or "other") == page
+                       and str(candidate.get("source") or "").casefold() == raw_source]
+            if matches and not any(str(item.get("source") or "").casefold() == raw_source
+                                   for item in selected):
+                newest = max(matches, key=lambda item: str(item.get("published_at") or ""))
+                if len(selected) < max_stories:
+                    add(newest)
 
     for page in sorted({item.get("category") or "other" for item in candidates}):
         if page_counts.get(page, 0):
@@ -170,9 +214,18 @@ def select_issue(articles, registry=None, rules=None, max_stories=40,
         if item["editorial_must_include"]:
             continue
         source = item["editorial_source"]
+        raw_source = str(item.get("source") or "").casefold()
         page = item.get("category") or "other"
+        if page == "comics":
+            # The two requested comic subscriptions were already anchored
+            # above; older installments must not fill spare issue capacity.
+            continue
         if source_counts.get(source, 0) >= source_limit:
             rejected.append({"id": item.get("id"), "code": "source_cap", "source": source})
+            continue
+        if raw_source_counts.get(raw_source, 0) >= RAW_SOURCE_LIMITS.get(raw_source, max_stories):
+            rejected.append({"id": item.get("id"), "code": "source_variant_cap",
+                             "source": item.get("source")})
             continue
         if page_counts.get(page, 0) >= page_caps.get(page, max_stories):
             rejected.append({"id": item.get("id"), "code": "page_cap", "page": page})

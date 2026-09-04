@@ -34,6 +34,31 @@
     "BBC": {
       "exclude_any": ["cricket", "county championship"]
     },
+    "BBC US & Canada": {
+      "category": "worldnews",
+      "priority_boost": 1.0,
+      "priority_any": [
+        "white house", "congress", "supreme court", "federal reserve",
+        "economy", "election", "trade", "foreign policy", "war", "iran",
+        "china", "russia", "canada", "national", "government"
+      ],
+      "priority_match_boost": 2.0,
+      "exclude_any": [
+        "lindsay clancy", "celebrity", "royal", "king charles", "weather",
+        "hail", "lightning", "trial", "murder", "shooting"
+      ]
+    },
+    "Financial Times US": {
+      "category": "worldnews",
+      "priority_boost": 1.0
+    },
+    "Financial Times World": {
+      "category": "worldnews"
+    },
+    "Reuters": {
+      "category": "worldnews",
+      "priority_boost": 1.0
+    },
     "BBC Football": {
       "category": "sports",
       "priority_boost": 1.0,

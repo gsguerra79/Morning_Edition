@@ -36,6 +36,17 @@ class EditorialSelectionTests(unittest.TestCase):
         self.assertEqual(["a-2"], [item["id"] for item in selected])
         self.assertEqual("source_avoid_rule", report["rejected"][0]["code"])
 
+    def test_variant_rule_overrides_canonical_source_rule(self):
+        items = [article(1, source="BBC US & Canada", category="worldnews",
+                         title="Routine local murder trial"),
+                 article(2, source="BBC World", category="worldnews",
+                         title="Government announces national policy")]
+        registry = {"sources": [{"source": "BBC", "topics": ["World News"]}]}
+        rules = {"sources": {"BBC": {}, "BBC US & Canada": {"exclude_any": ["murder"]}}}
+        selected, _ = select_issue(items, registry=registry, rules=rules,
+                                   max_stories=10, source_share=1)
+        self.assertEqual(["a-2"], [item["id"] for item in selected])
+
     def test_required_scope_defaults_to_empty_instead_of_filler(self):
         items = [article(1, source="Globo", title="Weather today in Brasília"),
                  article(2, source="Globo", title="Federal government announces national policy")]
@@ -59,7 +70,9 @@ class EditorialSelectionTests(unittest.TestCase):
         number = 0
         for page, cap in caps.items():
             for offset in range(cap + 3):
-                items.append(article(number, source=f"Source {offset % 8}",
+                source = (("GiantITP", "Wilde Life")[offset % 2]
+                          if page == "comics" else f"Source {offset % 8}")
+                items.append(article(number, source=source,
                                      category=page, score=100-number/100))
                 number += 1
         selected, report = select_issue(items, max_stories=40, source_share=.20)
@@ -91,6 +104,37 @@ class EditorialSelectionTests(unittest.TestCase):
                                    page_caps={"world": 10})
         self.assertNotIn("corroborating_sources", selected[0])
         self.assertNotIn("independent", selected[0]["why_selected"].lower())
+
+    def test_named_world_and_sports_sources_survive_page_caps(self):
+        items = [article(i, source="BBC World", category="worldnews", score=100-i)
+                 for i in range(8)]
+        items += [
+            article(20, source="BBC US & Canada", category="worldnews", score=1),
+            article(21, source="Financial Times US", category="worldnews", score=1),
+            article(22, source="Reuters", category="worldnews", score=1),
+            article(23, source="ATP Tour", category="sports", score=1),
+            article(24, source="World Surf League", category="sports", score=1),
+        ]
+        selected, _ = select_issue(items, max_stories=20, source_share=1,
+                                   page_caps={"worldnews": 8, "sports": 5})
+        sources = {item["source"] for item in selected}
+        self.assertTrue({"BBC US & Canada", "Financial Times US", "Reuters",
+                         "ATP Tour", "World Surf League"} <= sources)
+
+    def test_comics_shows_only_latest_from_each_series(self):
+        items = [
+            dict(article(1, source="GiantITP", category="comics"),
+                 published_at="2026-01-01T00:00:00+00:00"),
+            dict(article(2, source="GiantITP", category="comics"),
+                 published_at="2026-02-01T00:00:00+00:00"),
+            dict(article(3, source="Wilde Life", category="comics"),
+                 published_at="2025-01-01T00:00:00+00:00"),
+            dict(article(4, source="Wilde Life", category="comics"),
+                 published_at="2025-02-01T00:00:00+00:00"),
+        ]
+        selected, _ = select_issue(items, max_stories=10, source_share=1,
+                                   page_caps={"comics": 2})
+        self.assertEqual({"a-2", "a-4"}, {item["id"] for item in selected})
 
 
 if __name__ == "__main__":
