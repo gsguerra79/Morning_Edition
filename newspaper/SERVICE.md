@@ -21,10 +21,12 @@ authentication, transport security, and an explicit threat review.
   clusters receive no corroboration boost. Durable pages use cadence-appropriate
   discovery and retention windows (for example, Ideas is not limited to the
   breaking-news window).
-- The **Sources** view is the owner-facing reconciliation surface for the live
-  Notion editorial registry. It groups the complete inventory by owner page and
-  shows reading intent, Must include, Avoid, adapter state, production loading,
-  per-source fetch health, connector gaps, and missing rule assets.
+- The **Sources** view is the owner-facing source-of-truth surface. **Inventory**
+  reconciles the imported editorial baseline with reader-managed feeds and
+  shows reading intent, Must include, Avoid, coverage status, adapter state,
+  fetch health, and connector gaps. **Manage sources** adds, validates, removes,
+  restores, imports, and exports feeds. **Topics** edits section names, order,
+  colors, and ranking intent. Notion is no longer required for routine changes.
 - The **Feedback** view records every **Not for me** decision with its selected
   reason. Feedback synchronizes through shared state, immediately removes the
   story cluster from Home, and can be undone in the browser.
@@ -34,6 +36,9 @@ authentication, transport security, and an explicit threat review.
   Weather data is cached for 15 minutes in the production volume. If an
   upstream service is temporarily unavailable, the last successful payload is
   shown and marked cached rather than blanking the page.
+- Opening a story always records it in History. Whether opening also hides its
+  Home card is a synced preference under **Settings → Display** and defaults to
+  off; explicit Read Later and Not for me actions still retire cards.
 
 ## Operations
 
