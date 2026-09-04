@@ -730,6 +730,45 @@
     .coverage-guidance b { display:block; color:var(--text3); font-size:9px; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
     @media (max-width:760px) { .coverage-guidance { grid-template-columns:1fr; } }
 
+    /* ── Weather desk ──────────────────────────────────── */
+    .weather-desk { padding: 12px 0 50px; }
+    .weather-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; padding-bottom:14px; border-bottom:3px solid #24748c; margin-bottom:22px; }
+    .weather-heading h1 { font-family:var(--font-head); font-size:30px; margin:0; }
+    .weather-updated { color:var(--text3); font-size:12px; }
+    .weather-alerts { display:grid; gap:8px; margin-bottom:20px; }
+    .weather-alert { display:block; border:1px solid #b64b3e; background:rgba(182,75,62,.08); padding:12px 15px; color:var(--text); text-decoration:none; }
+    .weather-alert strong { display:block; color:#a52a2a; margin-bottom:3px; }
+    .weather-now { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(240px,.7fr); gap:24px; margin-bottom:28px; }
+    .weather-current, .rio-weather { border:1px solid var(--border); padding:20px; }
+    .weather-place { color:var(--text3); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+    .weather-temp { font-family:var(--font-head); font-size:54px; line-height:1; margin:8px 0; }
+    .weather-condition { font-family:var(--font-head); font-size:20px; font-weight:600; }
+    .weather-detail { color:var(--text2); font-size:13px; margin-top:8px; }
+    .weather-block { margin:30px 0; }
+    .weather-block-title { font-family:var(--font-head); font-size:20px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+    .weekly-strip { display:grid; grid-template-columns:repeat(7,minmax(115px,1fr)); gap:10px; }
+    .forecast-day { border:1px solid var(--border); padding:12px; min-height:126px; }
+    .forecast-day b { display:block; font-family:var(--font-head); margin-bottom:7px; }
+    .forecast-temps { font-size:18px; font-weight:700; margin:5px 0; }
+    .forecast-copy { color:var(--text2); font-size:12px; line-height:1.35; }
+    .hourly-strip { display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:thin; }
+    .hour-card { flex:0 0 112px; border:1px solid var(--border); padding:11px; text-align:center; }
+    .hour-time { color:var(--text3); font-size:11px; text-transform:uppercase; }
+    .hour-icon { font-size:24px; margin:7px 0; }
+    .hour-temp { font-family:var(--font-head); font-size:22px; font-weight:700; }
+    .hour-rain { color:#24748c; font-size:11px; margin-top:5px; }
+    .weather-lower { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr); gap:28px; align-items:start; }
+    .radar-frame { border:1px solid var(--border); background:#d8e0e2; padding:8px; }
+    .radar-frame img { display:block; width:100%; height:auto; }
+    .radar-caption { display:flex; justify-content:space-between; gap:12px; color:var(--text3); font-size:11px; margin-top:8px; }
+    .weather-stories { display:grid; gap:0; }
+    .weather-story { display:block; padding:13px 0; border-bottom:1px solid var(--border); text-decoration:none; color:var(--text); }
+    .weather-story:hover h3 { color:var(--brand); }
+    .weather-story h3 { font-family:var(--font-head); font-size:17px; line-height:1.2; margin:4px 0 5px; }
+    .weather-story p { color:var(--text2); font-size:12.5px; line-height:1.4; margin:0; }
+    @media (max-width:900px) { .weekly-strip { grid-template-columns:repeat(4,minmax(115px,1fr)); } .weather-lower { grid-template-columns:1fr; } }
+    @media (max-width:640px) { .weather-heading { align-items:flex-start; flex-direction:column; } .weather-now { grid-template-columns:1fr; } .weekly-strip { display:flex; overflow-x:auto; } .forecast-day { flex:0 0 132px; } .weather-temp { font-size:46px; } }
+
   </style>
 </head>
 <body>
@@ -750,6 +789,9 @@
   <nav class="viewnav">
     <button class="viewnav-tab active" onclick="switchView('digest')" id="vnav-digest">
       Home <span class="vbadge" id="badge-digest"></span>
+    </button>
+    <button class="viewnav-tab" onclick="switchView('weather')" id="vnav-weather">
+      Weather
     </button>
     <button class="viewnav-tab" onclick="switchView('later')" id="vnav-later">
       Read Later <span class="vbadge" id="badge-later"></span>
@@ -799,6 +841,10 @@
         </aside>
       </div>
     </div>
+  </div>
+
+  <div class="view" id="view-weather">
+    <div class="weather-desk" id="weather-content"><p class="empty">Loading weather…</p></div>
   </div>
 
   <!-- ── Read Later view ── -->
@@ -852,6 +898,7 @@ function toggleTheme() {
 const DIGEST_URL        = '/editions/live-preview';
 const EDITIONS_URL      = '/editions';
 const STATE_URL         = '/state';
+const WEATHER_URL       = '/weather';
 const READ_KEY          = 'digest_read_v1';
 const LATER_KEY         = 'digest_read_later';
 const HISTORY_KEY       = 'digest_history_v1';
@@ -897,6 +944,8 @@ function buildCats(list) {
 /* ── State helpers ────────────────────────────────────── */
 let allArticles = [];
 let coverageGaps = [];
+let weatherData = null;
+let weatherLoading = false;
 let sharedState = {
   readIds: new Set(),
   later: [],
@@ -1129,6 +1178,7 @@ function rerenderActiveView() {
   updateCatCounts();
   updateBadges();
   if (currentView === 'history') renderHistory();
+  else if (currentView === 'weather') renderWeather();
   else if (currentView === 'feedback') renderFeedback();
   else if (currentView === 'editions') renderEditions();
   else if (currentView === 'coverage') renderCoverage();
@@ -1180,6 +1230,8 @@ function setActiveView(view) {
   // The search box rides the view-nav row but only applies to Home.
   const search = document.getElementById('digest-search');
   if (search) search.style.display = (view === 'digest') ? '' : 'none';
+  const catbar = document.getElementById('catbar');
+  if (catbar) catbar.style.display = (view === 'weather') ? 'none' : '';
 }
 
 function switchView(view) {
@@ -1199,6 +1251,7 @@ function switchView(view) {
   buildCatNav();
 
   if (view === 'history')  renderHistory();
+  if (view === 'weather')  renderWeather();
   if (view === 'feedback') renderFeedback();
   if (view === 'later')    renderLater();
   if (view === 'editions') renderEditions();
@@ -1210,6 +1263,93 @@ function switchView(view) {
 /* ── Helpers ──────────────────────────────────────────── */
 function saveRead() {
   saveSharedState().catch(() => {});
+}
+
+/* ── Weather desk ────────────────────────────────────── */
+function safeExternalUrl(value, fallback = '#') {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'https:' || url.protocol === 'http:') ? escapeAttr(url.href) : fallback;
+  } catch (_) { return fallback; }
+}
+
+function weatherIcon(text) {
+  const value = String(text || '').toLowerCase();
+  if (value.includes('thunder')) return '⛈';
+  if (value.includes('snow') || value.includes('ice')) return '❄';
+  if (value.includes('rain') || value.includes('shower') || value.includes('drizzle')) return '🌧';
+  if (value.includes('fog')) return '🌫';
+  if (value.includes('cloud') || value.includes('overcast')) return '☁';
+  if (value.includes('clear') || value.includes('sunny')) return '☀';
+  return '◌';
+}
+
+function weatherTime(value, options = {}) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', { timeZone: 'America/Chicago', ...options });
+}
+
+function drawWeather(data) {
+  const el = document.getElementById('weather-content');
+  const houston = data.houston || {};
+  const current = houston.current || {};
+  const rio = data.rio;
+  const alerts = houston.alerts || [];
+  const weekly = houston.weekly || [];
+  const hourly = houston.hourly || [];
+  const radar = houston.radar || {};
+  const articles = data.articles || [];
+  const updated = weatherTime(data.updated_at, {hour:'numeric', minute:'2-digit', timeZoneName:'short'});
+  const alertHtml = alerts.length
+    ? alerts.map(a => `<a class="weather-alert" href="${safeExternalUrl(a.url)}" target="_blank" rel="noopener"><strong>${escapeAttr(a.title)}</strong><span>${escapeAttr(a.summary || '')}</span></a>`).join('')
+    : '<div class="weather-detail">No active National Weather Service alerts for Houston.</div>';
+  const weeklyHtml = weekly.map(day => {
+    const label = new Date(`${day.date}T12:00:00`).toLocaleDateString('en-US', {weekday:'short'});
+    const high = day.high == null ? '—' : `${Math.round(day.high)}°`;
+    const low = day.low == null ? '—' : `${Math.round(day.low)}°`;
+    return `<div class="forecast-day"><b>${escapeAttr(label)}</b><div>${weatherIcon(day.forecast)}</div><div class="forecast-temps">${high} <span style="color:var(--text3);font-weight:500">/ ${low}</span></div><div class="forecast-copy">${escapeAttr(day.forecast || '')}${day.precipitation ? ` · ${day.precipitation}% rain` : ''}</div></div>`;
+  }).join('');
+  const hourlyHtml = hourly.map(hour => `<div class="hour-card"><div class="hour-time">${weatherTime(hour.start, {hour:'numeric'})}</div><div class="hour-icon">${weatherIcon(hour.forecast)}</div><div class="hour-temp">${hour.temperature == null ? '—' : Math.round(hour.temperature) + '°'}</div><div class="hour-rain">${hour.precipitation || 0}% rain</div></div>`).join('');
+  const rioHtml = rio
+    ? `<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil · now</div><div class="weather-temp">${Math.round(rio.temperature)}°</div><div class="weather-condition">${weatherIcon(rio.condition)} ${escapeAttr(rio.condition)}</div><div class="weather-detail">Feels ${Math.round(rio.feels_like)}° · Humidity ${rio.humidity}% · Wind ${Math.round(rio.wind_mph)} mph</div><div class="weather-detail"><a href="${safeExternalUrl(rio.source_url)}" target="_blank" rel="noopener">${escapeAttr(rio.source)}</a></div></div>`
+    : '<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil</div><p class="empty">Current observation unavailable.</p></div>';
+  const articlesHtml = articles.length
+    ? articles.map(a => `<a class="weather-story" href="${safeExternalUrl(a.url)}" target="_blank" rel="noopener"><span class="weather-place">${escapeAttr(a.source)}${a.kind === 'alert' ? ' · Alert' : ''}</span><h3>${escapeAttr(a.title)}</h3>${a.summary ? `<p>${escapeAttr(a.summary)}</p>` : ''}</a>`).join('')
+    : '<p class="empty">No current storm, flood, hurricane, or alert coverage.</p>';
+  const radarUrl = safeExternalUrl(radar.image_url);
+  el.innerHTML = `
+    <div class="weather-heading"><div><div class="weather-place">The weather desk</div><h1>Houston & Gulf Weather</h1></div><div class="weather-updated">Updated ${escapeAttr(updated)}${data.stale ? ' · cached' : ''}</div></div>
+    <div class="weather-alerts">${alertHtml}</div>
+    <div class="weather-now">
+      <div class="weather-current"><div class="weather-place">Houston, Texas · now</div><div class="weather-temp">${current.temperature == null ? '—' : Math.round(current.temperature) + '°'}</div><div class="weather-condition">${weatherIcon(current.forecast)} ${escapeAttr(current.forecast || 'Forecast unavailable')}</div><div class="weather-detail">Rain ${current.precipitation || 0}% · Wind ${escapeAttr(current.wind || '—')}</div><div class="weather-detail"><a href="${safeExternalUrl(houston.source_url)}" target="_blank" rel="noopener">National Weather Service Houston/Galveston</a></div></div>
+      ${rioHtml}
+    </div>
+    <section class="weather-block"><h2 class="weather-block-title">Seven-day forecast</h2><div class="weekly-strip">${weeklyHtml}</div></section>
+    <section class="weather-block"><h2 class="weather-block-title">Hourly forecast · next 24 hours</h2><div class="hourly-strip">${hourlyHtml}</div></section>
+    <div class="weather-lower">
+      <section class="weather-block"><h2 class="weather-block-title">Houston radar</h2><div class="radar-frame"><a href="${safeExternalUrl(radar.page_url)}" target="_blank" rel="noopener"><img src="${radarUrl}" alt="Animated KHGX radar for Houston and Galveston"></a></div><div class="radar-caption"><span>${escapeAttr(radar.station || 'KHGX')}</span><a href="${safeExternalUrl(radar.page_url)}" target="_blank" rel="noopener">Open interactive radar ↗</a></div></section>
+      <section class="weather-block"><h2 class="weather-block-title">Storms, floods & hurricanes</h2><div class="weather-stories">${articlesHtml}</div></section>
+    </div>`;
+}
+
+async function renderWeather(force = false) {
+  const el = document.getElementById('weather-content');
+  if (weatherData && !force) { drawWeather(weatherData); return; }
+  if (weatherLoading) return;
+  weatherLoading = true;
+  el.innerHTML = '<p class="empty">Loading Houston forecast and alerts…</p>';
+  try {
+    const res = await fetch(WEATHER_URL + (force ? '?refresh=1' : ''), {cache:'no-store'});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    weatherData = await res.json();
+    drawWeather(weatherData);
+  } catch (err) {
+    el.innerHTML = `<p class="empty">Weather desk unavailable: ${escapeAttr(err.message)}</p>`;
+  } finally {
+    weatherLoading = false;
+  }
 }
 
 // Rank score shown as a chip overlaid on the thumbnail, with a hover breakdown.
@@ -3588,8 +3728,13 @@ function applyDigestData(data) {
   coverageGaps = Array.isArray(data.coverage_gaps) ? data.coverage_gaps : [];
   loadedGeneratedAt = data.generated_at || null;
   const genDate = data.generated_at ? new Date(data.generated_at) : new Date();
-  document.getElementById('header-date').textContent =
-    '— ' + genDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const issueDay = genDate.toLocaleDateString('en-US', {
+    timeZone: 'America/Chicago', weekday: 'long', month: 'long', day: 'numeric'
+  });
+  const issueTime = genDate.toLocaleTimeString('en-US', {
+    timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+  });
+  document.getElementById('header-date').textContent = `— ${issueDay} · Updated ${issueTime}`;
 }
 
 function refreshRunPill(running, phase) {
@@ -3703,7 +3848,7 @@ async function loadDigest() {
     if (!CATS[digestCat]) digestCat = 'all';
     sharedState.viewState = { ...sharedState.viewState, currentCat, digestCat };
     const requestedView = location.hash.replace(/^#/, '');
-    if (['digest', 'later', 'history', 'feedback', 'editions', 'coverage', 'settings'].includes(requestedView)) {
+    if (['digest', 'weather', 'later', 'history', 'feedback', 'editions', 'coverage', 'settings'].includes(requestedView)) {
       currentView = requestedView;
       sharedState.viewState = { ...sharedState.viewState, currentView };
     }
@@ -3717,6 +3862,7 @@ async function loadDigest() {
     updateCatCounts();
     updateBadges();
     if (currentView === 'history')       renderHistory();
+    else if (currentView === 'weather')  renderWeather();
     else if (currentView === 'feedback') renderFeedback();
     else if (currentView === 'later')    renderLater();
     else if (currentView === 'editions') renderEditions();

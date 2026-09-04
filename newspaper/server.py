@@ -16,6 +16,7 @@ Endpoints:
   GET  /settings PUT /settings  runtime-editable tuning knobs + models + blocklist
   GET  /models                installed Ollama models (for the model pickers)
   GET  /status                live pipeline status (running/phase/last run)
+  GET  /weather               cached Houston forecast/radar/alerts + Rio current weather
   POST /refresh               trigger a pipeline run now
 """
 import concurrent.futures
@@ -35,6 +36,7 @@ import pipeline
 import editions
 import settings
 import source_coverage
+import weather_service
 
 STATE_FILE  = os.environ.get('STATE_FILE', '/data/state.json')
 DIGEST_FILE = os.environ.get('DIGEST_FILE', '/data/digest.json')
@@ -634,6 +636,13 @@ class StateHandler(BaseHTTPRequestHandler):
             return
         if path == '/status':
             self._json(200, pipeline.get_status())
+            return
+        if path == '/weather':
+            qs = parse_qs(urlparse(self.path).query)
+            try:
+                self._json(200, weather_service.get_weather(force=(qs.get('refresh') == ['1'])))
+            except Exception as exc:
+                self._json(502, {'error': f'Weather sources unavailable: {exc}'})
             return
         if path == '/runs':
             self._json(200, pipeline.get_runs())
