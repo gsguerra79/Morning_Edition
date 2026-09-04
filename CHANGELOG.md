@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add an optional authenticated OpenF1 current-session layer to the Formula 1
+  race desk. During OpenF1's live window it supplies a compact provisional
+  classification and track weather; the existing Formula 1 archive and Jolpica
+  providers remain independent fallbacks. Credentials stay backend-only.
+
 - Rebuild Formula 1 as a race desk: current driver and constructor championship
   tables, the latest finalized race-weekend session classification, next-session
   timing, and twelve balanced dedicated-page stories while Home remains capped

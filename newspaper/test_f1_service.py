@@ -15,6 +15,8 @@ class F1ServiceTests(unittest.TestCase):
         f1_service.CACHE_FILE = str(Path(self.tmp.name) / "f1.json")
         f1_service._memory = None
         f1_service._memory_at = 0
+        f1_service._openf1_access_token = None
+        f1_service._openf1_token_until = 0
 
     def tearDown(self):
         f1_service.CACHE_FILE = self.old_cache
@@ -57,6 +59,37 @@ class F1ServiceTests(unittest.TestCase):
             result = f1_service.get_f1(force=True)
         self.assertTrue(result["stale"])
         self.assertIn("offline", result["errors"][-1])
+
+    def test_openf1_live_snapshot_normalizes_provisional_laps(self):
+        now = datetime(2026, 9, 4, 14, 30, tzinfo=timezone.utc)
+        payloads = {
+            "sessions": [{"session_key": 123, "meeting_name": "Italian Grand Prix",
+                "country_name": "Italy", "circuit_short_name": "Monza",
+                "session_name": "Practice 2", "session_type": "Practice",
+                "date_start": "2026-09-04T14:00:00+00:00",
+                "date_end": "2026-09-04T15:00:00+00:00"}],
+            "drivers": [{"driver_number": 4, "name_acronym": "NOR",
+                "full_name": "Lando Norris", "team_name": "McLaren",
+                "team_colour": "FF8700"}],
+            "session_result": [],
+            "laps": [{"driver_number": 4, "lap_duration": 80.125,
+                      "lap_number": 12}],
+            "weather": [{"air_temperature": 25.2, "track_temperature": 39.1}],
+        }
+        with patch.object(f1_service, "_openf1_json",
+                          side_effect=lambda endpoint, **params: payloads[endpoint]):
+            result = f1_service._openf1_snapshot(now)
+        self.assertTrue(result["provisional"])
+        self.assertEqual("NOR", result["rows"][0]["code"])
+        self.assertEqual("1:20.125", result["rows"][0]["time"])
+        self.assertEqual(12, result["rows"][0]["laps"])
+
+    def test_openf1_snapshot_ignores_non_live_window(self):
+        now = datetime(2026, 9, 5, 14, 30, tzinfo=timezone.utc)
+        sessions = [{"session_key": 123, "date_start": "2026-09-04T14:00:00+00:00",
+                     "date_end": "2026-09-04T15:00:00+00:00"}]
+        with patch.object(f1_service, "_openf1_json", return_value=sessions):
+            self.assertIsNone(f1_service._openf1_snapshot(now))
 
 
 if __name__ == "__main__":

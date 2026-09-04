@@ -1,9 +1,9 @@
 """Cached Formula 1 race desk built from public structured data.
 
 Championship tables come from the maintained Jolpica/Ergast-compatible API.
-Completed-session timing comes from Formula 1's own static timing archive.  The
-live stream now requires authentication; this service deliberately uses only
-finalized post-session archive files.
+Completed-session timing comes from Formula 1's own static timing archive.
+When OpenF1 credentials are configured, its authenticated REST API adds a
+current-session snapshot; failures never displace the finalized archive data.
 """
 
 import json
@@ -12,12 +12,14 @@ import tempfile
 import threading
 import time
 import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 
 YEAR = datetime.now(timezone.utc).year
 JOLPICA = "https://api.jolpi.ca/ergast/f1/current"
 F1_ARCHIVE = "https://livetiming.formula1.com/static"
+OPENF1_API = "https://api.openf1.org"
 CACHE_FILE = os.environ.get("F1_CACHE_FILE", "/data/f1-cache.json")
 CACHE_SECONDS = int(os.environ.get("F1_CACHE_SECONDS", "300"))
 USER_AGENT = "TheForgeDaily/2.0 (https://github.com/gsguerra79/Morning_Edition)"
@@ -25,6 +27,8 @@ USER_AGENT = "TheForgeDaily/2.0 (https://github.com/gsguerra79/Morning_Edition)"
 _lock = threading.Lock()
 _memory = None
 _memory_at = 0.0
+_openf1_access_token = None
+_openf1_token_until = 0.0
 
 
 def _json(url):
@@ -32,6 +36,139 @@ def _json(url):
         url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     with urllib.request.urlopen(request, timeout=15) as response:
         return json.loads(response.read().decode("utf-8-sig"))
+
+
+def _openf1_enabled():
+    return bool(os.environ.get("OPENF1_USERNAME") and os.environ.get("OPENF1_PASSWORD"))
+
+
+def _openf1_token():
+    """Exchange backend-only credentials for a short-lived bearer token."""
+    global _openf1_access_token, _openf1_token_until
+    now = time.time()
+    if _openf1_access_token and now < _openf1_token_until:
+        return _openf1_access_token
+    body = urllib.parse.urlencode({
+        "username": os.environ["OPENF1_USERNAME"],
+        "password": os.environ["OPENF1_PASSWORD"],
+    }).encode("utf-8")
+    request = urllib.request.Request(
+        f"{OPENF1_API}/token", data=body,
+        headers={"User-Agent": USER_AGENT,
+                 "Content-Type": "application/x-www-form-urlencoded",
+                 "Accept": "application/json"})
+    with urllib.request.urlopen(request, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    token = payload.get("access_token")
+    if not token:
+        raise ValueError("OpenF1 authentication returned no access token")
+    _openf1_access_token = token
+    _openf1_token_until = now + max(60, int(payload.get("expires_in") or 3600) - 120)
+    return token
+
+
+def _openf1_json(endpoint, **params):
+    query = urllib.parse.urlencode(params)
+    request = urllib.request.Request(
+        f"{OPENF1_API}/v1/{endpoint}?{query}",
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json",
+                 "Authorization": f"Bearer {_openf1_token()}"})
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _iso(value):
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _lap_time(value):
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        return ""
+    minutes, remainder = divmod(seconds, 60)
+    return f"{int(minutes)}:{remainder:06.3f}" if minutes else f"{remainder:.3f}"
+
+
+def _openf1_snapshot(now):
+    """Return a compact live/current-session classification, not telemetry."""
+    sessions = _openf1_json("sessions", session_key="latest")
+    if not sessions:
+        return None
+    session = sessions[-1]
+    start, end = _iso(session.get("date_start")), _iso(session.get("date_end"))
+    if not start or not end or not start - timedelta(minutes=30) <= now <= end + timedelta(minutes=30):
+        return None
+    key = session.get("session_key")
+    drivers = _openf1_json("drivers", session_key=key)
+    driver_map = {str(item.get("driver_number")): item for item in drivers}
+    final = _openf1_json("session_result", session_key=key)
+    provisional = not bool(final)
+    raw_rows = final
+    if provisional:
+        laps = _openf1_json("laps", session_key=key)
+        best = {}
+        for lap in laps:
+            duration = lap.get("lap_duration")
+            if not duration:
+                continue
+            number = str(lap.get("driver_number"))
+            if number not in best or float(duration) < float(best[number]["lap_duration"]):
+                best[number] = lap
+        raw_rows = sorted(best.values(), key=lambda item: float(item["lap_duration"]))
+        for position, item in enumerate(raw_rows, 1):
+            item = dict(item)
+            item["position"] = position
+            raw_rows[position - 1] = item
+    rows = []
+    leader = None
+    for item in sorted(raw_rows, key=lambda row: int(row.get("position") or 999)):
+        number = str(item.get("driver_number"))
+        driver = driver_map.get(number) or {}
+        duration = item.get("duration") if final else item.get("lap_duration")
+        if isinstance(duration, list):
+            duration = next((value for value in reversed(duration) if value), None)
+        if leader is None and duration:
+            leader = float(duration)
+        gap = item.get("gap_to_leader")
+        if isinstance(gap, list):
+            gap = next((value for value in reversed(gap) if value is not None), None)
+        if provisional and duration and leader is not None:
+            gap = float(duration) - leader
+        rows.append({
+            "position": int(item.get("position") or len(rows) + 1),
+            "number": number,
+            "code": driver.get("name_acronym"),
+            "name": driver.get("full_name") or driver.get("broadcast_name"),
+            "team": driver.get("team_name"),
+            "team_colour": driver.get("team_colour"),
+            "time": _lap_time(duration),
+            "gap": (f"+{float(gap):.3f}" if isinstance(gap, (int, float)) and gap else
+                    (str(gap) if gap not in (None, 0) else "")),
+            "laps": int(item.get("number_of_laps") or item.get("lap_number") or 0),
+            "status": ("DSQ" if item.get("dsq") else "DNF" if item.get("dnf") else
+                       "DNS" if item.get("dns") else "provisional" if provisional else "classified"),
+        })
+    weather_rows = _openf1_json("weather", session_key=key)
+    weather = weather_rows[-1] if weather_rows else {}
+    return {
+        "meeting": session.get("meeting_name"),
+        "country": session.get("country_name"),
+        "circuit": session.get("circuit_short_name"),
+        "session": session.get("session_name"),
+        "type": session.get("session_type"),
+        "start": start.isoformat(), "end": end.isoformat(),
+        "provisional": provisional,
+        "weather": {"air_c": weather.get("air_temperature"),
+                    "track_c": weather.get("track_temperature"),
+                    "rainfall": weather.get("rainfall"),
+                    "wind_kph": weather.get("wind_speed")},
+        "rows": rows,
+        "source": "OpenF1 live data", "source_url": "https://openf1.org/",
+    }
 
 
 def _offset(value):
@@ -193,13 +330,21 @@ def _build(now=None):
     drivers = _standings_rows(_json(f"{JOLPICA}/driverstandings/"), "drivers")
     teams = _standings_rows(_json(f"{JOLPICA}/constructorstandings/"), "teams")
     index = _json(f"{F1_ARCHIVE}/{now.year}/Index.json")
+    weekend = _race_weekend(index, now)
+    errors = []
+    if weekend and _openf1_enabled():
+        try:
+            weekend["live_session"] = _openf1_snapshot(now)
+        except Exception as exc:
+            errors.append(f"OpenF1: {exc}")
     return {
         "updated_at": now.isoformat(),
         "stale": False,
         "standings": {"drivers": drivers, "teams": teams,
                       "source": "Jolpica F1", "source_url": "https://jolpi.ca/"},
-        "race_weekend": _race_weekend(index, now),
-        "errors": [],
+        "race_weekend": weekend,
+        "openf1_enabled": _openf1_enabled(),
+        "errors": errors,
     }
 
 

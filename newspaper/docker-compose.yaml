@@ -26,6 +26,10 @@ services:
       MORNING_MAX_STORIES: ${MORNING_MAX_STORIES:-60}
       AFTERNOON_MAX_STORIES: ${AFTERNOON_MAX_STORIES:-15}
       SOURCE_SHARE_CAP: ${SOURCE_SHARE_CAP:-0.20}
+      # Optional authenticated current-session timing. Keep values only in the
+      # untracked .env file; never commit account credentials.
+      OPENF1_USERNAME: ${OPENF1_USERNAME:-}
+      OPENF1_PASSWORD: ${OPENF1_PASSWORD:-}
       EDITORIAL_REGISTRY_FILE: /data/editorial-registry.json
       SELECTION_RULES_FILE: /app/selection-rules.json
       SEED_FEEDS: /app/feeds.sample.json

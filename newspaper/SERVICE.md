@@ -44,9 +44,11 @@ authentication, transport security, and an explicit threat review.
 - The Formula 1 topic opens with a structured race desk. Jolpica provides the
   current driver and constructor championships; Formula 1's public static timing
   archive provides the latest finalized race-weekend session classification,
-  circuit weather and next-session time. The payload is cached for five minutes
-  and falls back to the last successful copy. The dedicated page carries twelve
-  balanced stories; the All page intentionally carries only its strongest six.
+  circuit weather and next-session time. When an OpenF1 supporter account is
+  configured, the backend also adds a provisional current-session snapshot;
+  credentials and bearer tokens never reach browser code. The payload is cached
+  for five minutes and falls back to the last successful copy. The page carries
+  twelve balanced stories; the All page intentionally carries its strongest six.
 - Opening a story always records it in History. Whether opening also hides its
   Home card is a synced preference under **Settings → Display** and defaults to
   off; explicit Read Later and Not for me actions still retire cards.
