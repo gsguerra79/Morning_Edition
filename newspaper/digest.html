@@ -392,11 +392,12 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px,1fr)); gap: 30px 26px; }
     .topic-sections { display: block; }
     .topic-section { padding: 18px 0 34px; margin-top: 12px; }
-    .topic-grid { grid-template-columns: repeat(var(--topic-cols, 4), minmax(0, 1fr)); }
+    .topic-grid { grid-template-columns: repeat(var(--topic-cols, 4), minmax(0, 1fr)); grid-auto-flow: row dense; }
     @media (max-width: 900px) { .topic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 640px) { .topic-grid { grid-template-columns: 1fr; } }
     .card { display: flex; flex-direction: column; }
     .card .thumb { aspect-ratio: 16/10; margin-bottom: 13px; }
+    .comic-card .thumb img { object-position: center 12%; }
     .card .kicker { margin-bottom: 9px; }
     .card-title { font-family: var(--font-head); font-weight: 600; font-size: 18.5px; line-height: 1.2; letter-spacing: -0.018em; margin-bottom: 8px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
     .card:hover .card-title { color: var(--brand); }
@@ -1386,7 +1387,7 @@ function scoreChip(a) {
 // popover) can overlay the image — .thumb itself is overflow:hidden for the
 // hover zoom, which would otherwise clip them.
 function thumbBlock(a) {
-  return `<div class="thumb-frame">${openLink(a, thumb(a))}${scoreChip(a)}</div>`;
+  return `<div class="thumb-frame">${openLink(a, thumb(a), true)}${scoreChip(a)}</div>`;
 }
 
 function catMeta(c) { return CATS[c] || { label: c, c: '#8a90a0' }; }
@@ -2122,7 +2123,7 @@ function relTime(a) {
 }
 function srcLine(a) {
   const t = relTime(a);
-  return `<span class="src"><span class="src-name">${a.source}</span>${t ? `<time>· ${t}</time>` : ''}</span>`;
+  return `<span class="src"><span class="src-name">${escapeAttr(a.source)}</span>${t ? `<time>· ${t}</time>` : ''}</span>`;
 }
 function cardActions(a) {
   return `<div class="card-actions">
@@ -2133,8 +2134,11 @@ function cardActions(a) {
 function whyLine(a) {
   return a.why_selected ? `<p class="card-summary"><strong>Why it’s here:</strong> ${escapeAttr(a.why_selected)}</p>` : '';
 }
-const openLink = (a, inner) =>
-  `<a href="${a.url}" onclick="openArticle('${a.id}','${a.url}'); return false;">${inner}</a>`;
+const openLink = (a, inner, trustedHTML = false) => {
+  const idArg = escapeAttr(JSON.stringify(String(a.id)));
+  const urlArg = escapeAttr(JSON.stringify(String(a.url)));
+  return `<a href="${escapeAttr(a.url)}" onclick="openArticle(${idArg},${urlArg}); return false;">${trustedHTML ? inner : escapeAttr(inner)}</a>`;
+};
 
 function renderHero(lead, side) {
   const el = document.getElementById('section-hero');
@@ -2144,7 +2148,7 @@ function renderHero(lead, side) {
       ${thumbBlock(lead)}
       ${kicker(lead)}
       <h2 class="lead-title" title="${escapeAttr(lead.title)}">${openLink(lead, lead.title)}</h2>
-      ${lead.summary ? `<p class="lead-summary">${lead.summary}</p>` : ''}
+      ${lead.summary ? `<p class="lead-summary">${escapeAttr(lead.summary)}</p>` : ''}
       ${whyLine(lead)}
       ${clusterDisclosure(lead)}
       <div class="lead-foot">${srcLine(lead)} ${cardActions(lead)}</div>
@@ -2165,11 +2169,11 @@ function renderHero(lead, side) {
 
 function gridCardHTML(a) {
   return `
-    <article class="article-wrap card" id="wrap-${a.id}" style="max-height:9999px;">
+    <article class="article-wrap card${a.category === 'comics' ? ' comic-card' : ''}" id="wrap-${a.id}" style="max-height:9999px;">
       ${thumbBlock(a)}
       ${kicker(a)}
       <h3 class="card-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
-      ${a.summary ? `<p class="card-summary">${a.summary}</p>` : ''}
+      ${a.summary ? `<p class="card-summary">${escapeAttr(a.summary)}</p>` : ''}
       ${whyLine(a)}
       ${clusterDisclosure(a)}
       <div class="card-foot">${srcLine(a)} ${cardActions(a)}</div>

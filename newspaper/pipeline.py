@@ -10,6 +10,7 @@ dependencies; the only network calls are to the feeds, the article pages, and
 the Ollama host.
 """
 import concurrent.futures
+import html as html_lib
 import json
 import math
 import os
@@ -18,6 +19,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -385,17 +387,35 @@ def build_system_prompt(categories):
             "- category must be one of the exact strings listed in the schema.")
 
 
-def _fetch_page(url):
-    """Return (og_image_or_None, body_excerpt) for an article URL."""
-    html = http_get_text(url, PAGE_TIMEOUT, limit=60000)
-    if not html:
-        return None, ''
+def _page_image(html, url):
+    """Return the page's best card image, including known comic-page artwork."""
     img_m = re.search(
         r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
         html, re.IGNORECASE) or re.search(
         r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
         html, re.IGNORECASE)
-    image = img_m.group(1) if img_m else None
+    if not img_m and 'giantitp.com/comics/oots' in url.lower():
+        img_m = re.search(
+            r'<img[^>]+src=["\']([^"\']*/comics/oots/[^"\']+)["\']',
+            html, re.IGNORECASE)
+    if not img_m and 'wildelifecomic.com/comic/' in url.lower():
+        img_m = re.search(
+            r'<img(?=[^>]+\bid=["\']cc-comic["\'])[^>]+src=["\']([^"\']+)["\']',
+            html, re.IGNORECASE) or re.search(
+            r'<img(?=[^>]+\bsrc=["\']([^"\']+)["\'])[^>]+\bid=["\']cc-comic["\']',
+            html, re.IGNORECASE)
+    if not img_m:
+        return None
+    image = html_lib.unescape(img_m.group(1)).strip()
+    return urllib.parse.urljoin(url, image) if image else None
+
+
+def _fetch_page(url):
+    """Return (best_image_or_None, body_excerpt) for an article URL."""
+    html = http_get_text(url, PAGE_TIMEOUT, limit=60000)
+    if not html:
+        return None, ''
+    image = _page_image(html, url)
     body = re.sub(r'<script[\s\S]*?</script>', ' ', html, flags=re.IGNORECASE)
     body = re.sub(r'<style[\s\S]*?</style>', ' ', body, flags=re.IGNORECASE)
     body = re.sub(r'<[^>]+>', ' ', body)
@@ -424,7 +444,8 @@ def _score(article, excerpt, chat_model, system_prompt, valid_cats):
         f'  "category": "<one of: {", ".join(valid_cats)}>"\n}}'
     )
     fallback = article.get('feed_summary') or excerpt or article['title']
-    fallback = re.sub(r'\s+', ' ', fallback).strip()
+    fallback = re.sub(r'<[^>]+>', ' ', fallback)
+    fallback = html_lib.unescape(re.sub(r'\s+', ' ', fallback)).strip()
     score, summary, category = 6.0, fallback[:180], article['category']
     ok = False
     if not AI_ENABLED:

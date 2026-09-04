@@ -78,6 +78,13 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("section.articles.map(gridCardHTML)", html)
         self.assertIn("balancedTopicColumns(section.articles.length)", html)
         self.assertNotIn("section.articles.slice(1, 5)", html)
+        self.assertIn("grid-auto-flow: row dense", html)
+        self.assertIn("escapeAttr(a.summary)", html)
+
+    def test_comic_cards_use_artwork_crop_styling(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("comic-card .thumb img", html)
+        self.assertIn("a.category === 'comics' ? ' comic-card'", html)
 
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
