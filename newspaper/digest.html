@@ -956,6 +956,7 @@ function toggleTheme() {
 
 /* ── Config ───────────────────────────────────────────── */
 const DIGEST_URL        = '/editions/today';
+const CURRENT_DIGEST_URL = '/digest.json';
 const HOT_METAL_URL     = '/hot-metal';
 const EDITIONS_URL      = '/editions';
 const STATE_URL         = '/state';
@@ -1010,6 +1011,8 @@ let weatherData = null;
 let weatherLoading = false;
 let f1Data = null;
 let f1Loading = false;
+let liveF1Articles = [];
+let liveF1Loading = false;
 let sharedState = {
   readIds: new Set(),
   later: [],
@@ -1284,11 +1287,13 @@ let hotMetalArticles = [];
 let hotMetalPayload = null;
 
 function articleById(id) {
-  return allArticles.find(a => a.id === id) || hotMetalArticles.find(a => a.id === id);
+  return liveF1Articles.find(a => a.id === id) || allArticles.find(a => a.id === id)
+    || hotMetalArticles.find(a => a.id === id);
 }
 
 function articleUniverse() {
   const items = new Map(allArticles.map(a => [a.id, a]));
+  liveF1Articles.forEach(a => items.set(a.id, a));
   hotMetalArticles.forEach(a => items.set(a.id, a));
   return [...items.values()];
 }
@@ -1996,7 +2001,9 @@ function buildCatNav() {
     });
     bar.innerHTML = Object.keys(CATS).map(key => {
       const c = CATS[key];
-      const n = counts[key] || 0;
+      const n = key === 'formula1' && liveF1Articles.length
+        ? dedupeToReps(liveF1Articles.filter(a => !laterIdSet().has(a.id))).length
+        : counts[key] || 0;
       const badge = n > 0 ? `<span class="badge">${n}</span>` : '';
       return `<button class="cattab${key === currentCat ? ' active' : ''}" data-cat="${key}" onclick="setCategory('${key}')">${c.c ? `<span class="cat-dot" style="background:${c.c}"></span>` : ''}${c.label}${badge}</button>`;
     }).join('');
@@ -2051,10 +2058,32 @@ window.setCategory = function(cat) {
   sharedState.viewState = { ...sharedState.viewState, currentView, currentCat, digestCat };
   saveSharedState().catch(() => {});
   buildCatNav();
-  if (currentView === 'digest')  render();
+  if (currentView === 'digest') {
+    render();
+    if (cat === 'formula1') loadLiveF1Articles(true);
+  }
   if (currentView === 'later')   renderLater();
   if (currentView === 'history') renderHistory();
 };
+
+async function loadLiveF1Articles(force = false) {
+  if (liveF1Loading || (liveF1Articles.length && !force)) return;
+  liveF1Loading = true;
+  try {
+    const response = await fetch(CURRENT_DIGEST_URL, {cache:'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const current = await response.json();
+    liveF1Articles = (current.articles || []).filter(a => a.category === 'formula1');
+    if (currentView === 'digest' && currentCat === 'formula1') {
+      buildCatNav();
+      render();
+    }
+  } catch (error) {
+    console.warn('Live F1 articles unavailable; keeping published edition:', error);
+  } finally {
+    liveF1Loading = false;
+  }
+}
 
 /* ── Badges ───────────────────────────────────────────── */
 function updateBadges() {
@@ -2232,6 +2261,7 @@ function render() {
   magazine.style.display = '';
   magazine.classList.toggle('f1-mode', currentCat === 'formula1');
   renderF1Desk();
+  if (currentCat === 'formula1' && !liveF1Articles.length) loadLiveF1Articles(false);
 
   // Bucket and order by effectiveScore = (score + cluster_boost) × source-
   // affinity so the pipeline-assigned score still dictates the baseline, cross-
@@ -2243,7 +2273,12 @@ function render() {
   // One ranked inbox, split into today (by score) and earlier (carried, by
   // recency). The front page draws today first; if today can't fill it (you've
   // cleared the top), it borrows the best of earlier so no section sits empty.
-  const inbox = dedupeToReps(allArticles.filter(a => visible(a)))
+  // Home remains the immutable published issue. Only the dedicated Formula 1
+  // desk swaps its article pool for the current ingest during a race weekend.
+  const articlePool = currentCat === 'formula1' && liveF1Articles.length
+    ? allArticles.filter(a => a.category !== 'formula1').concat(liveF1Articles)
+    : allArticles;
+  const inbox = dedupeToReps(articlePool.filter(a => visible(a)))
     .sort((a, b) => effectiveScore(b) - effectiveScore(a));
   const today = inbox.filter(a => isToday(a));
   const earlier = inbox.filter(a => !isToday(a))
@@ -4121,6 +4156,7 @@ async function pollStatus() {
   if (lastRunning && !running) {
     await checkForNewDigest();
     if (currentView === 'hotmetal') await renderHotMetal(true);
+    if (currentView === 'digest' && currentCat === 'formula1') await loadLiveF1Articles(true);
   }
   lastRunning = running;
   // Poll fast while a run is active, slow when idle.

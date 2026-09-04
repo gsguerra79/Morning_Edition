@@ -125,6 +125,13 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn('Hot Metal', html)
         self.assertNotIn('Live Preview', html)
 
+    def test_dedicated_f1_uses_live_articles_without_moving_home(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("const CURRENT_DIGEST_URL = '/digest.json'", html)
+        self.assertIn("if (cat === 'formula1') loadLiveF1Articles(true)", html)
+        self.assertIn("currentCat === 'formula1' && liveF1Articles.length", html)
+        self.assertIn("allArticles.filter(a => a.category !== 'formula1').concat(liveF1Articles)", html)
+
     def test_ft_and_reuters_have_source_art_when_story_image_is_absent(self):
         root = Path(__file__).parent
         html = (root / "digest.html").read_text(encoding="utf-8")
