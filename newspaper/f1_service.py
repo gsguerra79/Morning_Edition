@@ -119,18 +119,42 @@ def _openf1_snapshot(now):
     if provisional:
         laps = _openf1_json("laps", session_key=key)
         best = {}
+        latest_lap = {}
         for lap in laps:
             duration = lap.get("lap_duration")
-            if not duration:
-                continue
             number = str(lap.get("driver_number"))
-            if number not in best or float(duration) < float(best[number]["lap_duration"]):
+            if number not in latest_lap or int(lap.get("lap_number") or 0) > int(latest_lap[number].get("lap_number") or 0):
+                latest_lap[number] = lap
+            if duration and (number not in best or float(duration) < float(best[number]["lap_duration"])):
                 best[number] = lap
-        raw_rows = sorted(best.values(), key=lambda item: float(item["lap_duration"]))
-        for position, item in enumerate(raw_rows, 1):
-            item = dict(item)
-            item["position"] = position
-            raw_rows[position - 1] = item
+        race_like = str(session.get("session_name") or "").casefold() in ("race", "sprint")
+        if race_like:
+            positions = _openf1_json("position", session_key=key)
+            latest_position = {}
+            for item in positions:
+                number = str(item.get("driver_number"))
+                if number not in latest_position or str(item.get("date") or "") > str(latest_position[number].get("date") or ""):
+                    latest_position[number] = item
+            intervals = _openf1_json("intervals", session_key=key)
+            latest_interval = {}
+            for item in intervals:
+                number = str(item.get("driver_number"))
+                if number not in latest_interval or str(item.get("date") or "") > str(latest_interval[number].get("date") or ""):
+                    latest_interval[number] = item
+            raw_rows = []
+            for number, position in latest_position.items():
+                item = dict(position)
+                item["lap_number"] = (latest_lap.get(number) or {}).get("lap_number")
+                item["lap_duration"] = (best.get(number) or {}).get("lap_duration")
+                item["gap_to_leader"] = (latest_interval.get(number) or {}).get("gap_to_leader")
+                raw_rows.append(item)
+            raw_rows.sort(key=lambda item: int(item.get("position") or 999))
+        else:
+            raw_rows = sorted(best.values(), key=lambda item: float(item["lap_duration"]))
+            for position, item in enumerate(raw_rows, 1):
+                item = dict(item)
+                item["position"] = position
+                raw_rows[position - 1] = item
     rows = []
     leader = None
     for item in sorted(raw_rows, key=lambda row: int(row.get("position") or 999)):
@@ -144,7 +168,7 @@ def _openf1_snapshot(now):
         gap = item.get("gap_to_leader")
         if isinstance(gap, list):
             gap = next((value for value in reversed(gap) if value is not None), None)
-        if provisional and duration and leader is not None:
+        if provisional and not race_like and duration and leader is not None:
             gap = float(duration) - leader
         rows.append({
             "position": int(item.get("position") or len(rows) + 1),

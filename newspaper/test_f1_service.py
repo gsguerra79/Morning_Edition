@@ -112,6 +112,29 @@ class F1ServiceTests(unittest.TestCase):
         self.assertTrue(result["provisional"])
         self.assertEqual(1, len(result["rows"]))
 
+    def test_openf1_live_race_uses_track_position_not_fastest_lap(self):
+        now = datetime(2026, 9, 6, 14, 30, tzinfo=timezone.utc)
+        payloads = {
+            "sessions": [{"session_key": 456, "session_name": "Race",
+                "session_type": "Race", "date_start": "2026-09-06T14:00:00+00:00",
+                "date_end": "2026-09-06T16:00:00+00:00"}],
+            "drivers": [{"driver_number": 4, "name_acronym": "NOR"},
+                        {"driver_number": 63, "name_acronym": "RUS"}],
+            "session_result": [],
+            "laps": [{"driver_number": 4, "lap_duration": 82.0, "lap_number": 12},
+                     {"driver_number": 63, "lap_duration": 80.0, "lap_number": 12}],
+            "position": [{"driver_number": 4, "position": 1, "date": "2026-09-06T14:29:00Z"},
+                         {"driver_number": 63, "position": 2, "date": "2026-09-06T14:29:01Z"}],
+            "intervals": [{"driver_number": 4, "gap_to_leader": 0, "date": "2026-09-06T14:29:00Z"},
+                          {"driver_number": 63, "gap_to_leader": 1.2, "date": "2026-09-06T14:29:01Z"}],
+            "weather": [],
+        }
+        with patch.object(f1_service, "_openf1_json",
+                          side_effect=lambda endpoint, **params: payloads[endpoint]):
+            result = f1_service._openf1_snapshot(now)
+        self.assertEqual("NOR", result["rows"][0]["code"])
+        self.assertEqual("+1.200", result["rows"][1]["gap"])
+
 
 if __name__ == "__main__":
     unittest.main()
