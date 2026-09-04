@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Replace the stale deferred Stage 2–6 list with a reconciled v2 roadmap that
+  distinguishes the sole missing source, active-source quality upgrades, and
+  already-delivered v1 behavior.
+- Prioritize complete in-reader editorial source governance, the Kickstarter
+  gap, edition workflow polish, structured sports/F1/crowdfunding cards, and
+  operational recovery proof.
 - Consolidate descriptive runtime feed labels into their canonical source record
   in Sources, preserving editorial guidance while showing every active endpoint.
 - Keep each canonical source to one inventory card even when it serves multiple

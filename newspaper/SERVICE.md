@@ -26,7 +26,8 @@ authentication, transport security, and an explicit threat review.
   shows reading intent, Must include, Avoid, coverage status, adapter state,
   fetch health, and connector gaps. **Manage sources** adds, validates, removes,
   restores, imports, and exports feeds. **Topics** edits section names, order,
-  colors, and ranking intent. Notion is no longer required for routine changes.
+  colors, and ranking intent. Editing canonical source guidance still requires
+  the imported baseline until v2 makes those fields writable in the reader.
 - The **Feedback** view records every **Not for me** decision with its selected
   reason. Feedback synchronizes through shared state, immediately removes the
   story cluster from Home, and can be undone in the browser.

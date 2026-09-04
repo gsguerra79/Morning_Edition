@@ -221,10 +221,11 @@ registry atomically; unchanged runs do not rewrite it; query or validation
 failures preserve the last known-good registry and update only the reconciliation
 report.
 
-Once imported, ordinary source and topic work happens in the reader's
-**Sources** view. The Inventory combines the editorial baseline with feeds
-added directly in the reader; Manage sources owns feed validation/add/remove,
-and Topics owns section names, order, colors, and interest descriptions.
+Once imported, feed and topic work happens in the reader's **Sources** view.
+The Inventory combines the read-only editorial baseline with feeds added
+directly in the reader; Manage sources owns feed validation/add/remove, and
+Topics owns section names, order, colors, and interest descriptions. Canonical
+source guidance remains imported until the v2 editorial-control work is done.
 
 ### Bounded edition selection
 

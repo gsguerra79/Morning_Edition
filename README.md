@@ -18,6 +18,7 @@ and copyright notice are preserved in [LICENSE](LICENSE).
 - `freshrss/` — optional FreshRSS ingestion deployment.
 - `PRODUCT.md` — governing product contract.
 - `CHANGELOG.md` — release history and the accepted v1 product boundary.
+- `V2-ROADMAP.md` — reconciled, prioritized post-v1 product backlog.
 - `EXECUTION-PLAN.md` — phased implementation, decisions, problems, gates, and
   verified progress.
 - `EXISTING-SOLUTIONS.md` — alternatives and foundation evaluation.

@@ -21,8 +21,8 @@ Last reconciled: 2026-09-03
 
 Release status: **v1.0.0 complete — owner accepted 2026-09-03.** The accepted
 v1 boundary is the commissioned rolling reader recorded in the progress ledger.
-Stages 2–6 remain visible below as a post-v1 roadmap; they are deferred, not
-falsely represented as completed work.
+The reconciled post-v1 backlog is maintained in `V2-ROADMAP.md`; the former
+deferred Stage 2–6 list was retired after several of its claims became obsolete.
 
 ## Delivery doctrine
 
@@ -67,12 +67,12 @@ If visual inspection exposes a defect, repair and republish the same stage.
 Do not open the next stage, create a new research detour, or ask the owner to
 inspect engineering artifacts.
 
-## Complete source scope — authoritative from Stage 0
+## Complete source scope — current accepted baseline
 
-The live Notion `Clipping Sources` inventory was reconciled on 2026-08-30: 33
-sources, seven owner pages, 27 active adapters, and six connector gaps. This is
-the starting product scope. The eleven sources added on 2026-08-29 are merely a
-subset of this inventory and must never again be described as the project scope.
+The source inventory was freshly reconciled on 2026-09-03: 33 unique canonical
+sources, seven owner pages, 32 active/loaded sources, and one connector gap.
+This is the current product scope. Runtime feed variants are endpoints of their
+canonical source, not separate sources.
 
 - Brazil News (5): ((o))eco, Agência Brasil, Agência Pública, Globo,
   RioOnWatch.
@@ -84,12 +84,13 @@ subset of this inventory and must never again be described as the project scope.
   The Brothers Brick, The Gadgeteer, The Verge, Wired, Kickstarter.
 - World News (3): BBC, Financial Times, Reuters.
 
-Current connector gaps, visible rather than hidden: ATP Tour, Financial Times,
-Kickstarter, Medium, Reuters, and World Surf League. The other 27 sources are
-the initial live editorial corpus. Multi-page sources such as The Verge remain
-one canonical source routed to each approved owner page.
+Kickstarter is the sole current connector gap. Financial Times and World Surf
+League use working first-party sources. ATP Tour, Reuters, and Medium are live
+through compliant discovery feeds and have optional native-quality upgrades in
+the v2 roadmap. Multi-page sources such as The Verge remain one canonical
+source routed to each approved owner page.
 
-## Rebaselined visual delivery stages
+## Accepted visual delivery history
 
 Status vocabulary: `Not started`, `In progress`, `Owner inspection`, `Closed`,
 `Blocked`. Only Gabriel can move `Owner inspection` to `Closed`.
@@ -148,109 +149,12 @@ Owner inspection:
 - Close only when the visible source mix, topics, reasons, and rejection loop
   are credible enough to calibrate without developer intervention.
 
-### Stage 2 — Complete all named source connectors
+## Post-v1 work
 
-Status: Deferred to post-v1 roadmap
-
-Deliver in the reader:
-
-- Working compliant connectors for ATP Tour, Financial Times, Kickstarter,
-  Medium, Reuters, and World Surf League, using Gabriel's authorized access
-  where applicable.
-- Source Coverage changes each gap from incomplete to live only after its own
-  sample cards are visible and attributable.
-- Pilot/reliability evidence appears as a simple health indicator; it does not
-  delay editorial corrections or require owner operation.
-
-Connector checkpoints (each advances separately to `Owner inspection`):
-
-- Stage 2A — ATP Tour.
-- Stage 2B — Financial Times.
-- Stage 2C — Kickstarter.
-- Stage 2D — Medium.
-- Stage 2E — Reuters.
-- Stage 2F — World Surf League.
-
-For each checkpoint, the Source Coverage card must change from `connector gap`
-to `live`, expose understandable health, and link to attributable current or
-sample cards in the normal reader. One working connector does not close or
-conceal another, and no checkpoint closes without Gabriel's visual acceptance.
-
-Owner inspection:
-
-- Gabriel can open sample/current cards from every source and verify that each
-  source is being used for the intended material.
-- Close only after every source is visibly live or Gabriel explicitly accepts a
-  displayed blocker or alternative.
-
-### Stage 3 — Finite morning newspaper
-
-Status: Deferred to post-v1 roadmap
-
-Deliver in the reader:
-
-- The real 07:30 morning edition, immutable after publication, using the full
-  live registry, accepted feedback, source rules, seven pages, grounded reasons,
-  and bounded volume.
-- Clear source provenance and honest empty/short sections.
-
-Owner inspection:
-
-- Gabriel reads an actual morning edition in the normal desktop and mobile
-  interface and evaluates every page, source mix, story fit, and explanation.
-- Close only when Gabriel accepts the visible morning product. A fixture or
-  preview cannot close this stage.
-
-### Stage 4 — Non-repetitive afternoon update
-
-Status: Deferred to post-v1 roadmap
-
-Deliver in the reader:
-
-- The real 16:30 update containing only genuinely new or materially changed
-  stories, linked back to the morning where relevant.
-- An explicit no-material-change state instead of filler.
-
-Owner inspection:
-
-- Gabriel compares an actual morning and afternoon pair in the reader and can
-  see why each afternoon card qualifies.
-- Close only after Gabriel accepts a real published pair.
-
-### Stage 5 — Source-appropriate presentation
-
-Status: Deferred to post-v1 roadmap
-
-Deliver in the reader:
-
-- Comics as current panels with original-page links.
-- Sports as schedules/results/status and relevant Brazilian competitors.
-- Formula 1 with fact/analysis/rumor labeling and event/team/driver context.
-- Kickstarter and development-stage gear with campaign, evidence, readiness,
-  delivery-risk, support, and landed-cost context when available.
-- Ordinary articles retain the accepted newspaper presentation.
-
-Owner inspection:
-
-- Gabriel inspects real examples of every presentation type in the reader.
-- Close only when the formats are visibly useful and correctly differentiated.
-
-### Stage 6 — Cross-device and operational acceptance
-
-Status: Deferred to post-v1 roadmap
-
-Deliver in the reader:
-
-- Read, saved, dismissed, feedback, and navigation state synchronized across
-  desktop and mobile over LAN and Tailscale.
-- Visible freshness and failure health, tested backup/recovery, and preserved
-  historical editions.
-
-Owner inspection:
-
-- Gabriel performs the normal workflow on two devices and verifies state,
-  editions, and recovery-visible behavior without technical tools.
-- Close only when Gabriel accepts the complete first prototype.
+The former Stage 2–6 list mixed missing work with features that were later
+delivered during v1 calibration. It has been replaced by the reconciled and
+prioritized `V2-ROADMAP.md`. Historical engineering records below remain for
+auditability and do not define the active backlog.
 
 ## Mission
 
@@ -925,7 +829,7 @@ erase superseded conclusions.
 | FP-021 | 2026-08-30 | Step 6 delivery | The 72-hour source pilot was allowed to appear as a prerequisite for a usable reader, and the owner was given project-directory and `jq` commands as the way to follow it. After being told to correct this, implementation began before the canonical plan was amended. | Resolved for immediate delivery: governance was amended first, then the non-destructive bounded Live Preview was tested and commissioned over LAN and Tailscale. The pilot remains background evidence only. The broader doctrine remains binding for all future work. |
 | FP-022 | 2026-08-30 | Step 6 editorial calibration | The first live preview selected 8 G1 cards, including regional TV-video indexes, plus low-value F1 marketing/lifestyle pieces. All deterministic base scores were tied at 6.0; G1 same-source clusters received the maximum cluster boost and were described as independent corroboration. The source cap allowed 8 because it used 20% of the 40-story ceiling rather than the 16-story issue. The running volume contained neither the compiled registry nor private rules, so explanations and filters silently fell back to generic behavior. | Open and immediate. Execute the editorial-repair criteria above before additional source expansion. Reliability observation continues independently and is not an excuse to defer visible quality corrections. |
 | FP-023 | 2026-08-30 | Plan governance | Prior step closures were supported primarily by implementation, tests, shadow evidence, PRs, and CI, while critical integration remained invisible or absent in the running reader. The plan also allowed the eleven newly added sources to be mistaken for total scope despite 33 live Notion sources. | Superseded the old steps with Stages 0–6, each ending in a named browser-facing owner inspection. Reset active execution to Stage 0. All 33 sources and seven owner pages are authoritative from the first stage. Historical closed labels no longer imply product acceptance. |
-| FP-006 | 2026-08-29 | Source review | Several requested named sources lack live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Open and now machine-visible: Step 3 registry reconciliation reports exactly these six as planned connectors with no active adapter. Phase 4 investigates compliant adapters or records explicit blockers/alternatives. |
+| FP-006 | 2026-08-29 | Source review | Several requested named sources lacked live ingestion: Reuters, Financial Times, Medium, Kickstarter, ATP Tour, and World Surf League. | Reconciled 2026-09-03: Financial Times and World Surf League are live through first-party sources; ATP Tour, Reuters, and Medium are live through compliant discovery feeds; Kickstarter is the sole remaining connector gap. Native ATP/Reuters/Medium work is retained only as optional v2 quality improvement. |
 | FP-007 | 2026-08-29 | Source review | Globo Avoid guidance is linguistically ambiguous. | Waiting for owner confirmation; no durable filter should encode the ambiguous clause meanwhile. |
 | FP-008 | 2026-08-29 | Step 1 | Four TBD queues needed to become eleven agreed source records without losing the owner-selected pages or disturbing unrelated rows. | Technically resolved: reused the four original pages, created seven companion pages, populated source-specific guidance, and reconciled the complete table. Awaiting owner closure. |
 | FP-009 | 2026-08-29 | Step 2 | Initial backup invocation could resolve Docker's mount path but checked the root-owned directory as the ordinary user, then aborted before pausing or archiving. | Resolved by performing only the directory-existence check through non-interactive sudo. Removed the empty failed-attempt directory and completed a fresh backup. |
@@ -983,6 +887,7 @@ session to verify the claim.
 | 2026-09-03 | Stage 1 All-page gaps and comic-card repair | Gabriel reported holes even in the 49-story rolling All page and blank-looking cards for both comic subscriptions. | The story count was not the cause. Truncated HTML in several feed summaries escaped the intended card and became invisible full-size grid children. Ingestion now reduces fallback summaries to plain text, rendering escapes all summaries and link data, and topic grids use dense flow as a final guard. GiantITP and Wilde Life page artwork is extracted and shown as a deliberate top-biased crop; a host-and-path allow-listed same-origin relay defeats GiantITP hotlink blocking without creating an open proxy. The live desktop grid now has complete rows of 3/4/3/5/2/4/5 columns and phone reflows to single-card rows. Both comic images load at their native dimensions. Seventy-two tests pass locally and on the Pi. | Keep Stage 1 at `Owner inspection`. Gabriel judges the filled All page and comic-card aesthetics in the ordinary reader. |
 | 2026-09-03 | v1.0.0 owner acceptance | Gabriel explicitly accepted the repaired reader and instructed that it be saved to GitHub as “v1 complete.” | Stage 1 is closed. The commissioned 49-story rolling reader, metric weather desk, in-product source/topic management, optional read hiding, LEGO coverage, complete All-page rows, and two artwork-backed comic cards form the accepted v1.0.0 boundary. Unfinished expansion stages remain documented as post-v1 roadmap rather than being mislabeled complete. | Commit the release record, create annotated tag `v1.0.0`, push commit and tag through `gsguerra@4-main-pi`, and verify the remote tag resolves to the release commit. |
 | 2026-09-03 | Post-v1 canonical source consolidation | Gabriel identified repeated Sources entries where the detailed baseline record appeared disconnected while a sparse runtime-created variant appeared connected. | Notion itself contained 33 unique rows; the 42-record live inventory was incorrectly promoting nine runtime feed labels to source identity. Canonical aliases now fold BBC section feeds into BBC, FT US/World into Financial Times, GE Flamengo into Globo, Medium topic feeds into Medium, and the Reuters/ATP/WSL runtime endpoints into their existing canonical rows. Each source renders once, retains its detailed guidance, lists all assigned pages, and reports its aggregate feed count and health. The seven affected existing Notion rows were updated in place with current connection status, page assignments, and normalized home URLs; no Notion rows were created or deleted. | Deploy, verify 33 unique live source cards with the working runtime endpoints folded into their detailed records, inspect desktop and phone Sources layouts, and publish the fix to `main`. |
+| 2026-09-03 | Post-v1 roadmap reconciliation | Reconciled the fresh 33-source inventory, accepted v1 boundary, running edition archive, historical expansion stages, and the owner's request to move routine source governance out of Notion. | Confirmed 32 active sources and one genuine gap (Kickstarter). Confirmed production already publishes immutable 07:30/16:30 editions. Removed delivered comics, density, weather, cross-device state, health, and edition machinery from the outstanding list; recast ATP, Reuters, and Medium as optional quality upgrades. Created `V2-ROADMAP.md` with six ordered owner-facing priorities. | Begin Priority 1 with editable canonical editorial guidance and a deliberate source-research queue in the Sources interface. Do not reopen completed v1 work or treat working discovery feeds as absent sources. |
 
 ## Session reconciliation checklist
 
