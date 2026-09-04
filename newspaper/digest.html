@@ -725,7 +725,7 @@
     .coverage-chip { display:inline-flex; padding:4px 8px; border-radius:999px; font-size:10px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; border:1px solid var(--border2); color:var(--text3); }
     .coverage-chip.live { color:#639922; border-color:#639922; }
     .coverage-chip.gap,.coverage-chip.warn { color:#b77a2c; border-color:#b77a2c; }
-    .coverage-guidance { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .coverage-guidance { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .coverage-guidance div { background:var(--surface2); border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.45; color:var(--text2); }
     .coverage-guidance b { display:block; color:var(--text3); font-size:9px; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
     @media (max-width:760px) { .coverage-guidance { grid-template-columns:1fr; } }
@@ -912,7 +912,7 @@ const LEAD_MAX          = 4;     // cap the lead tier so it stays editorial
 const MID_THRESH        = 5.5;   // (legacy; kept for any external reference)
 const HISTORY_DAYS      = 3; // keep today + 2 prior calendar days
 
-const DEFAULT_VIEW_STATE = { currentView: 'digest', currentCat: 'all', digestCat: 'all', showScores: false };
+const DEFAULT_VIEW_STATE = { currentView: 'digest', currentCat: 'all', digestCat: 'all', showScores: false, hideReadOnOpen: false };
 
 /* ── Category metadata (c = accent color) ─────────────── */
 // Built from GET /categories at load (see buildCats); this is the fallback if
@@ -985,6 +985,7 @@ function normalizeState(raw = {}) {
       currentCat: viewState.currentCat || 'all',
       digestCat: viewState.digestCat || 'all',
       showScores: !!viewState.showScores,
+      hideReadOnOpen: !!viewState.hideReadOnOpen,
     },
     sourceStats: normalizeSourceStats(raw.sourceStats),
     learning: { lastDecayAt: typeof learning.lastDecayAt === 'string' ? learning.lastDecayAt : null },
@@ -1309,15 +1310,15 @@ function drawWeather(data) {
     const weekday = new Date(`${day.date}T12:00:00`).toLocaleDateString('en-US', {weekday:'short'});
     const label = day.high == null && day.name ? day.name : weekday;
     const temperatures = day.high == null
-      ? `Low ${day.low == null ? '—' : Math.round(day.low) + '°'}`
+      ? `Low ${day.low == null ? '—' : Math.round(day.low) + '°C'}`
       : day.low == null
-        ? `High ${Math.round(day.high)}°`
-        : `${Math.round(day.high)}° <span style="color:var(--text3);font-weight:500">/ ${Math.round(day.low)}°</span>`;
+        ? `High ${Math.round(day.high)}°C`
+        : `${Math.round(day.high)}° <span style="color:var(--text3);font-weight:500">/ ${Math.round(day.low)}°C</span>`;
     return `<div class="forecast-day"><b>${escapeAttr(label)}</b><div>${weatherIcon(day.forecast)}</div><div class="forecast-temps">${temperatures}</div><div class="forecast-copy">${escapeAttr(day.forecast || '')}${day.precipitation ? ` · ${day.precipitation}% rain` : ''}</div></div>`;
   }).join('');
-  const hourlyHtml = hourly.map(hour => `<div class="hour-card"><div class="hour-time">${weatherTime(hour.start, {hour:'numeric'})}</div><div class="hour-icon">${weatherIcon(hour.forecast)}</div><div class="hour-temp">${hour.temperature == null ? '—' : Math.round(hour.temperature) + '°'}</div><div class="hour-rain">${hour.precipitation || 0}% rain</div></div>`).join('');
+  const hourlyHtml = hourly.map(hour => `<div class="hour-card"><div class="hour-time">${weatherTime(hour.start, {hour:'numeric'})}</div><div class="hour-icon">${weatherIcon(hour.forecast)}</div><div class="hour-temp">${hour.temperature == null ? '—' : Math.round(hour.temperature) + '°C'}</div><div class="hour-rain">${hour.precipitation || 0}% rain</div></div>`).join('');
   const rioHtml = rio
-    ? `<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil · now</div><div class="weather-temp">${Math.round(rio.temperature)}°</div><div class="weather-condition">${weatherIcon(rio.condition)} ${escapeAttr(rio.condition)}</div><div class="weather-detail">Feels ${Math.round(rio.feels_like)}° · Humidity ${rio.humidity}% · Wind ${Math.round(rio.wind_mph)} mph</div><div class="weather-detail"><a href="${safeExternalUrl(rio.source_url)}" target="_blank" rel="noopener">${escapeAttr(rio.source)}</a></div></div>`
+    ? `<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil · now</div><div class="weather-temp">${Math.round(rio.temperature)}°C</div><div class="weather-condition">${weatherIcon(rio.condition)} ${escapeAttr(rio.condition)}</div><div class="weather-detail">Feels ${Math.round(rio.feels_like)}°C · Humidity ${rio.humidity}% · Wind ${Math.round(rio.wind_mph)} mph</div><div class="weather-detail"><a href="${safeExternalUrl(rio.source_url)}" target="_blank" rel="noopener">${escapeAttr(rio.source)}</a></div></div>`
     : '<div class="rio-weather"><div class="weather-place">Rio de Janeiro, Brazil</div><p class="empty">Current observation unavailable.</p></div>';
   const articlesHtml = articles.length
     ? articles.map(a => `<a class="weather-story" href="${safeExternalUrl(a.url)}" target="_blank" rel="noopener"><span class="weather-place">${escapeAttr(a.source)}${a.kind === 'alert' ? ' · Alert' : ''}</span><h3>${escapeAttr(a.title)}</h3>${a.summary ? `<p>${escapeAttr(a.summary)}</p>` : ''}</a>`).join('')
@@ -1327,7 +1328,7 @@ function drawWeather(data) {
     <div class="weather-heading"><div><div class="weather-place">The weather desk</div><h1>Houston & Gulf Weather</h1></div><div class="weather-updated">Updated ${escapeAttr(updated)}${data.stale ? ' · cached' : ''}</div></div>
     <div class="weather-alerts">${alertHtml}</div>
     <div class="weather-now">
-      <div class="weather-current"><div class="weather-place">Houston, Texas · now</div><div class="weather-temp">${current.temperature == null ? '—' : Math.round(current.temperature) + '°'}</div><div class="weather-condition">${weatherIcon(current.forecast)} ${escapeAttr(current.forecast || 'Forecast unavailable')}</div><div class="weather-detail">Rain ${current.precipitation || 0}% · Wind ${escapeAttr(current.wind || '—')}</div><div class="weather-detail"><a href="${safeExternalUrl(houston.source_url)}" target="_blank" rel="noopener">National Weather Service Houston/Galveston</a></div></div>
+      <div class="weather-current"><div class="weather-place">Houston, Texas · now</div><div class="weather-temp">${current.temperature == null ? '—' : Math.round(current.temperature) + '°C'}</div><div class="weather-condition">${weatherIcon(current.forecast)} ${escapeAttr(current.forecast || 'Forecast unavailable')}</div><div class="weather-detail">Rain ${current.precipitation || 0}% · Wind ${escapeAttr(current.wind || '—')}</div><div class="weather-detail"><a href="${safeExternalUrl(houston.source_url)}" target="_blank" rel="noopener">National Weather Service Houston/Galveston</a></div></div>
       ${rioHtml}
     </div>
     <section class="weather-block"><h2 class="weather-block-title">Seven-day forecast</h2><div class="weekly-strip">${weeklyHtml}</div></section>
@@ -1626,8 +1627,11 @@ window.openClusterMember = function(repId, memberId, url) {
     recordInteraction(member.source, 'open');
   }
   window.open(url, '_blank');
-  // Opening any coverage marks the whole story read and removes the card.
-  dismiss(repId, true);
+  if (sharedState.viewState.hideReadOnOpen) {
+    dismiss(repId, true);
+  } else {
+    saveSharedState().catch(() => {});
+  }
   updateBadges();
 };
 
@@ -1725,14 +1729,16 @@ function openArticle(id, url) {
       updateBadges();
     }
     recordInteraction(article.source, 'open');
-    sharedState.readIds.add(id);
-    saveSharedState().catch(() => {});
   }
 
   window.open(url, '_blank');
-  // Pass internal=true so dismiss doesn't double-count this as a dismiss —
-  // an open is positive signal, dismiss is the cleanup that follows.
-  dismiss(id, true);
+  if (sharedState.viewState.hideReadOnOpen) {
+    // Pass internal=true so dismiss doesn't double-count this as a dismiss —
+    // an open is positive signal, while hiding is merely the chosen display behavior.
+    dismiss(id, true);
+  } else {
+    saveSharedState().catch(() => {});
+  }
 }
 
 /* ── Save for later ───────────────────────────────────── */
@@ -2206,9 +2212,31 @@ function coverageText(value, fallback = 'Not specified') {
   return escapeAttr(text || fallback);
 }
 
+let coverageTab = 'inventory';
+
+function coverageTabsHtml() {
+  const tabs = [
+    ['inventory', 'Inventory'],
+    ['feeds', 'Manage sources'],
+    ['topics', 'Topics'],
+  ];
+  return `<nav class="subtabs" aria-label="Source management sections">${tabs.map(([id, label]) =>
+    `<button class="subtab${coverageTab === id ? ' active' : ''}" onclick="switchCoverageTab('${id}')">${label}</button>`
+  ).join('')}</nav><div id="coverage-pane"></div>`;
+}
+
+window.switchCoverageTab = function(tab) {
+  coverageTab = tab;
+  renderCoverage();
+};
+
 async function renderCoverage() {
   const el = document.getElementById('coverage-content');
-  el.innerHTML = '<p class="empty">Loading the complete source inventory…</p>';
+  el.innerHTML = coverageTabsHtml();
+  const pane = document.getElementById('coverage-pane');
+  if (coverageTab === 'feeds') { renderFeedsPane(pane); return; }
+  if (coverageTab === 'topics') { renderCategoriesPane(pane); return; }
+  pane.innerHTML = '<p class="empty">Loading the complete source inventory…</p>';
   try {
     const data = await (await fetch('/source-coverage', {cache:'no-store'})).json();
     const s = data.summary || {};
@@ -2231,27 +2259,29 @@ async function renderCoverage() {
               <span class="coverage-chip ${loaded ? 'live' : 'warn'}">${loaded ? 'Loaded in reader' : coverageText(source.ingestion_state)}</span>
               <span class="coverage-chip ${source.health_state === 'healthy' || source.health_state === 'healthy-no-recent-items' ? 'live' : 'warn'}">${coverageText(source.health_state).replaceAll('-', ' ')}</span>
               ${source.current_items ? `<span class="coverage-chip">${source.current_items} current items</span>` : ''}
+              ${source.origin === 'reader' ? '<span class="coverage-chip live">Reader managed</span>' : ''}
             </div>
             <div class="coverage-guidance">
               <div><b>What I read here</b>${coverageText(source.what_i_read)}</div>
               <div><b>Must include</b>${coverageText(source.must_include)}</div>
               <div><b>Avoid</b>${coverageText(source.avoid)}</div>
+              <div><b>Coverage status</b>${coverageText(source.sufficiency, source.adapter_state === 'active' ? 'Active' : 'Needs a connector')}</div>
             </div>
           </article>`;
         }).join('')}
       </section>`).join('');
-    el.innerHTML = `<p class="sec-label">Source of Truth</p>
+    pane.innerHTML = `<p class="sec-label">Source of Truth</p>
       <h1 style="font-family:var(--font-head);font-size:30px;margin:6px 0 4px">Complete Source Coverage</h1>
-      <p style="color:var(--text2);font-size:14px;line-height:1.5">This is what The Forge Daily is actually configured to build from. Missing and incomplete sources are shown—not hidden.</p>
+      <p style="color:var(--text2);font-size:14px;line-height:1.5">This is what The Forge Daily is actually configured to build from. Add or remove feeds under Manage sources; edit the paper’s sections and interests under Topics. Missing and incomplete sources are shown—not hidden.</p>
       <div class="coverage-summary">
-        <div class="coverage-metric"><strong>${s.sources || 0}</strong><span>Notion sources</span></div>
+        <div class="coverage-metric"><strong>${s.sources || 0}</strong><span>Managed sources</span></div>
         <div class="coverage-metric"><strong>${s.pages || 0}</strong><span>Owner pages</span></div>
         <div class="coverage-metric"><strong>${s.active || 0}</strong><span>Active adapters</span></div>
         <div class="coverage-metric"><strong>${s.fully_loaded || 0}</strong><span>Loaded in reader</span></div>
         <div class="coverage-metric"><strong>${s.connector_gaps || 0}</strong><span>Connector gaps</span></div>
       </div>${health}${warnings}${pages}`;
   } catch (error) {
-    el.innerHTML = '<div class="coverage-alert"><strong>Source Coverage failed to load.</strong> The reader cannot verify its editorial scope.</div>';
+    pane.innerHTML = '<div class="coverage-alert"><strong>Source Coverage failed to load.</strong> The reader cannot verify its editorial scope.</div>';
   }
 }
 
@@ -2981,8 +3011,10 @@ function renderRunsTable(wrap, runs, status) {
 
 /* ── Settings: category editor ────────────────────────── */
 let catEditList = null;   // working copy while editing
+let catEditorPaneId = 'settings-pane';
 
 function renderCategoriesPane(pane) {
+  catEditorPaneId = pane.id;
   pane.innerHTML = '<p class="cfg-help" style="padding:16px 0;">Loading…</p>';
   fetch('/categories', { cache: 'no-store' })
     .then(r => r.json())
@@ -2991,7 +3023,7 @@ function renderCategoriesPane(pane) {
 }
 
 function drawCatEditor() {
-  const pane = document.getElementById('settings-pane');
+  const pane = document.getElementById(catEditorPaneId);
   if (!pane || !catEditList) return;
   const rows = catEditList.map((c, i) => `
     <div class="cat-row">
@@ -3061,8 +3093,6 @@ window.saveCategories = async () => {
 
 /* ── Render Settings (sub-tabbed) ─────────────────────── */
 const SETTINGS_TABS = [
-  { id: 'feeds',      label: 'Feeds' },
-  { id: 'categories', label: 'Categories' },
   { id: 'filters',    label: 'Filters' },
   { id: 'models',     label: 'Models' },
   { id: 'tuning',     label: 'Tuning' },
@@ -3070,7 +3100,7 @@ const SETTINGS_TABS = [
   { id: 'runs',       label: 'Runs' },
   { id: 'about',      label: 'About' },
 ];
-let settingsTab = 'feeds';
+let settingsTab = 'filters';
 
 function renderSettings() {
   const el = document.getElementById('settings-content');
@@ -3094,8 +3124,6 @@ window.switchSettingsTab = function(tab) {
 function renderSettingsPane() {
   const pane = document.getElementById('settings-pane');
   if (!pane) return;
-  if (settingsTab === 'feeds') { renderFeedsPane(pane); return; }
-  if (settingsTab === 'categories') { renderCategoriesPane(pane); return; }
   if (settingsTab === 'display') { renderDisplayPane(pane); return; }
   if (settingsTab === 'runs')  { renderRunsPane(pane); return; }
 
@@ -3104,7 +3132,7 @@ function renderSettingsPane() {
     pane.innerHTML = '<p class="empty" style="padding:16px 0;">Loading settings…</p>';
     ensureSettingsData().then(() => {
       // Only re-render if the user is still on a tab that needed the data.
-      if (settingsTab !== 'feeds') renderSettingsPane();
+      renderSettingsPane();
     });
     return;
   }
@@ -3129,6 +3157,7 @@ function renderSettingsPane() {
 // Client-side display preferences (per account, synced via viewState).
 function renderDisplayPane(pane) {
   const on = !!sharedState.viewState.showScores;
+  const hideReadOnOpen = !!sharedState.viewState.hideReadOnOpen;
   pane.innerHTML = `
     <div class="settings-section">
       <div class="settings-h">Display</div>
@@ -3140,11 +3169,23 @@ function renderDisplayPane(pane) {
           <span class="toggle-sub">Adds a score chip to each story's thumbnail, with a hover breakdown (Base → coverage → personalization → source affinity → final Score). Off by default.</span>
         </span>
       </label>
+      <label class="toggle-row">
+        <input type="checkbox" onchange="toggleHideReadOnOpen(this.checked)"${hideReadOnOpen ? ' checked' : ''}>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Hide stories after opening
+          <span class="toggle-sub">When off, opening adds a story to History but leaves its card on Home. Read Later and Not for me still remove cards.</span>
+        </span>
+      </label>
     </div>`;
 }
 
 window.toggleShowScores = function(on) {
   sharedState.viewState.showScores = !!on;
+  saveSharedState().catch(() => {});
+};
+
+window.toggleHideReadOnOpen = function(on) {
+  sharedState.viewState.hideReadOnOpen = !!on;
   saveSharedState().catch(() => {});
 };
 

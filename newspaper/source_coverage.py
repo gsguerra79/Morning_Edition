@@ -77,8 +77,15 @@ def build(registry, feeds, digest=None, rules=None):
     sources = registry.get("sources") if isinstance(registry, dict) else None
     registry_loaded = isinstance(sources, list) and bool(sources)
     sources = sources or []
-    configured_urls = {_url(feed.get("url")) for feed in feeds or []
+    feeds = [feed for feed in (feeds or []) if isinstance(feed, dict)]
+    configured_urls = {_url(feed.get("url")) for feed in feeds
                        if isinstance(feed, dict)}
+    registry_urls = {
+        _url(adapter.get("url"))
+        for source in sources
+        for adapter in (source.get("adapters") or [])
+        if isinstance(adapter, dict) and adapter.get("url")
+    }
     article_counts = Counter()
     feed_health = {_url(item.get("url")): item for item in (digest or {}).get("feed_health", [])
                    if isinstance(item, dict) and item.get("url")}
@@ -130,12 +137,55 @@ def build(registry, feeds, digest=None, rules=None):
             "what_i_read": source.get("what_i_read"),
             "must_include": source.get("must_include"),
             "avoid": source.get("avoid"),
+            "sufficiency": source.get("sufficiency"),
             "adapter_state": adapter_state,
             "ingestion_state": ingestion_state,
             "active_adapters": len(active_urls),
             "configured_adapters": configured,
             "health_state": health_state,
             "current_items": article_counts.get(str(source.get("source") or ""), 0),
+            "origin": "editorial-registry",
+        })
+
+    # A source added directly in the reader must immediately appear in its
+    # inventory even though it was never part of the imported Notion baseline.
+    # Match by adapter URL first so labeled sub-feeds (BBC US, BBC Tennis, etc.)
+    # do not become duplicate pseudo-sources.
+    page_by_key = {spec["key"]: page for page, spec in PAGE_DEFINITIONS.items()}
+    runtime_only = {}
+    for feed in feeds:
+        url = _url(feed.get("url"))
+        if not url or url in registry_urls:
+            continue
+        source = str(feed.get("source") or "").strip()
+        if not source:
+            continue
+        item = runtime_only.setdefault(source, {"urls": [], "category": feed.get("category")})
+        item["urls"].append(url)
+    for source, item in runtime_only.items():
+        observed = [feed_health.get(url) for url in item["urls"]]
+        if not observed or any(health is None for health in observed):
+            health_state = "not-checked"
+        elif any(health.get("status") == "failed" for health in observed):
+            health_state = "fetch-failed"
+        elif sum(int(health.get("items") or 0) for health in observed):
+            health_state = "healthy"
+        else:
+            health_state = "healthy-no-recent-items"
+        rows.append({
+            "source": source,
+            "topics": [page_by_key.get(str(item["category"] or ""), "Unassigned")],
+            "what_i_read": None,
+            "must_include": None,
+            "avoid": None,
+            "sufficiency": "Added in The Forge Daily",
+            "adapter_state": "active",
+            "ingestion_state": "loaded",
+            "active_adapters": len(item["urls"]),
+            "configured_adapters": len(item["urls"]),
+            "health_state": health_state,
+            "current_items": article_counts.get(source, 0),
+            "origin": "reader",
         })
 
     pages = {}

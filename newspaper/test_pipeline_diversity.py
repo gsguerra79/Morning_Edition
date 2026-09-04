@@ -24,6 +24,12 @@ class PipelineDiversityTests(unittest.TestCase):
                           "source": source, "category": "worldnews",
                           "title": f"{source} headline", "score": 6,
                           "published_at": now})
+        for i, source in enumerate(("Brickset", "The Brothers Brick")):
+            items.append({"id": f"lego-required-{i}",
+                          "cluster_id": f"lego-required-{i}", "cluster_rep": True,
+                          "source": source, "category": "technology",
+                          "title": f"{source} LEGO headline", "score": 6,
+                          "published_at": now})
         sports = [
             ("BBC Football", "football match"), ("BBC Football", "soccer result"),
             ("GE Flamengo", "Flamengo victory"), ("BBC Tennis", "US Open tennis"),
@@ -63,16 +69,30 @@ class PipelineDiversityTests(unittest.TestCase):
                   "cluster_rep": True, "source": "BBC", "category": "worldnews",
                   "title": f"World {i}", "score": 10, "published_at": now}
                  for i in range(12)]
-        for i, source in enumerate(("BBC US & Canada", "Financial Times US", "Reuters",
-                                    "ATP Tour", "World Surf League")):
-            page = "worldnews" if i < 3 else "sports"
+        required = (("BBC US & Canada", "worldnews"),
+                    ("Financial Times US", "worldnews"),
+                    ("Reuters", "worldnews"),
+                    ("ATP Tour", "sports"),
+                    ("World Surf League", "sports"),
+                    ("Brickset", "technology"),
+                    ("The Brothers Brick", "technology"))
+        for i, (source, page) in enumerate(required):
             items.append({"id": f"named-{i}", "cluster_id": f"named-{i}",
                           "cluster_rep": True, "source": source, "category": page,
                           "title": source, "score": 1, "published_at": now})
         selected, _ = pipeline.select_balanced_issue(items)
         sources = {item["source"] for item in selected}
         self.assertTrue({"BBC US & Canada", "Financial Times US", "Reuters",
-                         "ATP Tour", "World Surf League"} <= sources)
+                         "ATP Tour", "World Surf League", "Brickset",
+                         "The Brothers Brick"} <= sources)
+
+    def test_brickset_random_daily_filler_is_filtered(self):
+        rules = {"Brickset": {"exclude_any": ["random set of the day",
+                                                  "random figure of the day"]}}
+        useful = {"source": "Brickset", "title": "LEGO 72306 PlayStation revealed!"}
+        filler = {"source": "Brickset", "title": "Random set of the day: Blaster Bike"}
+        self.assertTrue(pipeline.apply_source_scope(useful, rules))
+        self.assertFalse(pipeline.apply_source_scope(filler, rules))
 
     def test_durable_pages_receive_longer_windows(self):
         self.assertGreaterEqual(pipeline._page_window_hours("ideas", 36), 24 * 14)

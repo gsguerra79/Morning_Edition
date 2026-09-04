@@ -127,6 +127,15 @@
       ],
       "priority_match_boost": 2.0,
       "exclude_any": ["song", "album", "dance punk", "music video", "celebrity"]
+    },
+    "Brickset": {
+      "category": "technology",
+      "priority_boost": 1.0,
+      "exclude_any": ["random set of the day", "random figure of the day"]
+    },
+    "The Brothers Brick": {
+      "category": "technology",
+      "priority_boost": 1.0
     }
   }
 }

@@ -115,6 +115,7 @@ COMIC_SOURCES = ('giantitp', 'wilde life')
 PAGE_REQUIRED_SOURCES = {
     'worldnews': ('bbc us & canada', 'financial times us', 'reuters'),
     'sports': ('atp tour', 'world surf league'),
+    'technology': ('brickset', 'the brothers brick'),
 }
 
 

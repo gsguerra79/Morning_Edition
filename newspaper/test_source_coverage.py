@@ -45,6 +45,20 @@ class SourceCoverageTests(unittest.TestCase):
         self.assertEqual([{"url": "https://multi.test/feed", "source": "Multi",
                            "category": "technology"}], feeds)
 
+    def test_reader_added_feed_appears_in_inventory(self):
+        result = build(
+            {"generated_at": "2026-08-30T00:00:00Z", "sources": []},
+            [{"url": "https://new.test/feed", "source": "New Source",
+              "category": "technology"}],
+            {"feed_health": [{"url": "https://new.test/feed", "status": "fetched",
+                              "items": 3}]},
+            {"sources": {}},
+        )
+        rows = [row for page in result["pages"] for row in page["sources"]]
+        self.assertEqual("New Source", rows[0]["source"])
+        self.assertEqual("reader", rows[0]["origin"])
+        self.assertEqual("healthy", rows[0]["health_state"])
+
 
 if __name__ == "__main__":
     unittest.main()

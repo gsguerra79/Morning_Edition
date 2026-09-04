@@ -41,8 +41,8 @@ class WeatherServiceTests(unittest.TestCase):
         days = weather_service._weekly(periods)
 
         self.assertEqual(7, len(days))
-        self.assertEqual(91, days[0]["high"])
-        self.assertEqual(71, days[0]["low"])
+        self.assertEqual(32.8, days[0]["high"])
+        self.assertEqual(21.7, days[0]["low"])
         self.assertEqual(5, days[0]["precipitation"])
 
     def test_build_returns_houston_rio_and_weather_articles(self):
@@ -82,13 +82,15 @@ class WeatherServiceTests(unittest.TestCase):
             payload = weather_service._build()
 
         self.assertEqual(24, len(payload["houston"]["hourly"]))
+        self.assertEqual(31.1, payload["houston"]["current"]["temperature"])
+        self.assertEqual("C", payload["houston"]["current"]["unit"])
         self.assertEqual("Flood Warning", payload["houston"]["alerts"][0]["title"])
         self.assertEqual(rio, payload["rio"])
         self.assertTrue(any(a["title"] == "Gulf storm update" for a in payload["articles"]))
         self.assertEqual("KHGX — Houston/Galveston", payload["houston"]["radar"]["station"])
 
     def test_failed_refresh_serves_stale_cache(self):
-        cached = {"updated_at": "2026-09-03T00:00:00+00:00", "errors": []}
+        cached = {"updated_at": "2026-09-03T00:00:00+00:00", "units": "metric", "errors": []}
         Path(weather_service.CACHE_FILE).write_text(json.dumps(cached), encoding="utf-8")
         with patch.object(weather_service, "_build", side_effect=OSError("offline")):
             payload = weather_service.get_weather(force=True)

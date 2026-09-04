@@ -50,6 +50,7 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertEqual("later", normalized["viewState"]["currentView"])
         self.assertEqual("all", normalized["viewState"]["currentCat"])
         self.assertFalse(normalized["viewState"]["showScores"])
+        self.assertFalse(normalized["viewState"]["hideReadOnOpen"])
         self.assertEqual({}, normalized["sourceStats"])
         self.assertEqual({"lastDecayAt": None}, normalized["learning"])
 
@@ -88,6 +89,18 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("Houston radar", html)
         self.assertIn("Rio de Janeiro, Brazil", html)
         self.assertIn("Updated ${issueTime}", html)
+
+    def test_sources_owns_feed_and_topic_management(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("['feeds', 'Manage sources']", html)
+        self.assertIn("['topics', 'Topics']", html)
+        self.assertNotIn("{ id: 'feeds',      label: 'Feeds' }", html)
+        self.assertNotIn("{ id: 'categories', label: 'Categories' }", html)
+
+    def test_opened_story_visibility_is_optional_and_defaults_to_visible(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn("hideReadOnOpen: false", html)
+        self.assertIn("Hide stories after opening", html)
 
 
 if __name__ == "__main__":

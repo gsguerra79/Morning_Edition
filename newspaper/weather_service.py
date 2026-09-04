@@ -45,6 +45,13 @@ def _text(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
+def _celsius(value, unit="F"):
+    if value is None:
+        return None
+    number = float(value)
+    return round((number - 32) * 5 / 9, 1) if str(unit or "F").upper() == "F" else round(number, 1)
+
+
 def _rss(url, source, limit=8):
     root = ET.fromstring(_request(url, "application/rss+xml, application/xml, text/xml"))
     rows = []
@@ -81,7 +88,7 @@ def _weekly(periods):
                           "icon": period.get("icon")}
             order.append(date)
         day = days[date]
-        temp = period.get("temperature")
+        temp = _celsius(period.get("temperature"), period.get("temperatureUnit"))
         if period.get("isDaytime"):
             day["high"] = temp
             day["forecast"] = period.get("shortForecast")
@@ -97,8 +104,8 @@ def _weekly(periods):
 def _hourly(periods):
     return [{
         "start": period.get("startTime"),
-        "temperature": period.get("temperature"),
-        "unit": period.get("temperatureUnit"),
+        "temperature": _celsius(period.get("temperature"), period.get("temperatureUnit")),
+        "unit": "C",
         "forecast": period.get("shortForecast"),
         "precipitation": (period.get("probabilityOfPrecipitation") or {}).get("value") or 0,
         "wind": f"{period.get('windSpeed') or ''} {period.get('windDirection') or ''}".strip(),
@@ -119,7 +126,7 @@ WMO = {
 def _rio():
     url = ("https://api.open-meteo.com/v1/forecast?latitude=-22.9068&longitude=-43.1729"
            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,"
-           "precipitation,weather_code,wind_speed_10m&temperature_unit=fahrenheit"
+           "precipitation,weather_code,wind_speed_10m"
            "&wind_speed_unit=mph&timezone=America%2FSao_Paulo")
     raw = _json(url)
     current = raw.get("current") or {}
@@ -189,6 +196,7 @@ def _build():
     current = _hourly(hourly_periods[:1])
     return {
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "units": "metric",
         "stale": False,
         "houston": {
             "current": current[0] if current else None,
@@ -237,6 +245,8 @@ def get_weather(force=False):
         if not force and _memory and now - _memory_at < CACHE_SECONDS:
             return _memory
         cached = _load_file()
+        if cached and cached.get("units") != "metric":
+            cached = None
         if not force and cached:
             try:
                 age = now - datetime.fromisoformat(cached["updated_at"]).timestamp()
