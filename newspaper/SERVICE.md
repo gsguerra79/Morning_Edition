@@ -28,6 +28,12 @@ authentication, transport security, and an explicit threat review.
 - The **Feedback** view records every **Not for me** decision with its selected
   reason. Feedback synchronizes through shared state, immediately removes the
   story cluster from Home, and can be undone in the browser.
+- The **Weather** view uses the National Weather Service for Houston current,
+  hourly, seven-day, and alert data; NOAA for Houston radar and Gulf/Atlantic
+  storm reporting; and Open-Meteo for the compact Rio de Janeiro observation.
+  Weather data is cached for 15 minutes in the production volume. If an
+  upstream service is temporarily unavailable, the last successful payload is
+  shown and marked cached rather than blanking the page.
 
 ## Operations
 
@@ -49,6 +55,7 @@ volume; later in-app changes survive image rebuilds.
 - `/editions` — archive index
 - `/editions/live-preview` — non-persistent bounded issue from the current digest
 - `/source-coverage` — reader-ready source-scope and ingestion reconciliation
+- `/weather` — cached Houston weather desk and Rio current observation
 - `/editions/YYYY-MM-DD-morning` — immutable issue
 - `/editions/YYYY-MM-DD-afternoon` — immutable update
 - `/feeds` and `/categories` — active source/topic configuration

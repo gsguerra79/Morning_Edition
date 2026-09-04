@@ -103,6 +103,10 @@ def preview(digest, now=None):
         'kind': 'preview',
         'date': now.date().isoformat(),
         'published_at': now.isoformat(),
+        # Preserve the ingestion timestamp so the reader can say when its
+        # underlying issue was actually updated. `published_at` above is only
+        # the time this non-persistent preview response was assembled.
+        'generated_at': digest.get('generated_at'),
         'article_count': len(selected),
         'articles': selected,
         'selection_report': selection_report,

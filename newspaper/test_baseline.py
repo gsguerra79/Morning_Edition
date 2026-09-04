@@ -78,6 +78,17 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("balancedTopicColumns(section.articles.length)", html)
         self.assertNotIn("section.articles.slice(1, 5)", html)
 
+    def test_weather_desk_and_masthead_timestamp_are_present(self):
+        html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
+        self.assertIn('id="vnav-weather"', html)
+        self.assertIn('id="view-weather"', html)
+        self.assertIn("const WEATHER_URL       = '/weather';", html)
+        self.assertIn("Seven-day forecast", html)
+        self.assertIn("Hourly forecast · next 24 hours", html)
+        self.assertIn("Houston radar", html)
+        self.assertIn("Rio de Janeiro, Brazil", html)
+        self.assertIn("Updated ${issueTime}", html)
+
 
 if __name__ == "__main__":
     unittest.main()

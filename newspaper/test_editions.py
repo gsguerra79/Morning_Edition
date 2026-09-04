@@ -9,7 +9,7 @@ import editions
 
 class EditionTests(unittest.TestCase):
     def test_preview_is_bounded_and_does_not_write_archive(self):
-        digest = {'articles': [
+        digest = {'generated_at': '2026-08-24T20:15:00+00:00', 'articles': [
             {'id': f'a-{i}', 'cluster_id': f'c-{i}', 'cluster_rep': True,
              'title': f'Story {i}', 'url': f'https://example.com/{i}',
              'source': f'Source {i % 8}', 'category': 'world', 'score': 100-i}
@@ -19,6 +19,7 @@ class EditionTests(unittest.TestCase):
         result = editions.preview(digest, now=self.now)
         self.assertEqual('live-preview', result['id'])
         self.assertTrue(result['preview'])
+        self.assertEqual(digest['generated_at'], result['generated_at'])
         self.assertLessEqual(result['article_count'], 60)
         self.assertEqual(before, list(os.listdir(self.tmp.name)))
 
