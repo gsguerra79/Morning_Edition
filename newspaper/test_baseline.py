@@ -86,6 +86,7 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("comic-card .thumb img", html)
         self.assertIn("a.category === 'comics' ? ' comic-card'", html)
         self.assertIn("/comic-image?url=", html)
+        self.assertIn("a.category !== 'comics'", html)
 
     def test_comic_image_relay_rejects_non_subscribed_hosts(self):
         with self.assertRaisesRegex(ValueError, "not allow-listed"):

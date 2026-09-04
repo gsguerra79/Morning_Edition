@@ -265,7 +265,7 @@
 
     /* ── Thumbnail (image with category-tinted fallback) ── */
     .thumb { position: relative; width: 100%; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface2); }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+    .thumb img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
     .card:hover .thumb img, .lead:hover .thumb img, .mini:hover .thumb img { transform: scale(1.045); }
     .thumb .ph { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-head); font-weight: 700; color: #fff; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .92; padding: 8px; text-align: center; }
     /* Rollup count badge on the image — "+2" means 2 duplicates folded in. */
@@ -2176,7 +2176,7 @@ function gridCardHTML(a) {
       ${thumbBlock(a)}
       ${kicker(a)}
       <h3 class="card-title" title="${escapeAttr(a.title)}">${openLink(a, a.title)}</h3>
-      ${a.summary ? `<p class="card-summary">${escapeAttr(a.summary)}</p>` : ''}
+      ${a.summary && a.category !== 'comics' ? `<p class="card-summary">${escapeAttr(a.summary)}</p>` : ''}
       ${whyLine(a)}
       ${clusterDisclosure(a)}
       <div class="card-foot">${srcLine(a)} ${cardActions(a)}</div>
