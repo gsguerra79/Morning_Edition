@@ -17,7 +17,7 @@ none can close a stage and the owner is never expected to review them.
 Durable governing decisions may also be promoted to the workspace `MEMORY.md`;
 detailed working state belongs here.
 
-Last reconciled: 2026-08-30
+Last reconciled: 2026-09-03
 
 ## Delivery doctrine
 
@@ -113,7 +113,7 @@ Owner inspection:
 
 ### Stage 1 — Editorial calibration and direct feedback
 
-Status: In progress
+Status: Owner inspection
 
 Deliver in the reader:
 
@@ -967,6 +967,7 @@ session to verify the claim.
 | 2026-08-31 | Stage 1 football/mountaineering repair | Activated the official BBC association-football feed, added a narrow first-party GE Flamengo HTML connector because GE's current team page has no working modern RSS feed, enforced source-scope rules during ingestion and carry-forward, excluded American-football terms, and constrained Climbing to mountain/alpine/expedition material. Rebuilt and refreshed production. | All 50 tests pass. The live 32-source refresh fetched 65 BBC Football items, six GE Flamengo items, and 12 Climbing items; the retained visible corpus now contains six worldwide association-football stories, one current Flamengo story, ten Technology & Things stories, and zero generic Climbing stories. | Keep Stage 1 `In progress`; owner judges the repaired visible mix. Continue strengthening Brazil-wide football acquisition beyond the dedicated Flamengo and BBC worldwide streams. |
 | 2026-08-31 | Stage 1 depth repair | Gabriel rejected the ostensibly populated repair as weak: a major 3–0 Flamengo clássico win yielded one visible club story, while Wired, The Verge, and Medium yielded no credible visible technology depth. Traced this to equal fallback scores with AI disabled, a single shallow GE page, and the unreadable authenticated Medium connector. Added two deeper GE Flamengo pages, explicit match/result priority, deterministic owner-scope boosts for Wired/The Verge, and three official public Medium topic feeds as a temporary technology/gadgets/hardware fallback with self-help noise filtering. | The 37-feed production refresh now retains nine Flamengo stories, led by the 3–0 Botafogo victory, player ratings, and title-race implications; Technology retains nine Wired, four Verge, and eight filtered Medium candidates. All 50 tests pass. | Keep Stage 1 `In progress`. Owner judges the refreshed issue; do not confuse item volume with final editorial quality. Replace public Medium topic fallback with the owner's authenticated followed-topic stream when readable. |
 | 2026-08-31 | Stage 1 structural balance repair | Gabriel rejected the whack-a-mole behavior where boosting one interest evicted others, Sports alternated between only mountains and only Flamengo, World collapsed to one story, and opening a Brazil story immediately replaced it. Removed the global-retention gate from issue admission and replaced it with protected page budgets plus explicit Sports sub-budgets. Added BBC Tennis and a first-party WSL homepage connector. Read stories now remain in the fixed issue instead of disappearing; unmet minima render an owner-visible coverage warning. | The deployed 39-feed issue has 49 stable stories: Brazil 6, World 8, F1 6, Technology 10, Comics 2, Sports 12, Ideas 5. Sports is football 4, tennis 2, surfing 2, mountaineering 3, other 1. Coverage gaps are empty. Fifty-two tests pass. Desktop 1440px and mobile 390px normal-use renders were visually inspected. | Stage 1 is `Owner inspection`, not Closed. Gabriel inspects the ordinary reader and explicitly accepts or rejects this repaired behavior. |
+| 2026-09-03 | Stage 1 resumed owner inspection | Recovered the canonical project after the workspace/session migration and reverified the commissioned reader through its Tailscale surface. Corrected the stale headline status from `In progress` to `Owner inspection`; no product behavior changed. | The latest ingestion completed successfully with 49 retained articles from 39 feeds. The bounded live preview exposes 40 stories across all seven pages: Brazil 6, World 8, Formula 1 6, Technology & Things 8, Comics 2, Sports 5, and Ideas 5. Source Coverage reports 33 sources, seven pages, 27 active adapters, six explicit connector gaps, and no registry warnings. Three prior feedback decisions remain synchronized. All 52 tests pass; desktop 1440px and phone 390px renders show the visible `Not for me` controls. | Gabriel inspects the live issue and feedback loop. Close Stage 1 only on explicit acceptance; otherwise record and repair visible editorial defects before beginning Stage 2A. |
 
 ## Session reconciliation checklist
 
