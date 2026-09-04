@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img" aria-label="Financial Times story">
-  <rect width="800" height="450" fill="#fff1e5"/>
-  <path stroke="#262220" stroke-width="2" d="M70 92h660M70 356h660"/>
-  <path stroke="#d8b9a6" d="M70 112h660M70 336h660"/>
-  <text x="400" y="222" text-anchor="middle" fill="#262220" font-family="Georgia,serif" font-size="74" font-weight="700">FINANCIAL TIMES</text>
-  <text x="400" y="276" text-anchor="middle" fill="#6b5548" font-family="Arial,sans-serif" font-size="24" letter-spacing="7">WORLD &amp; UNITED STATES</text>
-</svg>

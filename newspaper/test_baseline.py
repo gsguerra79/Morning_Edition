@@ -139,15 +139,17 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("member?.category !== 'comics'", html)
         self.assertIn("article.category !== 'comics' && sharedState.viewState.hideReadOnOpen", html)
 
-    def test_ft_and_reuters_have_source_art_when_story_image_is_absent(self):
+    def test_missing_publisher_art_uses_story_recovery_not_generic_logos(self):
         root = Path(__file__).parent
         html = (root / "digest.html").read_text(encoding="utf-8")
         dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
-        self.assertIn("'/ft-card.svg?v=1'", html)
-        self.assertIn("'/reuters-card.svg?v=1'", html)
-        self.assertIn('ft-card.svg', server.ICON_FILES)
-        self.assertIn('reuters-card.svg', server.ICON_FILES)
-        self.assertIn('ft-card.svg reuters-card.svg', dockerfile)
+        self.assertIn("`/story-image?source=${encodeURIComponent", html)
+        self.assertNotIn('/ft-card.svg', html)
+        self.assertNotIn('/reuters-card.svg', html)
+        self.assertNotIn('ft-card.svg', server.ICON_FILES)
+        self.assertNotIn('reuters-card.svg', server.ICON_FILES)
+        self.assertNotIn('ft-card.svg', dockerfile)
+        self.assertNotIn('reuters-card.svg', dockerfile)
 
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")

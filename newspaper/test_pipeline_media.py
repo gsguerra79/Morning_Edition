@@ -5,6 +5,24 @@ import pipeline
 
 
 class PageMediaTests(unittest.TestCase):
+    def test_rss_image_enclosure_is_preserved(self):
+        markup = '''<rss><channel><item><title>FP2 report</title>
+          <link>https://www.autosport.com/f1/news/report/1/</link>
+          <pubDate>Fri, 04 Sep 2026 15:14:01 +0000</pubDate>
+          <enclosure url="https://cdn-5.motorsport.com/images/amp/result.jpg"
+                     type="image/jpeg" length="162276" />
+        </item></channel></rss>'''
+        items = pipeline.parse_feed(
+            markup, 'Autosport', 'formula1',
+            datetime(2026, 9, 4, tzinfo=timezone.utc))
+        self.assertEqual(
+            'https://cdn-5.motorsport.com/images/amp/result.jpg',
+            items[0]['feed_image'])
+
+    def test_non_image_enclosure_is_ignored(self):
+        block = '<enclosure url="https://example.com/audio.mp3" type="audio/mpeg" />'
+        self.assertIsNone(pipeline.extract_feed_image(block))
+
     def test_giantitp_comic_art_is_used_when_open_graph_image_is_absent(self):
         markup = '''
           <img src="https://i.giantitp.com/redesign/Header_Comics.gif">

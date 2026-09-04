@@ -1568,14 +1568,16 @@ function thumb(a) {
   const tint = `color-mix(in srgb, ${cat.c} 22%, var(--surface2))`;
   const ph = `<div class="ph">${cat.label || a.category}</div>`;
   const source = String(a.source || '').toLowerCase();
-  const sourceFallback = source.startsWith('financial times')
-    ? '/ft-card.svg?v=1'
-    : source === 'reuters' ? '/reuters-card.svg?v=1' : '';
+  const recoverableSource = source.startsWith('financial times') || source === 'reuters' ||
+    ['formula 1','motorsport','autosport','racefans','the race'].includes(source);
+  const recoveredImage = recoverableSource
+    ? `/story-image?source=${encodeURIComponent(a.source || '')}&title=${encodeURIComponent(a.title || '')}&url=${encodeURIComponent(a.url || '')}`
+    : '';
   const imageURL = a.image && a.category === 'comics'
     ? `/comic-image?url=${encodeURIComponent(a.image)}`
     : a.image && (source.startsWith('financial times') || source === 'reuters')
       ? `/card-image?url=${encodeURIComponent(a.image)}`
-      : a.image || sourceFallback;
+      : a.image || recoveredImage;
   const im = imageURL
     ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy" onerror="this.style.display='none'">`
     : '';

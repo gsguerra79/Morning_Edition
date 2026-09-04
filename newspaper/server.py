@@ -22,9 +22,11 @@ Endpoints:
   GET  /hot-metal             current consequential breaking headlines
   GET  /comic-image           allow-listed relay for subscribed comic artwork
   GET  /card-image            allow-listed relay for FT/Reuters card artwork
+  GET  /story-image           recover and relay article-specific artwork
   POST /refresh               trigger a pipeline run now
 """
 import concurrent.futures
+import html as html_lib
 import json
 import os
 import re
@@ -35,7 +37,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 
 import pipeline
 import editions
@@ -80,8 +82,7 @@ STATIC_TYPES = {
 
 # Icon files served at the root, by exact name (no path traversal).
 ICON_FILES = ('favicon.svg', 'favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png',
-              'apple-touch-icon.png', 'logo-mark.png', 'ft-card.svg',
-              'reuters-card.svg')
+              'apple-touch-icon.png', 'logo-mark.png')
 
 COMIC_IMAGE_PATHS = {
     'i.giantitp.com': ('/comics/oots/',),
@@ -92,6 +93,23 @@ CARD_IMAGE_PATHS = {
     'images.ft.com': ('/v3/image/',),
     'www.reuters.com': ('/resizer/',),
 }
+
+STORY_ARTICLE_HOSTS = {
+    'www.ft.com', 'ft.com', 'www.reuters.com', 'reuters.com',
+    'www.formula1.com', 'formula1.com', 'www.motorsport.com',
+    'motorsport.com', 'www.autosport.com', 'autosport.com',
+    'www.racefans.net', 'racefans.net', 'www.the-race.com', 'the-race.com',
+}
+STORY_IMAGE_PATHS = {
+    'images.ft.com': ('/v3/image/',),
+    'www.reuters.com': ('/resizer/',),
+    'media.formula1.com': ('/image/upload/',),
+    'storage.ghost.io': ('/',),
+    'www.racefans.net': ('/wp-content/',),
+}
+STORY_IMAGE_MAX_BYTES = 6 * 1024 * 1024
+_story_image_cache = {}
+_story_image_lock = threading.Lock()
 
 DEFAULT_STATE = {
     'updatedAt': None,
@@ -434,6 +452,135 @@ def fetch_card_image(url, timeout=10):
     return data, content_type
 
 
+def _story_image_paths(hostname):
+    """Return approved paths for a publisher image CDN host."""
+    host = (hostname or '').lower()
+    if re.fullmatch(r'cdn-\d+\.motorsport\.com', host):
+        return ('/images/',)
+    return STORY_IMAGE_PATHS.get(host)
+
+
+def _clean_embedded_url(value):
+    return html_lib.unescape((value or '')
+        .replace('\\/', '/')
+        .replace('\\u003d', '=')
+        .replace('\\u0026', '&')
+        .replace('\\u0025', '%')).strip()
+
+
+def _google_news_story_image(title, source, timeout=12):
+    """Locate the publisher-owned image paired with an exact FT/Reuters title.
+
+    This is used only when FT blocks server-side metadata or an immutable old
+    Reuters edition still contains a Google News wrapper. Generic thumbnails
+    and images owned by any other publisher are rejected.
+    """
+    source_key = (source or '').casefold()
+    if source_key.startswith('financial times'):
+        domain, image_prefix = 'ft.com', 'https://images.ft.com/'
+    elif source_key == 'reuters':
+        domain, image_prefix = 'reuters.com', 'https://www.reuters.com/resizer/'
+    else:
+        return None
+    clean_title = re.sub(r'\s+-\s+Reuters\s*$', '', title or '', flags=re.IGNORECASE).strip()
+    if len(clean_title) < 8:
+        return None
+    search_url = ('https://news.google.com/search?q=' +
+                  quote(f'"{clean_title}" site:{domain}') +
+                  '&hl=en-US&gl=US&ceid=US:en')
+    req = urllib.request.Request(search_url, headers={
+        'User-Agent': 'Mozilla/5.0 The Forge Daily (article artwork lookup)',
+        'Accept': 'text/html',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        page = resp.read(4 * 1024 * 1024).decode('utf-8', errors='replace')
+    occurrences = [m.start() for m in re.finditer(re.escape(clean_title), page, re.IGNORECASE)]
+    for position in reversed(occurrences):
+        chunk = page[max(0, position - 2500):position + 9000]
+        match = re.search(re.escape(image_prefix) + r'[^"\s<]+', chunk, re.IGNORECASE)
+        if not match:
+            continue
+        candidate = _clean_embedded_url(match.group(0)).rstrip('],')
+        parsed = urlparse(candidate)
+        paths = _story_image_paths(parsed.hostname)
+        if parsed.scheme == 'https' and paths and any(parsed.path.startswith(p) for p in paths):
+            return candidate
+    return None
+
+
+def _direct_story_image(article_url, timeout=10):
+    parsed = urlparse(article_url or '')
+    if parsed.scheme != 'https' or (parsed.hostname or '').lower() not in STORY_ARTICLE_HOSTS:
+        return None
+    req = urllib.request.Request(article_url, headers={
+        'User-Agent': ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+                       'Chrome/130.0 Safari/537.36 The Forge Daily'),
+        'Accept': 'text/html',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        page = resp.read(400000).decode('utf-8', errors='replace')
+    image = pipeline._page_image(page, article_url)
+    if not image:
+        return None
+    parsed_image = urlparse(image)
+    paths = _story_image_paths(parsed_image.hostname)
+    return image if (parsed_image.scheme == 'https' and paths and
+                     any(parsed_image.path.startswith(p) for p in paths)) else None
+
+
+def _fetch_story_image_bytes(image_url, timeout=12):
+    parsed = urlparse(image_url or '')
+    paths = _story_image_paths(parsed.hostname)
+    if parsed.scheme != 'https' or not paths or not any(parsed.path.startswith(p) for p in paths):
+        raise ValueError('Story image URL is not allow-listed')
+    req = urllib.request.Request(image_url, headers={
+        'User-Agent': 'Mozilla/5.0 The Forge Daily (article artwork)',
+        'Accept': 'image/avif,image/webp,image/png,image/jpeg,image/*',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        final = urlparse(resp.geturl())
+        final_paths = _story_image_paths(final.hostname)
+        if final.scheme != 'https' or not final_paths or not any(
+                final.path.startswith(prefix) for prefix in final_paths):
+            raise ValueError('Story image redirect is not allow-listed')
+        content_type = (resp.headers.get_content_type() or '').lower()
+        if not content_type.startswith('image/'):
+            raise ValueError('Story image source did not return an image')
+        data = resp.read(STORY_IMAGE_MAX_BYTES + 1)
+    if len(data) > STORY_IMAGE_MAX_BYTES:
+        raise ValueError('Story image is too large')
+    return data, content_type
+
+
+def fetch_story_image(source, title, article_url):
+    """Resolve and cache article-specific artwork; never return source logos."""
+    source_key = (source or '').casefold()
+    permitted = (source_key.startswith('financial times') or source_key == 'reuters' or
+                 source_key in {'formula 1', 'motorsport', 'autosport', 'racefans', 'the race'})
+    if not permitted:
+        raise ValueError('Source is not eligible for artwork recovery')
+    cache_key = (source_key, title or '', article_url or '')
+    with _story_image_lock:
+        cached = _story_image_cache.get(cache_key)
+    if cached:
+        return cached
+    image_url = None
+    try:
+        image_url = _direct_story_image(article_url)
+    except Exception:
+        pass
+    if not image_url and (source_key.startswith('financial times') or source_key == 'reuters'):
+        image_url = _google_news_story_image(title, source)
+    if not image_url:
+        raise ValueError('No article-specific artwork was found')
+    result = _fetch_story_image_bytes(image_url)
+    with _story_image_lock:
+        if len(_story_image_cache) >= 128:
+            _story_image_cache.pop(next(iter(_story_image_cache)))
+        _story_image_cache[cache_key] = result
+    return result
+
+
 def normalize_feed_payload(payload):
     if not isinstance(payload, dict):
         return None, 'Payload must be an object'
@@ -767,6 +914,27 @@ class StateHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(len(data)))
             self.send_header('Cache-Control', 'public, max-age=3600')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if path == '/story-image':
+            qs = parse_qs(urlparse(self.path).query)
+            source = (qs.get('source') or [''])[0]
+            title = (qs.get('title') or [''])[0]
+            article_url = (qs.get('url') or [''])[0]
+            try:
+                data, content_type = fetch_story_image(source, title, article_url)
+            except ValueError as exc:
+                self._json(404, {'error': str(exc)})
+                return
+            except Exception:
+                self._json(502, {'error': 'Article artwork is temporarily unavailable'})
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=21600')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(data)

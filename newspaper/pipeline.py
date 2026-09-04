@@ -219,6 +219,39 @@ def extract_field(xml, tag):
     return ''
 
 
+def extract_feed_image(block):
+    """Return article artwork explicitly supplied by RSS/Atom.
+
+    Motorsport and Autosport publish proper image enclosures.  Ignoring them
+    forced the page scraper to rediscover artwork and left otherwise healthy
+    F1 cards blank whenever the Open Graph tag fell beyond the old read limit.
+    """
+    for tag in ('enclosure', 'media:content', 'media:thumbnail'):
+        for match in re.finditer(rf'<{tag}\b[^>]*>', block or '', re.IGNORECASE):
+            markup = match.group(0)
+            url_match = re.search(r'\burl=["\']([^"\']+)["\']', markup, re.IGNORECASE)
+            type_match = re.search(r'\btype=["\']([^"\']+)["\']', markup, re.IGNORECASE)
+            medium_match = re.search(r'\bmedium=["\']([^"\']+)["\']', markup, re.IGNORECASE)
+            if not url_match:
+                continue
+            media_type = (type_match.group(1) if type_match else '').casefold()
+            medium = (medium_match.group(1) if medium_match else '').casefold()
+            if tag == 'enclosure' and media_type and not media_type.startswith('image/'):
+                continue
+            if tag.startswith('media:') and medium and medium != 'image':
+                continue
+            image = html_lib.unescape(url_match.group(1)).strip()
+            if image.startswith(('https://', 'http://')):
+                return image
+    description = extract_field(block, 'description') or extract_field(block, 'content')
+    image_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', description, re.IGNORECASE)
+    if image_match:
+        image = html_lib.unescape(image_match.group(1)).strip()
+        if image.startswith(('https://', 'http://')):
+            return image
+    return None
+
+
 def parse_date(s):
     """Best-effort parse of RSS (RFC822) or Atom (ISO) dates -> aware datetime."""
     if not s:
@@ -252,8 +285,12 @@ def parse_feed(xml, source, category, cutoff):
         if pub < cutoff:
             continue
         description = clean_text(re.sub(r'<[^>]+>', ' ', extract_field(block, 'description')))
-        out.append({'title': title, 'url': url, 'source': source, 'feed_summary': description,
-                    'category': category, 'published_at': pub.isoformat()})
+        item = {'title': title, 'url': url, 'source': source, 'feed_summary': description,
+                'category': category, 'published_at': pub.isoformat()}
+        image = extract_feed_image(block)
+        if image:
+            item['feed_image'] = image
+        out.append(item)
 
     # Atom <entry>
     for m in re.finditer(r'<entry\b[^>]*>([\s\S]*?)</entry>', xml, re.IGNORECASE):
@@ -268,8 +305,12 @@ def parse_feed(xml, source, category, cutoff):
         if pub < cutoff:
             continue
         description = clean_text(re.sub(r'<[^>]+>', ' ', extract_field(block, 'summary') or extract_field(block, 'content')))
-        out.append({'title': title, 'url': url, 'source': source, 'feed_summary': description,
-                    'category': category, 'published_at': pub.isoformat()})
+        item = {'title': title, 'url': url, 'source': source, 'feed_summary': description,
+                'category': category, 'published_at': pub.isoformat()}
+        image = extract_feed_image(block)
+        if image:
+            item['feed_image'] = image
+        out.append(item)
 
     return out
 
@@ -426,6 +467,10 @@ def _page_image(html, url):
         r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
         html, re.IGNORECASE) or re.search(
         r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+        html, re.IGNORECASE) or re.search(
+        r'<meta[^>]+(?:name|property)=["\']twitter:image(?::src)?["\'][^>]+content=["\']([^"\']+)["\']',
+        html, re.IGNORECASE) or re.search(
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:name|property)=["\']twitter:image(?::src)?["\']',
         html, re.IGNORECASE)
     if not img_m and 'giantitp.com/comics/oots' in url.lower():
         img_m = re.search(
@@ -445,7 +490,9 @@ def _page_image(html, url):
 
 def _fetch_page(url):
     """Return (best_image_or_None, body_excerpt) for an article URL."""
-    html = http_get_text(url, PAGE_TIMEOUT, limit=60000)
+    # Several major publishers place social metadata after large preload and
+    # consent blocks.  300 KB remains bounded while reaching the actual image.
+    html = http_get_text(url, PAGE_TIMEOUT, limit=300000)
     if not html:
         return None, ''
     image = _page_image(html, url)
