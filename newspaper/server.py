@@ -67,11 +67,12 @@ STATIC_TYPES = {
     '.html': 'text/html; charset=utf-8',
     '.ico': 'image/x-icon',
     '.png': 'image/png',
+    '.svg': 'image/svg+xml',
     '.json': 'application/json',
 }
 
 # Icon files served at the root, by exact name (no path traversal).
-ICON_FILES = ('favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png',
+ICON_FILES = ('favicon.svg', 'favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png',
               'apple-touch-icon.png', 'logo-mark.png')
 
 COMIC_IMAGE_PATHS = {

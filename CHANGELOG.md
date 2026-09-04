@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replace the inherited abstract browser icon with a Forge Daily hammer-and-anvil
+  favicon, including SVG, PNG, ICO, and Apple touch variants plus cache-busted
+  browser references.
 - Replace the stale deferred Stage 2–6 list with a reconciled v2 roadmap that
   distinguishes the sole missing source, active-source quality upgrades, and
   already-delivered v1 behavior.

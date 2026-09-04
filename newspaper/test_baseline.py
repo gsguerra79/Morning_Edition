@@ -117,6 +117,17 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("hideReadOnOpen: false", html)
         self.assertIn("Hide stories after opening", html)
 
+    def test_forge_favicon_is_versioned_and_shipped(self):
+        root = Path(__file__).parent
+        html = (root / "digest.html").read_text(encoding="utf-8")
+        svg = (root / "favicon.svg").read_text(encoding="utf-8")
+        dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn('/favicon.svg?v=forge-1', html)
+        self.assertIn('hammer and anvil', svg)
+        self.assertIn("favicon.svg", server.ICON_FILES)
+        self.assertEqual('image/svg+xml', server.STATIC_TYPES['.svg'])
+        self.assertIn('favicon.svg favicon.ico', dockerfile)
+
 
 if __name__ == "__main__":
     unittest.main()
