@@ -10,6 +10,8 @@ MAJOR_SOURCES = {
     'financial times world', 'financial times us', 'the guardian', 'guardian',
     'associated press', 'ap news', 'agência brasil', 'agencia brasil',
     'g1 brasil', 'globo', 'folha de s.paulo', 'o globo',
+    'new york times', 'new york times world', 'new york times us',
+    'washington post',
 }
 EXCLUDE = re.compile(r'\b(opinion|commentary|podcast|quiz|review|explainer|week in pictures)\b', re.I)
 SIGNALS = (
@@ -22,7 +24,9 @@ SIGNALS = (
         r'assassinat(?:ed|ion)|hostage release|nuclear alert|terror attack)\b', re.I)),
     ('Major political or diplomatic development', re.compile(
         r'\b(resigns?|steps down|impeach(?:ed|ment)|election results?|wins? election|'
-        r'emergency summit|peace agreement|peace deal|major sanctions)\b', re.I)),
+        r'emergency summit|peace agreement|peace deal|major sanctions|'
+        r'(?:u[.]?s[.]?|american|trump) envoys?.{0,80}(?:meet\w*|talks?).{0,40}putin|'
+        r'putin.{0,80}(?:meets?|talks? with).{0,40}(?:u[.]?s[.]?|american|trump) envoys?)\b', re.I)),
     ('Major public address or announcement', re.compile(
         r'\b(address(?:es|ed)? (?:the )?nation|national address|major speech|'
         r'emergency address|announces? (?:a )?(?:ceasefire|state of emergency|'
@@ -77,13 +81,25 @@ def select(digest, now=None):
             rejected['old'] += 1
             continue
         text = f"{article.get('title') or ''} {article.get('summary') or ''}"
+        evidence_sources = {
+            str(article.get('editorial_source') or article.get('source') or '').strip().casefold()
+        }
+        for evidence in article.get('corroborating_sources') or []:
+            if isinstance(evidence, dict):
+                value = evidence.get('editorial_source') or evidence.get('source')
+            else:
+                value = evidence
+            if str(value or '').strip():
+                evidence_sources.add(str(value).strip().casefold())
+        evidence_sources.discard('')
+        corroboration = len(evidence_sources)
         reason = _signal(article)
+        if not reason and corroboration >= 3 and float(article.get('score') or 0) >= 8:
+            reason = 'Major developing story confirmed by multiple outlets'
         if not reason or EXCLUDE.search(text):
             rejected['insufficient_significance'] += 1
             continue
         source = str(article.get('editorial_source') or article.get('source') or '').casefold()
-        corroboration = max(int(article.get('cluster_size') or 1),
-                            len(article.get('corroborating_sources') or []) + 1)
         if source not in MAJOR_SOURCES and corroboration < 2:
             rejected['weak_confirmation'] += 1
             continue

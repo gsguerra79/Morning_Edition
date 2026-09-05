@@ -166,6 +166,44 @@ class PipelineDiversityTests(unittest.TestCase):
         self.assertTrue(any(item["cluster_size"] == 2 for item in clustered))
         self.assertTrue(all(item["cluster_boost"] == 0 for item in clustered))
 
+    def test_same_publisher_desk_variants_are_not_independent_sources(self):
+        items = [
+            {"id": "world", "title": "US envoys meet Putin for Ukraine talks",
+             "source": "BBC World", "score": 10, "embedding": None},
+            {"id": "us", "title": "US envoys meet Putin in Ukraine talks",
+             "source": "BBC US & Canada", "score": 10, "embedding": None},
+        ]
+        clustered = pipeline.cluster(items)
+        rep = next(item for item in clustered if item["cluster_rep"])
+        self.assertEqual(0, rep["cluster_boost"])
+        self.assertNotIn("corroborating_sources", rep)
+
+    def test_cross_outlet_headline_variants_cluster_as_one_story(self):
+        items = [
+            {"id": "nyt", "title": "U.S. Strikes Three Iranian ‘Shadow Network’ Oil Tankers, Military Says",
+             "source": "New York Times World", "score": 10, "embedding": None},
+            {"id": "bbc", "title": "US hits three Iranian oil tankers after saying its warships were targeted",
+             "source": "BBC World", "score": 10, "embedding": None},
+            {"id": "ft", "title": "US strikes three Iranian oil tankers in response to attacks on warships",
+             "source": "Financial Times World", "score": 10, "embedding": None},
+        ]
+        clustered = pipeline.cluster(items)
+        self.assertEqual(1, sum(item["cluster_rep"] for item in clustered))
+        self.assertEqual({3}, {item["cluster_size"] for item in clustered})
+        self.assertEqual(1, len({item["cluster_id"] for item in clustered}))
+        rep = next(item for item in clustered if item["cluster_rep"])
+        self.assertEqual(2, len(rep["corroborating_sources"]))
+
+    def test_related_but_distinct_strikes_do_not_merge(self):
+        items = [
+            {"id": "tankers", "title": "US strikes three Iranian oil tankers",
+             "source": "Reuters", "score": 10, "embedding": None},
+            {"id": "nuclear", "title": "US strikes Iranian nuclear facility",
+             "source": "BBC World", "score": 10, "embedding": None},
+        ]
+        clustered = pipeline.cluster(items)
+        self.assertEqual(2, sum(item["cluster_rep"] for item in clustered))
+
     def test_retention_preserves_sources_before_high_volume_backfill(self):
         now = datetime.now(timezone.utc).isoformat()
         items = []

@@ -1146,18 +1146,50 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
             members[best_anchor].append(i)
 
     groups = list(members.values())
-    # Deterministic fallback for the Pi: title-token similarity gives useful
-    # duplicate folding without requiring an embedding model.
-    stop = {'the','a','an','and','or','to','of','in','on','for','with','is','are','as','at','from','by'}
+    # Deterministic fallback for installations without an embedding model.
+    # Headlines from different publishers routinely use different verbs and
+    # attribution clauses for the same event.  Canonicalise those small
+    # variations and use containment as well as Jaccard overlap, while still
+    # requiring at least four shared story tokens before the looser rule may
+    # merge anything.
+    stop = {
+        'the','a','an','and','or','to','of','in','on','for','with','is','are','as','at','from','by',
+        'after','says','said','saying','amid','over','its','their','his','her','new',
+    }
+    aliases = {
+        'hit': 'strike', 'hits': 'strike', 'strikes': 'strike',
+        'struck': 'strike', 'striking': 'strike',
+        'iranian': 'iran', 'iranians': 'iran',
+        'tankers': 'tanker', 'warships': 'warship',
+        'attacks': 'attack', 'attacked': 'attack',
+        'targets': 'target', 'targeted': 'target',
+        'envoys': 'envoy', 'meets': 'meet', 'meeting': 'meet',
+        'talks': 'talk',
+    }
+
+    def story_tokens(title):
+        title = re.sub(r'\bu[.]s[.]?', 'us', str(title or '').lower())
+        return {
+            aliases.get(token, token)
+            for token in re.findall(r'[a-z0-9]+', title)
+            if len(token) > 2 and token not in stop
+        }
+
+    def same_story(tokens, anchor_tokens):
+        union = tokens | anchor_tokens
+        common = tokens & anchor_tokens
+        if not union:
+            return False
+        jaccard = len(common) / len(union)
+        containment = len(common) / min(len(tokens), len(anchor_tokens))
+        return jaccard >= 0.42 or (len(common) >= 4 and containment >= 0.60)
+
     token_groups = []
     for i in (i for i in range(n) if norms[i] is None):
-        tokens = {t for t in re.findall(r'[a-z0-9]+', articles[i]['title'].lower())
-                  if len(t) > 2 and t not in stop}
+        tokens = story_tokens(articles[i].get('title'))
         best = None
         for group, anchor_tokens in token_groups:
-            union = tokens | anchor_tokens
-            similarity = len(tokens & anchor_tokens) / len(union) if union else 0
-            if similarity >= 0.42:
+            if same_story(tokens, anchor_tokens):
                 best = group
                 break
         if best is None:
@@ -1170,6 +1202,12 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
         key = str(value or '').strip().casefold()
         if key in ('g1 brasil', 'globo'):
             return 'globo'
+        if key.startswith('bbc'):
+            return 'bbc'
+        if key.startswith('financial times'):
+            return 'financial times'
+        if key.startswith('new york times'):
+            return 'new york times'
         return key
 
     for grp in groups:
@@ -1183,11 +1221,27 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
         # corroboration. Only genuinely distinct publishers may lift a story.
         boost = (min(boost_cap, boost_k * math.log2(len(independent_sources)))
                  if len(independent_sources) > 1 else 0.0)
+        rep_family = source_family(articles[rep].get('source'))
+        corroborating = []
+        seen_families = {rep_family}
+        for member in grp:
+            family = source_family(articles[member].get('source'))
+            if not family or family in seen_families:
+                continue
+            seen_families.add(family)
+            corroborating.append({
+                'source': articles[member].get('source'),
+                'title': articles[member].get('title'),
+                'url': articles[member].get('url'),
+            })
         for i in grp:
             articles[i]['cluster_id'] = cid
             articles[i]['cluster_size'] = size
             articles[i]['cluster_rep'] = (i == rep)
             articles[i]['cluster_boost'] = round(boost, 3) if i == rep else 0.0
+            articles[i].pop('corroborating_sources', None)
+        if corroborating:
+            articles[rep]['corroborating_sources'] = corroborating
     return articles
 
 

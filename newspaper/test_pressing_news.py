@@ -45,9 +45,41 @@ class HotMetalTests(unittest.TestCase):
 
     def test_non_major_source_requires_corroboration(self):
         result = pressing_news.select({'articles': [
-            self.story(source='Regional News', cluster_size=2),
+            self.story(source='Regional News', corroborating_sources=[
+                {'source': 'Reuters', 'url': 'https://reuters.example/story'},
+            ]),
         ]}, self.now)
         self.assertEqual(1, result['article_count'])
+
+    def test_three_outlet_major_story_is_hot_metal_without_keyword_signal(self):
+        result = pressing_news.select({'articles': [self.story(
+            title='US strikes three Iranian oil tankers in response to attacks on warships',
+            summary='Three priority outlets independently report the same developing event.',
+            source='Financial Times World', score=10, cluster_size=3,
+            corroborating_sources=[
+                {'source': 'BBC World', 'url': 'https://bbc.example/story'},
+                {'source': 'New York Times World', 'url': 'https://nytimes.example/story'},
+            ],
+        )]}, self.now)
+        self.assertEqual(1, result['article_count'])
+        self.assertEqual('Major developing story confirmed by multiple outlets',
+                         result['articles'][0]['hot_metal_reason'])
+
+    def test_us_envoys_meeting_putin_is_major_diplomacy(self):
+        result = pressing_news.select({'articles': [self.story(
+            title='US envoys meet Putin in Moscow for Ukraine talks',
+            source='BBC World', score=10,
+        )]}, self.now)
+        self.assertEqual(1, result['article_count'])
+        self.assertEqual('Major political or diplomatic development',
+                         result['articles'][0]['hot_metal_reason'])
+
+    def test_cluster_size_alone_does_not_fake_independent_confirmation(self):
+        result = pressing_news.select({'articles': [self.story(
+            title='Minister discusses new policy', source='Regional News',
+            cluster_size=4, score=10,
+        )]}, self.now)
+        self.assertEqual(0, result['article_count'])
 
     def test_output_is_bounded(self):
         stories = [self.story(id=f'a{i}', cluster_id=f'a{i}', score=20-i)
