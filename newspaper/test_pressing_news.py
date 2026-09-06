@@ -74,6 +74,41 @@ class HotMetalTests(unittest.TestCase):
         self.assertEqual('Major political or diplomatic development',
                          result['articles'][0]['hot_metal_reason'])
 
+    def test_ongoing_war_combat_diplomacy_and_humanitarian_news_are_admitted(self):
+        stories = [
+            self.story(id='combat', cluster_id='combat',
+                       title='Russian drone attack hits Ukrainian power grid'),
+            self.story(id='diplomacy', cluster_id='diplomacy', category='usnews',
+                       title='Congress approves military aid package for Ukraine'),
+            self.story(id='humanitarian', cluster_id='humanitarian',
+                       title='Aid convoy enters Gaza as ceasefire talks resume'),
+        ]
+        result = pressing_news.select({'articles': stories}, self.now)
+        self.assertEqual(3, result['article_count'])
+        by_id = {item['id']: item for item in result['articles']}
+        self.assertEqual('Ongoing war or conflict development',
+                         by_id['combat']['hot_metal_reason'])
+
+    def test_conflict_location_without_war_context_is_not_admitted(self):
+        result = pressing_news.select({'articles': [
+            self.story(id='song', cluster_id='song',
+                       title='Ukraine wins European song contest',
+                       summary='Artists celebrated after the final.'),
+            self.story(id='chef', cluster_id='chef',
+                       title='Israeli chef opens new restaurant in London',
+                       summary='The menu features regional cuisine.'),
+        ]}, self.now)
+        self.assertEqual(0, result['article_count'])
+
+    def test_same_putin_envoy_meeting_is_not_repeated(self):
+        result = pressing_news.select({'articles': [
+            self.story(id='ft', cluster_id='ft', source='Financial Times World', score=10,
+                       title='Trump envoys take Ukraine peace proposal to meeting with Putin'),
+            self.story(id='nyt', cluster_id='nyt', source='New York Times World', score=10,
+                       title='Putin Meets Witkoff and Kushner in Moscow to Discuss Ukraine War'),
+        ]}, self.now)
+        self.assertEqual(1, result['article_count'])
+
     def test_cluster_size_alone_does_not_fake_independent_confirmation(self):
         result = pressing_news.select({'articles': [self.story(
             title='Minister discusses new policy', source='Regional News',

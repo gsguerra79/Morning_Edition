@@ -1164,7 +1164,7 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
         'attacks': 'attack', 'attacked': 'attack',
         'targets': 'target', 'targeted': 'target',
         'envoys': 'envoy', 'meets': 'meet', 'meeting': 'meet',
-        'talks': 'talk',
+        'talks': 'talk', 'witkoff': 'envoy', 'kushner': 'envoy',
     }
 
     def story_tokens(title):
@@ -1182,7 +1182,7 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
             return False
         jaccard = len(common) / len(union)
         containment = len(common) / min(len(tokens), len(anchor_tokens))
-        return jaccard >= 0.42 or (len(common) >= 4 and containment >= 0.60)
+        return jaccard >= 0.42 or (len(common) >= 4 and containment >= 0.55)
 
     token_groups = []
     for i in (i for i in range(n) if norms[i] is None):

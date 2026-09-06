@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 MAX_ITEMS = 10
 MAX_AGE_HOURS = 18
-NEWS_CATEGORIES = {'worldnews', 'brazilnews', 'world'}
+NEWS_CATEGORIES = {'worldnews', 'usnews', 'brazilnews', 'world'}
 MAJOR_SOURCES = {
     'reuters', 'bbc', 'bbc news', 'bbc world', 'bbc us & canada', 'financial times',
     'financial times world', 'financial times us', 'the guardian', 'guardian',
@@ -36,6 +36,18 @@ SIGNALS = (
         r'emergency rate hike|government shutdown|constitutional crisis)\b', re.I)),
 )
 
+CONFLICT_ACTORS = re.compile(
+    r'\b(ukrain\w*|russia\w*|gaza|israel\w*|iran\w*|hamas|hezbollah|'
+    r'leban\w*|sudan\w*|myanmar|burma|congo\w*|houthi\w*|yemen\w*)\b', re.I)
+WAR_DEVELOPMENTS = re.compile(
+    r'\b(war|invasion|occup\w*|frontline|fighting|combat|offensive|airstrike|'
+    r'strikes?|attack\w*|missiles?|drones?|bomb\w*|shell\w*|troops?|military|'
+    r'warships?|weapons?|arms|ceasefire|peace (?:talks?|proposal|deal|plan)|'
+    r'negotiat\w*|envoys?|mediat\w*|sanctions?|hostages?|prisoners?|blockade|'
+    r'humanitarian|aid convoy|famine|refugees?|displac\w*|casualties|'
+    r'killed|deaths?|wounded)\b', re.I)
+EXPLICIT_WAR = re.compile(r'\b(ongoing war|civil war|armed conflict)\b', re.I)
+
 
 def _parse_time(value):
     try:
@@ -58,6 +70,28 @@ def _signal(article):
                     return None
             return reason
     return None
+
+
+def _ongoing_war(article):
+    """Admit substantive reporting about a current armed conflict.
+
+    A conflict actor/location alone is deliberately insufficient: that would
+    turn culture, sport, and unrelated domestic coverage into Hot Metal.
+    """
+    text = f"{article.get('title') or ''} {article.get('summary') or ''}"
+    if EXPLICIT_WAR.search(text) or (CONFLICT_ACTORS.search(text) and WAR_DEVELOPMENTS.search(text)):
+        return 'Ongoing war or conflict development'
+    return None
+
+
+def _event_key(article):
+    """Collapse narrow headline variants that describe the same live event."""
+    text = f"{article.get('title') or ''} {article.get('summary') or ''}".casefold()
+    if ('putin' in text
+            and re.search(r'\b(envoys?|witkoff|kushner)\b', text)
+            and re.search(r'\b(ukrain\w*|moscow)\b', text)):
+        return 'putin-us-envoys-ukraine'
+    return article.get('cluster_id') or article.get('story_fingerprint') or article.get('id')
 
 
 def select(digest, now=None):
@@ -96,6 +130,8 @@ def select(digest, now=None):
         reason = _signal(article)
         if not reason and corroboration >= 3 and float(article.get('score') or 0) >= 8:
             reason = 'Major developing story confirmed by multiple outlets'
+        if not reason:
+            reason = _ongoing_war(article)
         if not reason or EXCLUDE.search(text):
             rejected['insufficient_significance'] += 1
             continue
@@ -112,7 +148,15 @@ def select(digest, now=None):
         -float(item.get('score') or 0),
         -(_parse_time(item.get('published_at')) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
     ))
-    selected = candidates[:MAX_ITEMS]
+    selected, seen_events = [], set()
+    for item in candidates:
+        event = _event_key(item)
+        if event in seen_events:
+            continue
+        seen_events.add(event)
+        selected.append(item)
+        if len(selected) >= MAX_ITEMS:
+            break
     return {
         'id': 'hot-metal', 'kind': 'hot_metal',
         'generated_at': digest.get('generated_at'),
