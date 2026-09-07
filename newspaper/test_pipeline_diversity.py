@@ -5,6 +5,13 @@ import pipeline
 
 
 class PipelineDiversityTests(unittest.TestCase):
+    def test_f1_race_win_headline_is_a_result_update(self):
+        article = {
+            "title": "Antonelli stuns from 19th on the grid to win home race",
+            "summary": "The Italian Grand Prix produced a dramatic home victory.",
+        }
+        self.assertEqual("results_updates", pipeline.f1_story_kind(article))
+
     def test_balanced_issue_protects_every_page_and_sports_subtopic(self):
         now = datetime.now(timezone.utc).isoformat()
         items = []

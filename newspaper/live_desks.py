@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 STATE_FILE = os.environ.get('LIVE_DESKS_FILE', '/data/live-desks.json')
 F1_FRONT_SIZE = 6
 F1_NORMAL_REPLACEMENTS = 2
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 COMIC_REFRESH_SECONDS = 15 * 60
 _lock = threading.Lock()
 COMIC_FEEDS = (
@@ -63,6 +63,11 @@ def _f1_tier(article):
         return 'paddock'
     if re.search(r'\b(wedding|girlfriend|boyfriend|family|lifestyle|holiday|vacation|social media|off.track|personal life|health|injur|recovery|recovers)\b', text):
         return 'paddock'
+    # The ingestion selector has already identified completed-session and race
+    # result coverage.  Do not demote a genuine result merely because a
+    # publisher wrote "wins at Monza" instead of the literal "race report".
+    if article.get('f1_kind') == 'results_updates':
+        return 'desk'
     if re.search(r'\b(strategy|strategic|undercut|overcut|pit stop|tyre choice|tire choice|degradation|race pace|long run|fuel load|stint)\b', text):
         return 'desk'
     if re.search(r'\b(appointed|appointment|signing|signed|confirmed|team principal|driver line.up|personnel|replacement)\b', text):
@@ -76,8 +81,40 @@ def _f1_tier(article):
     return 'paddock'
 
 
+def _published_timestamp(article):
+    try:
+        return datetime.fromisoformat(
+            str(article.get('published_at') or '').replace('Z', '+00:00')
+        ).timestamp()
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _f1_session_priority(article):
+    """Break same-time ties in actual session order, newest session first."""
+    text = f"{article.get('title') or ''} {article.get('summary') or ''}".casefold()
+    if re.search(r'\b(?:grand prix|\bgp\b|race).{0,60}\b(?:wins?|won|victory|podium|results?|classification|standings)\b', text) \
+            or re.search(r'\b(?:wins?|won|victory|podium).{0,60}\b(?:grand prix|\bgp\b|race)\b', text):
+        return 5
+    if re.search(r'\bsprint(?:\s+(?:race|result|classification))?\b', text):
+        return 4
+    if re.search(r'\b(?:qualifying|q[123]|grid)\b', text):
+        return 3
+    if re.search(r'\b(?:fp3|practice\s*3)\b', text):
+        return 2
+    if re.search(r'\b(?:fp[12]|practice\s*[12])\b', text):
+        return 1
+    return 0
+
+
+def _f1_sort_key(article):
+    return (_published_timestamp(article), _f1_session_priority(article),
+            float(article.get('score') or 0))
+
+
 def _f1_target(items):
     """Mirror the balanced six-story Home selection used by the reader."""
+    items = sorted(items, key=_f1_sort_key, reverse=True)
     desk = [article for article in items if _f1_tier(article) == 'desk']
     ranked = desk + [article for article in items if _f1_tier(article) != 'desk']
     # Six qualifying Race Desk pieces means no Paddock item belongs on Home.
@@ -161,7 +198,8 @@ def _stable_front(items, previous_ids):
             kept.append(item_id)
 
     # Present the stable set in current editorial order.
-    order = {article.get('id'): index for index, article in enumerate(items)}
+    order = {article.get('id'): index for index, article in
+             enumerate(sorted(items, key=_f1_sort_key, reverse=True))}
     return sorted(kept[:F1_FRONT_SIZE], key=lambda item_id: order.get(item_id, 9999))
 
 
@@ -251,7 +289,12 @@ def build(digest, path=None, fetch_current_comics=False):
     path = path or STATE_FILE
     generated_at = digest.get('generated_at') or digest.get('published_at')
     articles = list(digest.get('articles') or [])
-    f1_articles = [a for a in articles if a.get('category') == 'formula1']
+    # A live desk must present the freshest reporting first.  The issue
+    # selector's insertion order also reflects protected-source quotas and is
+    # not a valid display order after a race weekend.
+    f1_articles = sorted(
+        (a for a in articles if a.get('category') == 'formula1'),
+        key=_f1_sort_key, reverse=True)
     comics = _latest_comics(articles)
 
     with _lock:
@@ -270,7 +313,12 @@ def build(digest, path=None, fetch_current_comics=False):
             return previous
         if fetch_current_comics:
             comics = _fetch_current_comics(comics, generated_at)
-        previous_ids = ((previous.get('desks') or {}).get('formula1') or {}).get('front_page_ids') or []
+        # A schema change may alter ranking or admission semantics.  Reusing
+        # the prior front-page IDs would preserve the very stale cards the
+        # migration is intended to remove.
+        previous_ids = (((previous.get('desks') or {}).get('formula1') or {})
+                        .get('front_page_ids') or []) \
+            if previous.get('schema_version') == SCHEMA_VERSION else []
         payload = {
             'schema_version': SCHEMA_VERSION,
             'source_generated_at': generated_at,

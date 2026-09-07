@@ -1417,6 +1417,7 @@ function f1ArticleClass(a) {
   const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
   if (/\b(rumou?r|speculat|could join|linked with|tipped for|may replace)\b/.test(text)) return {tier:'paddock', label:'Rumour'};
   if (/\b(wedding|girlfriend|boyfriend|family|lifestyle|holiday|vacation|social media|off.track|personal life|health|injur|recovery|recovers)\b/.test(text)) return {tier:'paddock', label:'Personal'};
+  if (a.f1_kind === 'results_updates') return {tier:'desk', label:'Update'};
   if (/\b(strategy|strategic|undercut|overcut|pit stop|tyre choice|tire choice|degradation|race pace|long run|fuel load|stint)\b/.test(text)) return {tier:'desk', label:'Strategy'};
   if (/\b(appointed|appointment|signing|signed|confirmed|team principal|driver line.up|personnel|replacement)\b/.test(text)) return {tier:'desk', label:'Personnel'};
   if (/\b(technical|technology|upgrade|engine|power unit|aero|regulation|rule|tyre|tire|battery|chassis|floor|wing|design|top speed|mj)\b/.test(title)) return {tier:'desk', label:'Technical'};
@@ -2381,7 +2382,8 @@ function render() {
   if (railLabel) railLabel.textContent = currentCat === 'formula1' ? 'Championship' : 'Earlier this week';
 
   if (currentCat === 'formula1') {
-    const stories = inbox.filter(a => a.category === 'formula1');
+    const stories = inbox.filter(a => a.category === 'formula1')
+      .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0) || effectiveScore(b) - effectiveScore(a));
     const raceDesk = stories.filter(a => f1ArticleClass(a).tier === 'desk');
     const paddock = stories.filter(a => f1ArticleClass(a).tier === 'paddock');
     const storySection = (title, subtitle, items) => `<section class="f1-news-section"><div class="f1-news-head"><h2>${title}</h2><p>${subtitle}</p></div>${items.length ? `<div class="grid f1-news-grid">${items.map(gridCardHTML).join('')}</div>` : '<p class="empty">No current stories in this tier.</p>'}</section>`;

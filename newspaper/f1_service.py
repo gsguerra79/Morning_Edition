@@ -312,6 +312,8 @@ def _session_result(session):
 
 def _race_weekend(index, now):
     active = None
+    recent = None
+    recent_end = None
     for meeting in index.get("Meetings") or []:
         sessions = meeting.get("Sessions") or []
         starts = [_utc(item, "StartDate") for item in sessions]
@@ -321,6 +323,14 @@ def _race_weekend(index, now):
         if starts and ends and min(starts) - timedelta(hours=18) <= now <= max(ends) + timedelta(hours=18):
             active = meeting
             break
+        meeting_end = max(ends) if ends else None
+        if meeting_end and meeting_end < now and (recent_end is None or meeting_end > recent_end):
+            recent, recent_end = meeting, meeting_end
+    if not active:
+        # Between race weekends the most recent completed classification is
+        # still the relevant result.  Keep it until the next meeting enters
+        # the normal pre-weekend window rather than blanking the card Monday.
+        active = recent
     if not active:
         return None
     sessions = active.get("Sessions") or []
@@ -340,7 +350,7 @@ def _race_weekend(index, now):
             and _utc(item, "StartDate") <= now <= _utc(item, "EndDate")]
     current_session = live[0] if live else None
     return {
-        "active": True,
+        "active": recent is None or active is not recent,
         "meeting": active.get("Name"),
         "country": (active.get("Country") or {}).get("Name"),
         "circuit": (active.get("Circuit") or {}).get("ShortName"),

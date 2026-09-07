@@ -53,6 +53,20 @@ class F1ServiceTests(unittest.TestCase):
         self.assertEqual("Practice 2", weekend["current_session"]["name"])
         self.assertEqual("Race", weekend["next_session"]["name"])
 
+    def test_latest_race_result_remains_available_between_weekends(self):
+        index = {"Meetings": [{"Name": "Italian Grand Prix",
+            "Country": {"Name": "Italy"}, "Circuit": {"ShortName": "Monza"},
+            "Sessions": [{"Name": "Race", "StartDate": "2026-09-06T15:00:00",
+                "EndDate": "2026-09-06T17:00:00", "GmtOffset": "02:00:00",
+                "Path": "2026/italy/race/"}]}]}
+        result = {"session": "Race", "rows": [{"position": 1, "code": "ANT"}]}
+        now = datetime(2026, 9, 7, 15, 30, tzinfo=timezone.utc)
+        with patch.object(f1_service, "_session_result", return_value=result):
+            weekend = f1_service._race_weekend(index, now)
+        self.assertIsNotNone(weekend)
+        self.assertFalse(weekend["active"])
+        self.assertEqual("Race", weekend["latest_session"]["session"])
+
     def test_failed_refresh_serves_stale_cache(self):
         cached = {"updated_at": "2026-09-04T00:00:00+00:00", "standings": {}}
         Path(f1_service.CACHE_FILE).write_text(json.dumps(cached), encoding="utf-8")

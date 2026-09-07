@@ -59,6 +59,9 @@ def f1_kind(article):
     if re.search(r"\b(results?|classification|standings|practice\s*[123]?|fp[123]|qualifying|"
                  r"sprint(?:\s+race)?|grid|penalt(?:y|ies)|race result|live coverage|as it happened)\b", text):
         return "results_updates"
+    if (re.search(r"\b(?:grand prix|\bgp\b|race).{0,60}\b(?:wins?|won|victory|podium)\b", text)
+            or re.search(r"\b(?:wins?|won|victory|podium).{0,60}\b(?:grand prix|\bgp\b|race)\b", text)):
+        return "results_updates"
     if _matches(text, ("technical", "technology", "upgrade", "engine", "power unit",
                        "aero", "regulation", "rule", "tyre", "tire", "battery",
                        "chassis", "floor", "wing", "design", "top speed")):

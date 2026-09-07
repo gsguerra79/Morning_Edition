@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -54,6 +55,46 @@ class LiveDeskTests(unittest.TestCase):
         old_ids = set(before['desks']['formula1']['front_page_ids'])
         new_ids = set(after['desks']['formula1']['front_page_ids'])
         self.assertGreaterEqual(len(new_ids - old_ids), 3)
+
+    def test_race_result_headline_is_not_demoted_to_paddock(self):
+        winner = dict(article('winner', kind='results_updates', source='Autosport'),
+                      title='Antonelli stuns from 19th on the grid to win home race')
+        self.assertEqual('desk', live_desks._f1_tier(winner))
+
+    def test_live_f1_desk_orders_current_reporting_before_old_sessions(self):
+        items = [
+            dict(article('fp3', kind='results_updates', source='Formula 1',
+                         published='2026-09-05T17:16:00Z'),
+                 title='Russell goes fastest in final practice'),
+            dict(article('race', kind='results_updates', source='Autosport',
+                         published='2026-09-06T15:12:00Z'),
+                 title='Antonelli wins the Italian Grand Prix'),
+            dict(article('analysis', kind='technical', source='Motorsport',
+                         published='2026-09-07T11:43:00Z'),
+                 title='How Monza introduced oval-like slipstream racing'),
+        ]
+        result = live_desks.build({'generated_at': 'one', 'articles': items}, self.path)
+        desk = result['desks']['formula1']
+        self.assertEqual(['analysis', 'race', 'fp3'], [a['id'] for a in desk['articles']])
+        self.assertLess(desk['front_page_ids'].index('race'),
+                        desk['front_page_ids'].index('fp3'))
+
+    def test_schema_upgrade_does_not_retain_stale_front_page_ids(self):
+        old = [article(f'old-{i}', kind='technical', source=f'Old {i}',
+                       published='2026-09-05T12:00:00Z') for i in range(6)]
+        fresh = [article(f'fresh-{i}', kind='technical', source=f'Fresh {i}',
+                         published='2026-09-07T12:00:00Z') for i in range(6)]
+        Path(self.path).write_text(json.dumps({
+            'schema_version': live_desks.SCHEMA_VERSION - 1,
+            'source_generated_at': 'old',
+            'desks': {'formula1': {
+                'articles': old, 'front_page_ids': [a['id'] for a in old],
+            }},
+        }), encoding='utf-8')
+        result = live_desks.build(
+            {'generated_at': 'new', 'articles': fresh + old}, self.path)
+        self.assertEqual({a['id'] for a in fresh},
+                         set(result['desks']['formula1']['front_page_ids']))
 
     def test_home_f1_prefers_race_desk_over_paddock_material(self):
         desk = [
