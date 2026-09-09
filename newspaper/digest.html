@@ -433,7 +433,7 @@
     .f1-standings-rail .f1-table td { padding:3px 4px; }
     .f1-standings-grid { display:grid; grid-template-columns:1fr; gap:22px; }
     .f1-standings-grid h3 { font-family:var(--font-head); font-size:15px; margin-bottom:7px; }
-    .f1-kind { display:inline-flex; margin-left:7px; border:1px solid currentColor; border-radius:999px; padding:1px 6px; font-size:8px; line-height:1.4; letter-spacing:.04em; vertical-align:1px; opacity:.78; }
+    .story-kind { display:inline-flex; margin-left:7px; border:1px solid currentColor; border-radius:999px; padding:1px 6px; font-size:8px; line-height:1.4; letter-spacing:.04em; vertical-align:1px; opacity:.78; }
     .f1-news-sections { display:grid; gap:38px; }
     .f1-news-section { min-width:0; }
     .f1-news-section + .f1-news-section { border-top:1px solid var(--border2); padding-top:28px; }
@@ -1428,6 +1428,21 @@ function f1ArticleClass(a) {
   return {tier:'paddock', label:'Tangential'};
 }
 
+function sportsArticleClass(a) {
+  if (a.sports_kind) return a.sports_kind;
+  const source = String(a.source || '').toLowerCase();
+  const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
+  if (source === 'world surf league') return 'surf';
+  if (source === 'atp tour') return 'tennis';
+  if (source === 'bbc football' || source === 'ge flamengo') return 'football';
+  if (/\b(surf|surfer|wsl|championship tour)\b/.test(text)) return 'surf';
+  if (/\b(football|soccer|flamengo|fluminense|brasileirão|libertadores|copa do brasil|premier league|world cup|futebol)\b/.test(text)) return 'football';
+  if (/\b(tennis|atp|wimbledon|roland garros)\b/.test(text)) return 'tennis';
+  if (/\b(mountain|alpine|summit|expedition|mountaineer|climber|climbing|matterhorn|everest|manaslu)\b/.test(text)) return 'mountaineering';
+  if (['alpinist','explorersweb','climbing'].includes(source)) return 'adventure';
+  return 'other';
+}
+
 function drawF1(data) {
   const el = document.getElementById('f1-desk');
   if (!el || currentCat !== 'formula1') return;
@@ -1619,7 +1634,13 @@ function kicker(a) {
   const cat = catMeta(a.category);
   const kinds = {results_updates:'Session / results', technical:'Technical', preview_forecast:'Preview', news:'News', rumor_interview:'Rumor / interview'};
   const presentation = a.category === 'formula1' ? f1ArticleClass(a) : null;
-  const kind = presentation ? `<span class="f1-kind">${escapeAttr(presentation.label)}</span>` : a.f1_kind ? `<span class="f1-kind">${kinds[a.f1_kind] || escapeAttr(a.f1_kind)}</span>` : '';
+  const sportsKinds = {football:'Football', tennis:'Tennis', surf:'Surfing', mountaineering:'Mountaineering', adventure:'Adventure', other:'Sports News'};
+  const sportsKind = a.category === 'sports' ? sportsArticleClass(a) : null;
+  const kind = presentation
+    ? `<span class="story-kind">${escapeAttr(presentation.label)}</span>`
+    : sportsKind
+      ? `<span class="story-kind">${sportsKinds[sportsKind] || escapeAttr(sportsKind)}</span>`
+      : a.f1_kind ? `<span class="story-kind">${kinds[a.f1_kind] || escapeAttr(a.f1_kind)}</span>` : '';
   const editionPart = a.edition_part === 'afternoon' ? '<span class="edition-part">Afternoon addition</span>' : '';
   return `<span class="kicker" style="color:${cat.c}"><span class="cdot" style="background:${cat.c}"></span>${cat.label || a.category}${kind}${editionPart}</span>`;
 }

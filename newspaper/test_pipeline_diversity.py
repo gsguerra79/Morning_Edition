@@ -5,6 +5,34 @@ import pipeline
 
 
 class PipelineDiversityTests(unittest.TestCase):
+    def test_sports_subtopics_are_source_aware_and_not_ambiguous(self):
+        self.assertEqual('surf', pipeline.sports_subtopic({
+            'source': 'World Surf League',
+            'title': 'Inside Pro Surfing: Lexus US Open of Surfing 2026'}))
+        self.assertEqual('football', pipeline.sports_subtopic({
+            'source': 'Agência Brasil',
+            'title': 'Fluminense vence nas quartas da Libertadores'}))
+        self.assertEqual('adventure', pipeline.sports_subtopic({
+            'source': 'ExplorersWeb',
+            'title': "What it is like to experience the world's worst sting"}))
+        self.assertEqual('mountaineering', pipeline.sports_subtopic({
+            'source': 'ExplorersWeb',
+            'title': 'Trailrunner missing on Matterhorn during climbing attempt'}))
+
+    def test_selected_sports_stories_persist_visible_subtopic(self):
+        now = datetime.now(timezone.utc).isoformat()
+        stories = [
+            {'id': 'surf', 'cluster_id': 'surf', 'cluster_rep': True,
+             'source': 'World Surf League', 'category': 'sports',
+             'title': 'US Open of Surfing', 'score': 9, 'published_at': now},
+            {'id': 'tennis', 'cluster_id': 'tennis', 'cluster_rep': True,
+             'source': 'ATP Tour', 'category': 'sports',
+             'title': 'ATP final', 'score': 9, 'published_at': now},
+        ]
+        selected, _ = pipeline.select_balanced_issue(stories)
+        self.assertEqual({'surf': 'surf', 'tennis': 'tennis'},
+                         {item['id']: item['sports_kind'] for item in selected})
+
     def test_f1_race_win_headline_is_a_result_update(self):
         article = {
             "title": "Antonelli stuns from 19th on the grid to win home race",

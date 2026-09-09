@@ -114,7 +114,7 @@ PAGE_BUDGETS = {
 }
 SPORTS_MINIMUMS = {'football': 3, 'tennis': 1, 'surf': 1, 'mountaineering': 1}
 SPORTS_MAXIMUMS = {'football': 4, 'tennis': 2, 'surf': 2,
-                   'mountaineering': 3, 'other': 1}
+                   'mountaineering': 2, 'adventure': 1, 'other': 1}
 COMIC_SOURCES = ('giantitp', 'wilde life')
 PAGE_REQUIRED_SOURCES = {
     'worldnews': ('bbc world', 'financial times world', 'reuters', 'new york times world'),
@@ -1460,18 +1460,32 @@ def sports_subtopic(article):
     source = str(article.get('source') or '').casefold()
     text = ' '.join(str(article.get(k) or '') for k in
                     ('title', 'summary', 'feed_summary')).casefold()
-    if source in ('bbc football', 'ge flamengo') or any(x in text for x in
-            ('football', 'soccer', 'flamengo', 'brasileirão', 'premier league', 'world cup')):
-        return 'football'
-    if source == 'atp tour' or any(x in text for x in
-            ('tennis', 'atp ', 'us open', 'wimbledon', 'roland garros')):
+    # Source-specific desks outrank ambiguous event names. In particular,
+    # WSL's "US Open of Surfing" must never become tennis merely because its
+    # title contains "US Open".
+    if source == 'world surf league':
+        return 'surf'
+    if source == 'atp tour':
         return 'tennis'
-    if source == 'world surf league' or any(x in text for x in
+    if source in ('bbc football', 'ge flamengo'):
+        return 'football'
+    if any(x in text for x in
             ('surf', 'surfer', 'wsl ', 'championship tour')):
         return 'surf'
-    if source in ('alpinist', 'explorersweb', 'climbing') or any(x in text for x in
-            ('mountain', 'alpine', 'summit', 'expedition', 'mountaineer')):
+    if any(x in text for x in
+            ('football', 'soccer', 'flamengo', 'fluminense', 'brasileirão',
+             'libertadores', 'copa do brasil', 'premier league', 'world cup',
+             'futebol')):
+        return 'football'
+    if any(x in text for x in
+            ('tennis', 'atp ', 'wimbledon', 'roland garros')):
+        return 'tennis'
+    if any(x in text for x in
+            ('mountain', 'alpine', 'summit', 'expedition', 'mountaineer',
+             'climber', 'climbing', 'matterhorn', 'everest', 'manaslu')):
         return 'mountaineering'
+    if source in ('alpinist', 'explorersweb', 'climbing'):
+        return 'adventure'
     return 'other'
 
 
@@ -1562,6 +1576,8 @@ def select_balanced_issue(articles):
                          'required': 1, 'available': 0})
 
     sports = [a for a in reps if a.get('category') == 'sports']
+    for article in sports:
+        article['sports_kind'] = sports_subtopic(article)
     for topic, minimum in SPORTS_MINIMUMS.items():
         matches = [a for a in sports if sports_subtopic(a) == topic]
         present = sum(1 for a in selected if a.get('category') == 'sports'
