@@ -5,6 +5,48 @@ import pipeline
 
 
 class PageMediaTests(unittest.TestCase):
+    def test_summary_sanitizer_cuts_html_tag_inventory(self):
+        broken = ('Flamengo trains in Quito | Ge '
+                  'a,abbr,acronym,address,applet,article,aside,audio,body,canvas')
+        self.assertEqual('Flamengo trains in Quito | Ge',
+                         pipeline.sanitize_summary(broken))
+
+    def test_page_fetch_prefers_exact_description_over_truncated_css(self):
+        markup = '''<html><head>
+          <meta property="og:description" content="A clean publisher summary.">
+          <style>body,div,dl,dt,dd,ul,ol,li{margin:0}
+        '''
+        original = pipeline.http_get_text
+        pipeline.http_get_text = lambda *args, **kwargs: markup
+        try:
+            _, excerpt = pipeline._fetch_page('https://example.com/story')
+        finally:
+            pipeline.http_get_text = original
+        self.assertEqual('A clean publisher summary.', excerpt)
+
+    def test_unclosed_style_without_metadata_does_not_leak(self):
+        markup = '<html><head><style>body,div,dl,dt,dd{margin:0}'
+        original = pipeline.http_get_text
+        pipeline.http_get_text = lambda *args, **kwargs: markup
+        try:
+            _, excerpt = pipeline._fetch_page('https://example.com/story')
+        finally:
+            pipeline.http_get_text = original
+        self.assertEqual('', excerpt)
+
+    def test_carried_story_summary_is_sanitized_before_reembedding(self):
+        article = {
+            'title': 'Clean headline',
+            'summary': 'Useful lead body,div,dl,dt,dd,ul,ol,li{margin:0}',
+        }
+        original = pipeline._embed
+        pipeline._embed = lambda text, model: None
+        try:
+            result = pipeline._reembed(article, 'disabled')
+        finally:
+            pipeline._embed = original
+        self.assertEqual('Useful lead', result['summary'])
+
     def test_rss_image_enclosure_is_preserved(self):
         markup = '''<rss><channel><item><title>FP2 report</title>
           <link>https://www.autosport.com/f1/news/report/1/</link>

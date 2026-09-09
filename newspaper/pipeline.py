@@ -259,6 +259,60 @@ def clean_text(s):
     return s.strip()
 
 
+_HTML_TAG_NAMES = {
+    'a', 'abbr', 'acronym', 'address', 'applet', 'article', 'aside', 'audio',
+    'b', 'big', 'blockquote', 'body', 'canvas', 'caption', 'center', 'cite',
+    'code', 'dd', 'del', 'details', 'div', 'dl', 'dt', 'fieldset', 'figure',
+    'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'html',
+    'input', 'legend', 'li', 'main', 'nav', 'ol', 'p', 'pre', 'section',
+    'span', 'table', 'tbody', 'td', 'textarea', 'th', 'thead', 'tr', 'ul',
+}
+
+
+def sanitize_summary(value, fallback=''):
+    """Return readable prose, cutting off leaked CSS/HTML inventories.
+
+    Some large publisher pages are truncated before a closing ``</style>``
+    tag reaches the bounded fetch.  A naive tag stripper then turns the CSS
+    reset (``body,div,dl,dt,...``) into visible summary text.  Detect that
+    structural signature rather than maintaining source-specific exceptions.
+    """
+    text = html_lib.unescape(str(value or ''))
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    for match in re.finditer(r'(?<![\w-])[a-z][a-z0-9]*(?:,[a-z][a-z0-9]*){4,}',
+                             text, re.IGNORECASE):
+        tokens = [token.casefold() for token in match.group(0).split(',')]
+        if sum(token in _HTML_TAG_NAMES for token in tokens) >= 4:
+            text = text[:match.start()].rstrip(' |,;:-')
+            break
+    css_marker = re.search(r'(?:^|\s)(?:@media|@font-face|[.#]?[a-z][\w-]*\s*\{)',
+                           text, re.IGNORECASE)
+    if css_marker:
+        text = text[:css_marker.start()].rstrip(' |,;:-')
+    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        text = re.sub(r'\s+', ' ', str(fallback or '')).strip()
+    return text[:200]
+
+
+def _page_description(markup):
+    """Extract publisher-authored description metadata from an exact page."""
+    candidates = {}
+    for tag in re.findall(r'<meta\b[^>]*>', markup or '', re.IGNORECASE):
+        key_match = re.search(r'\b(?:name|property)=["\']([^"\']+)["\']', tag,
+                              re.IGNORECASE)
+        value_match = re.search(r'\bcontent=["\']([^"\']*)["\']', tag,
+                                re.IGNORECASE)
+        if key_match and value_match:
+            candidates[key_match.group(1).casefold()] = value_match.group(1)
+    for key in ('og:description', 'twitter:description', 'description'):
+        value = sanitize_summary(candidates.get(key, ''))
+        if value:
+            return value
+    return ''
+
+
 def extract_field(xml, tag):
     for pat in (
         rf'<{tag}[^>]*><!\[CDATA\[([\s\S]*?)\]\]></{tag}>',
@@ -693,11 +747,16 @@ def _fetch_page(url):
     if not html:
         return None, ''
     image = _page_image(html, url)
-    body = re.sub(r'<script[\s\S]*?</script>', ' ', html, flags=re.IGNORECASE)
-    body = re.sub(r'<style[\s\S]*?</style>', ' ', body, flags=re.IGNORECASE)
-    body = re.sub(r'<[^>]+>', ' ', body)
-    body = re.sub(r'\s+', ' ', body).strip()[:900]
-    return image, body
+    description = _page_description(html)
+    if description:
+        return image, description
+    body = re.sub(r'<head\b[^>]*>[\s\S]*?(?:</head\s*>|$)', ' ', html,
+                  flags=re.IGNORECASE)
+    body = re.sub(r'<(script|style)\b[^>]*>[\s\S]*?(?:</\1\s*>|$)', ' ', body,
+                  flags=re.IGNORECASE)
+    paragraphs = re.findall(r'<p\b[^>]*>([\s\S]*?)</p>', body, re.IGNORECASE)
+    prose = ' '.join(paragraphs) if paragraphs else body
+    return image, sanitize_summary(prose)[:900]
 
 
 def _score(article, excerpt, chat_model, system_prompt, valid_cats):
@@ -720,9 +779,9 @@ def _score(article, excerpt, chat_model, system_prompt, valid_cats):
         '  "summary": "<1-2 sentences, max 180 chars, no em dashes>",\n'
         f'  "category": "<one of: {", ".join(valid_cats)}>"\n}}'
     )
-    fallback = article.get('feed_summary') or excerpt or article['title']
-    fallback = re.sub(r'<[^>]+>', ' ', fallback)
-    fallback = html_lib.unescape(re.sub(r'\s+', ' ', fallback)).strip()
+    fallback = sanitize_summary(
+        article.get('feed_summary') or excerpt or article['title'],
+        article['title'])
     score, summary, category = 6.0, fallback[:180], article['category']
     ok = False
     if not AI_ENABLED:
@@ -750,14 +809,13 @@ def _score(article, excerpt, chat_model, system_prompt, valid_cats):
         except (TypeError, ValueError):
             pass
         if isinstance(parsed.get('summary'), str):
-            summary = parsed['summary'].replace('—', '--').strip()[:200]
+            summary = sanitize_summary(parsed['summary'].replace('—', '--'), fallback)
         if parsed.get('category') in valid_cats:
             category = parsed['category']
     except Exception:
         pass
     ms = (time.monotonic() - t0) * 1000.0
-    if not summary:
-        summary = article['title'][:160]
+    summary = sanitize_summary(summary, fallback or article['title'])
     return score, summary, category, ok, ms
 
 
@@ -1293,6 +1351,8 @@ def _reembed(article, embed_model):
     """Refresh a carried article's embedding so it can re-cluster against fresh
     coverage. Its Ollama score/summary are reused (the expensive, less stable
     part); only the embedding — which clustering and taste need — is recomputed."""
+    article['summary'] = sanitize_summary(
+        article.get('summary'), article.get('title', ''))
     article['embedding'] = _embed(
         f"{article.get('title', '')}\n{article.get('summary', '')}", embed_model)
     return article
