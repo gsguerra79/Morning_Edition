@@ -2432,7 +2432,8 @@ function render() {
     document.getElementById('section-hero').className = 'topic-sections';
     document.getElementById('section-hero').innerHTML = sections.map(section => {
       const gaps = coverageGaps.filter(g => g.page === section.key);
-      const warning = gaps.length ? `<p class="empty" style="border:1px solid #a52a2a;padding:10px;margin:8px 0 14px">Coverage incomplete: ${gaps.map(g => g.subtopic ? `${g.subtopic} (${g.available}/${g.required})` : `${g.available}/${g.required} stories`).join(', ')}.</p>` : '';
+      const hardGaps = gaps.filter(g => g.status !== 'outside_current_window');
+      const warning = hardGaps.length ? `<p class="empty" style="border:1px solid #a52a2a;padding:10px;margin:8px 0 14px">Coverage incomplete: ${hardGaps.map(g => g.subtopic ? `${g.subtopic} (${g.available}/${g.required})` : `${g.available}/${g.required} stories`).join(', ')}.</p>` : '';
       return `<section class="topic-section" style="border-top:3px solid ${catMeta(section.key).c}">
         <p class="sec-label">${catMeta(section.key).label}${!currentIssueIsArchive && ['formula1','comics'].includes(section.key) ? liveDeskStamp(section.key) : ''}</p>
         ${warning}<div class="grid topic-grid" style="--topic-cols:${balancedTopicColumns(section.articles.length)}">${section.articles.map(gridCardHTML).join('')}</div>
