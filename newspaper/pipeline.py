@@ -116,10 +116,17 @@ SPORTS_MINIMUMS = {'football': 3, 'tennis': 1, 'surf': 1, 'mountaineering': 1}
 SPORTS_MAXIMUMS = {'football': 4, 'tennis': 2, 'surf': 2,
                    'mountaineering': 2, 'adventure': 1, 'other': 1}
 COMIC_SOURCES = ('giantitp', 'wilde life')
+
+
+def comic_issue_number(article):
+    """Return the numeric installment identifier when a comic exposes one."""
+    text = f"{article.get('title', '')} {article.get('url', '')}"
+    numbers = re.findall(r"(?<!\d)(\d{2,5})(?!\d)", text)
+    return max((int(number) for number in numbers), default=-1)
 PAGE_REQUIRED_SOURCES = {
     'worldnews': ('bbc world', 'financial times world', 'reuters', 'new york times world'),
     'usnews': ('bbc us & canada', 'financial times us', 'reuters',
-               'new york times us', 'washington post', 'houston chronicle'),
+               'new york times us', 'washington post'),
     'brazilnews': ('globo', 'agência brasil', 'agência pública',
                    '((o))eco', 'rioonwatch'),
     'sports': ('atp tour', 'world surf league'),
@@ -1570,7 +1577,7 @@ def select_balanced_issue(articles):
     for source in COMIC_SOURCES:
         matches = [a for a in comics if str(a.get('source') or '').casefold() == source]
         if matches:
-            add(max(matches, key=published_rank))
+            add(max(matches, key=lambda item: (comic_issue_number(item), published_rank(item))))
         else:
             gaps.append({'page': 'comics', 'source': source,
                          'required': 1, 'available': 0})

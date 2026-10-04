@@ -190,6 +190,21 @@ class PipelineDiversityTests(unittest.TestCase):
         self.assertEqual({"g-new", "w-new"}, {item["id"] for item in selected})
         self.assertNotIn("comics", {gap.get("page") for gap in gaps})
 
+    def test_comic_issue_number_beats_missing_rss_dates(self):
+        items = [
+            {"id": "g-1350", "cluster_id": "g-1350", "cluster_rep": True,
+             "source": "GiantITP", "category": "comics",
+             "title": "1350: Newest strip", "url": "http://www.giantitp.com/comics/oots1350.html",
+             "score": 6, "published_at": "2026-10-04T17:00:00+00:00"},
+            {"id": "g-1341", "cluster_id": "g-1341", "cluster_rep": True,
+             "source": "GiantITP", "category": "comics",
+             "title": "1341: Oldest strip", "url": "http://www.giantitp.com/comics/oots1341.html",
+             "score": 6, "published_at": "2026-10-04T17:00:01+00:00"},
+        ]
+        selected, _ = pipeline.select_balanced_issue(items)
+        self.assertIn("g-1350", {item["id"] for item in selected})
+        self.assertNotIn("g-1341", {item["id"] for item in selected})
+
     def test_same_source_cluster_gets_no_corroboration_boost(self):
         items = [
             {"id": "a", "title": "Daily weather forecast São Paulo", "source": "Globo",
