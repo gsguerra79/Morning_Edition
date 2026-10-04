@@ -126,7 +126,7 @@ def comic_issue_number(article):
 PAGE_REQUIRED_SOURCES = {
     'worldnews': ('bbc world', 'financial times world', 'reuters', 'new york times world'),
     'usnews': ('bbc us & canada', 'financial times us', 'reuters',
-               'new york times us', 'washington post'),
+               'new york times us', 'washington post', 'houston chronicle'),
     'brazilnews': ('globo', 'agência brasil', 'agência pública',
                    '((o))eco', 'rioonwatch'),
     'sports': ('atp tour', 'world surf league'),

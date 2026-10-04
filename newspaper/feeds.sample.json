@@ -1,5 +1,10 @@
 [
   {
+    "url": "https://news.google.com/rss/search?q=site%3Ahoustonchronicle.com%2Fnews%2Fhouston-texas&hl=en-US&gl=US&ceid=US%3Aen",
+    "source": "Houston Chronicle",
+    "category": "usnews"
+  },
+  {
     "url": "https://feeds.arstechnica.com/arstechnica/index",
     "source": "Ars Technica",
     "category": "tech"
