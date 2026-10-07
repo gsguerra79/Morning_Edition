@@ -1243,7 +1243,7 @@ def cluster(articles, sim_threshold=SIM_THRESHOLD, boost_cap=BOOST_CAP, boost_k=
     def same_story(tokens, anchor_tokens):
         union = tokens | anchor_tokens
         common = tokens & anchor_tokens
-        if not union:
+        if not union or not tokens or not anchor_tokens:
             return False
         jaccard = len(common) / len(union)
         containment = len(common) / min(len(tokens), len(anchor_tokens))

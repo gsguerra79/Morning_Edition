@@ -5,6 +5,17 @@ import pipeline
 
 
 class PipelineDiversityTests(unittest.TestCase):
+    def test_cluster_handles_headline_with_no_story_tokens(self):
+        stories = [
+            {'id': 'blank', 'title': '', 'embedding': None, 'score': 1},
+            {'id': 'normal', 'title': 'Houston council approves budget',
+             'embedding': None, 'score': 2},
+        ]
+        clustered = pipeline.cluster(stories)
+        self.assertEqual(2, len(clustered))
+        self.assertEqual({'blank', 'normal'},
+                         {item['cluster_id'] for item in clustered})
+
     def test_sports_subtopics_are_source_aware_and_not_ambiguous(self):
         self.assertEqual('surf', pipeline.sports_subtopic({
             'source': 'World Surf League',
