@@ -312,6 +312,8 @@
     /* ── Score dot ──────────────────────────────────────── */
     .thumb-frame { position: relative; }
     .thumb-frame.image-missing { display: block; }
+    .source-fallback-badge { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: inline-flex; align-items: center; gap: 7px; max-width: calc(100% - 24px); padding: 6px 9px; border-radius: 7px; background: rgba(15,14,12,.82); color: #fff; font: 700 10px/1 var(--font-body); letter-spacing: .04em; text-transform: uppercase; backdrop-filter: blur(4px); }
+    .source-fallback-badge img { width: 20px; height: 20px; object-fit: contain; border-radius: 3px; background: #fff; }
     .score-chip {
       position: absolute; top: 9px; right: 9px; z-index: 6;
       display: inline-flex; align-items: center; gap: 5px;
@@ -1614,6 +1616,13 @@ const SOURCE_FALLBACK_ART = [
   ['houston chronicle', '/stock-technology.jpg'],
   ['reuters', '/stock-worldnews.jpg'],
 ];
+const SOURCE_FALLBACK_LOGOS = [
+  ['financial times', '/source-logos/financialtimes.png'],
+  ['new york times', '/source-logos/nytimes.png'],
+  ['washington post', '/source-logos/washingtonpost.png'],
+  ['houston chronicle', '/source-logos/houstonchronicle.png'],
+  ['reuters', '/source-logos/reuters.ico'],
+];
 const DESK_FALLBACK_ART = {
   worldnews: '/stock-worldnews.jpg', usnews: '/stock-usnews.jpg',
   brazilnews: '/stock-brazilnews.jpg', technology: '/stock-technology.jpg',
@@ -1624,6 +1633,11 @@ function fallbackImage(a) {
   const source = String(a.source || '').toLowerCase();
   const match = SOURCE_FALLBACK_ART.find(([name]) => source === name || source.startsWith(name + ' '));
   return match ? match[1] : (DESK_FALLBACK_ART[a.category] || DESK_FALLBACK_ART.worldnews);
+}
+function fallbackLogo(a) {
+  const source = String(a.source || '').toLowerCase();
+  const match = SOURCE_FALLBACK_LOGOS.find(([name]) => source.includes(name));
+  return match ? match[1] : '';
 }
 
 document.addEventListener('error', (event) => {
@@ -1656,10 +1670,12 @@ function thumb(a) {
   const fallback = fallbackImage(a);
   const shownImage = imageURL || fallback;
   const im = `<img src="${escapeAttr(shownImage)}" alt="" loading="lazy"${imageURL && imageURL !== fallback ? ` data-fallback-source="${escapeAttr(fallback)}"` : ''}>`;
+  const logo = !imageURL ? fallbackLogo(a) : '';
+  const sourceBadge = logo ? `<span class="source-fallback-badge"><img src="${escapeAttr(logo)}" alt="">${escapeHtml(a.source || 'Publisher')}</span>` : '';
   // Count badge when this card rolls up duplicates — clearly visible on the image.
   const others = (a._clusterOthers || []).length;
   const badge = others > 0 ? `<span class="thumb-badge">＋${others}</span>` : '';
-  return `<div class="thumb" style="background:${tint}">${ph}${im}${badge}</div>`;
+  return `<div class="thumb" style="background:${tint}">${ph}${im}${sourceBadge}${badge}</div>`;
 }
 
 // Category kicker (colored dot + label). Rollups are signalled by the "＋N"

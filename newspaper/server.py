@@ -1040,6 +1040,12 @@ class StateHandler(BaseHTTPRequestHandler):
             name = path.lstrip('/')
             self._serve_file(os.path.join(STATIC_DIR, name), STATIC_TYPES[os.path.splitext(name)[1]])
             return
+        if path.startswith('/source-logos/') and '/' not in path[len('/source-logos/'):].strip('/'):
+            name = path[len('/source-logos/'):]
+            ext = os.path.splitext(name)[1].lower()
+            if ext in ('.png', '.ico'):
+                self._serve_file(os.path.join(STATIC_DIR, 'source-logos', name), STATIC_TYPES[ext])
+                return
         self.send_error(404, 'Not Found')
 
     def do_PUT(self):
