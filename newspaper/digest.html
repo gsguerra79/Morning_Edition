@@ -311,7 +311,7 @@
 
     /* ── Score dot ──────────────────────────────────────── */
     .thumb-frame { position: relative; }
-    .thumb-frame.image-missing { display: none; }
+    .thumb-frame.image-missing { display: block; }
     .score-chip {
       position: absolute; top: 9px; right: 9px; z-index: 6;
       display: inline-flex; align-items: center; gap: 5px;
@@ -1602,8 +1602,42 @@ function thumbBlock(a) {
 
 function catMeta(c) { return CATS[c] || { label: c, c: '#8a90a0' }; }
 
-// Image thumbnail with a category-tinted fallback. If the image fails (or there
-// is none), the category-colored block with its label shows through.
+// Publisher artwork is preferred. If it is unavailable, use a real local
+// photograph selected by source so the page never collapses to one generic
+// desk image. These are presentation fallbacks, never article claims.
+const SOURCE_FALLBACK_ART = [
+  ['financial times world', '/stock-ideas.jpg'],
+  ['financial times us', '/stock-technology.jpg'],
+  ['new york times world', '/stock-brazilnews.jpg'],
+  ['new york times us', '/stock-ideas.jpg'],
+  ['washington post', '/stock-usnews.jpg'],
+  ['houston chronicle', '/stock-technology.jpg'],
+  ['reuters', '/stock-worldnews.jpg'],
+];
+const DESK_FALLBACK_ART = {
+  worldnews: '/stock-worldnews.jpg', usnews: '/stock-usnews.jpg',
+  brazilnews: '/stock-brazilnews.jpg', technology: '/stock-technology.jpg',
+  ideas: '/stock-ideas.jpg', sports: '/stock-sports.jpg',
+  formula1: '/stock-formula1.jpg', comics: '/stock-comics.jpg',
+};
+function fallbackImage(a) {
+  const source = String(a.source || '').toLowerCase();
+  const match = SOURCE_FALLBACK_ART.find(([name]) => source === name || source.startsWith(name + ' '));
+  return match ? match[1] : (DESK_FALLBACK_ART[a.category] || DESK_FALLBACK_ART.worldnews);
+}
+
+document.addEventListener('error', (event) => {
+  const img = event.target;
+  if (!img || img.tagName !== 'IMG' || !img.closest('.thumb-frame')) return;
+  const source = img.getAttribute('data-fallback-source');
+  if (!source) return;
+  const current = img.getAttribute('src') || '';
+  if (source && current !== source) {
+    img.removeAttribute('data-fallback-source');
+    img.src = source;
+  }
+}, true);
+
 function thumb(a) {
   const cat = catMeta(a.category);
   const tint = `color-mix(in srgb, ${cat.c} 22%, var(--surface2))`;
@@ -1619,9 +1653,9 @@ function thumb(a) {
     : a.image && (source.startsWith('financial times') || source === 'reuters')
       ? `/card-image?url=${encodeURIComponent(a.image)}`
       : a.image || recoveredImage;
-  const im = imageURL
-    ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy" onerror="this.closest('.thumb-frame').classList.add('image-missing')">`
-    : '';
+  const fallback = fallbackImage(a);
+  const shownImage = imageURL || fallback;
+  const im = `<img src="${escapeAttr(shownImage)}" alt="" loading="lazy"${imageURL && imageURL !== fallback ? ` data-fallback-source="${escapeAttr(fallback)}"` : ''}>`;
   // Count badge when this card rolls up duplicates — clearly visible on the image.
   const others = (a._clusterOthers || []).length;
   const badge = others > 0 ? `<span class="thumb-badge">＋${others}</span>` : '';
@@ -2761,6 +2795,9 @@ let historySearchQuery = '';
 
 function escapeAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // Hides .list-row elements inside container whose title+source don't match
