@@ -1666,7 +1666,7 @@ function thumb(a) {
     ? `/comic-image?url=${encodeURIComponent(a.image)}`
     : a.image && (source.startsWith('financial times') || source === 'reuters')
       ? `/card-image?url=${encodeURIComponent(a.image)}`
-      : a.image || recoveredImage;
+      : a.image;
   const fallback = fallbackImage(a);
   const shownImage = imageURL || fallback;
   const im = `<img src="${escapeAttr(shownImage)}" alt="" loading="lazy"${imageURL && imageURL !== fallback ? ` data-fallback-source="${escapeAttr(fallback)}"` : ''}>`;
