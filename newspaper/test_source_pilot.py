@@ -1,5 +1,14 @@
 import unittest
 from datetime import datetime, timezone
+import importlib.util
+from pathlib import Path
+import tempfile
+
+_runner_spec = importlib.util.spec_from_file_location(
+    "run_source_pilot", Path(__file__).parent / "scripts" / "run-source-pilot.py")
+_runner = importlib.util.module_from_spec(_runner_spec)
+_runner_spec.loader.exec_module(_runner)
+atomic, load = _runner.atomic, _runner.load
 
 from source_pilot import record, run
 
@@ -8,6 +17,20 @@ ATOM = """<feed xmlns="http://www.w3.org/2005/Atom"><entry xml:lang="en"><title>
 
 
 class SourcePilotTests(unittest.TestCase):
+    def test_empty_state_file_is_treated_as_new_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source-pilot.json"
+            path.touch()
+            self.assertEqual(load(path, {}), {})
+
+    def test_corrupt_state_recovers_from_last_good_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source-pilot.json"
+            atomic(path, {"runs": [{"ok": True}]})
+            atomic(path, {"runs": [{"ok": True}, {"ok": True}]})
+            path.write_text("{interrupted", encoding="utf-8")
+            self.assertEqual(load(path), {"runs": [{"ok": True}]})
+
     def test_success_and_failure_are_both_recorded(self):
         config = {"sources": [{"source": "Good", "url": "good", "page": "Ideas"}, {"source": "Bad", "url": "bad", "page": "Ideas"}]}
         def fetcher(url):
