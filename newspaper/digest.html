@@ -264,11 +264,16 @@
 
     .divider { height: 1px; background: var(--border); margin: 20px 0; }
 
-    /* ── Thumbnail (image with category-tinted fallback) ── */
+    /* ── Thumbnail (publisher artwork or honest source fallback) ── */
     .thumb { position: relative; width: 100%; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface2); }
     .thumb img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
     .card:hover .thumb img, .lead:hover .thumb img, .mini:hover .thumb img { transform: scale(1.045); }
     .thumb .ph { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-head); font-weight: 700; color: #fff; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .92; padding: 8px; text-align: center; }
+    .source-fallback-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px; color: var(--source-fallback-fg, #fff); background: var(--source-fallback-bg, #39424e); text-align: center; }
+    .source-fallback-card img { width: clamp(42px, 22%, 76px); height: clamp(42px, 22%, 76px); object-fit: contain; border-radius: 10px; background: #fff; padding: 7px; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+    .source-fallback-card .source-fallback-initials { display: grid; place-items: center; width: clamp(42px, 22%, 76px); height: clamp(42px, 22%, 76px); border: 1px solid rgba(255,255,255,.55); border-radius: 10px; font: 700 clamp(20px, 4vw, 34px)/1 var(--font-head); letter-spacing: .04em; }
+    .source-fallback-name { max-width: 100%; font: 700 clamp(14px, 2vw, 20px)/1.1 var(--font-head); }
+    .source-fallback-note { font: 600 10px/1.2 var(--font-body); letter-spacing: .1em; opacity: .78; text-transform: uppercase; }
     /* Rollup count badge on the image — "+2" means 2 duplicates folded in. */
     .thumb-badge { position: absolute; top: 9px; left: 9px; display: inline-flex; align-items: center; background: rgba(15,14,12,.82); color: #fff; font-family: var(--font-head); font-weight: 700; font-size: 12.5px; letter-spacing: .01em; padding: 3px 10px; border-radius: 999px; backdrop-filter: blur(3px); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 
@@ -1604,58 +1609,58 @@ function thumbBlock(a) {
 
 function catMeta(c) { return CATS[c] || { label: c, c: '#8a90a0' }; }
 
-// Publisher artwork is preferred. If it is unavailable, use a real local
-// photograph selected by source so the page never collapses to one generic
-// desk image. These are presentation fallbacks, never article claims.
-const SOURCE_FALLBACK_ART = [
-  ['financial times world', '/stock-ideas.jpg'],
-  ['financial times us', '/stock-technology.jpg'],
-  ['new york times world', '/stock-brazilnews.jpg'],
-  ['new york times us', '/stock-ideas.jpg'],
-  ['washington post', '/stock-usnews.jpg'],
-  ['houston chronicle', '/stock-technology.jpg'],
-  ['reuters', '/stock-worldnews.jpg'],
-];
+// Publisher artwork is preferred. If it is unavailable, use an explicit
+// source-identity card. Never substitute a generic or category photo: it
+// falsely suggests that the image depicts the article.
 const SOURCE_FALLBACK_LOGOS = [
-  ['financial times', '/source-logos/financialtimes.png'],
-  ['new york times', '/source-logos/nytimes.png'],
-  ['washington post', '/source-logos/washingtonpost.png'],
-  ['houston chronicle', '/source-logos/houstonchronicle.png'],
-  ['reuters', '/source-logos/reuters.ico'],
+  ['financial times', '/source-logos/financialtimes.png', '#163d35', '#fff'],
+  ['new york times', '/source-logos/nytimes.png', '#111', '#fff'],
+  ['washington post', '/source-logos/washingtonpost.png', '#173b68', '#fff'],
+  ['houston chronicle', '/source-logos/houstonchronicle.png', '#174f70', '#fff'],
+  ['reuters', '/source-logos/reuters.ico', '#202020', '#fff'],
 ];
-const DESK_FALLBACK_ART = {
-  worldnews: '/stock-worldnews.jpg', usnews: '/stock-usnews.jpg',
-  brazilnews: '/stock-brazilnews.jpg', technology: '/stock-technology.jpg',
-  ideas: '/stock-ideas.jpg', sports: '/stock-sports.jpg',
-  formula1: '/stock-formula1.jpg', comics: '/stock-comics.jpg',
-};
-function fallbackImage(a) {
-  const source = String(a.source || '').toLowerCase();
-  const match = SOURCE_FALLBACK_ART.find(([name]) => source === name || source.startsWith(name + ' '));
-  return match ? match[1] : (DESK_FALLBACK_ART[a.category] || DESK_FALLBACK_ART.worldnews);
-}
-function fallbackLogo(a) {
+function fallbackIdentity(a) {
   const source = String(a.source || '').toLowerCase();
   const match = SOURCE_FALLBACK_LOGOS.find(([name]) => source.includes(name));
-  return match ? match[1] : '';
+  if (match) return { name: a.source || match[0], logo: match[1], bg: match[2], fg: match[3] };
+  const name = String(a.source || 'Publisher').trim() || 'Publisher';
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return { name, initials: initials || 'P', bg: '#39424e', fg: '#fff' };
+}
+function sourceFallbackCard(a) {
+  const identity = fallbackIdentity(a);
+  const logo = identity.logo
+    ? `<img src="${escapeAttr(identity.logo)}" alt="" aria-hidden="true">`
+    : `<span class="source-fallback-initials" aria-hidden="true">${escapeHtml(identity.initials)}</span>`;
+  return `<div class="source-fallback-card" style="--source-fallback-bg:${escapeAttr(identity.bg)};--source-fallback-fg:${escapeAttr(identity.fg)}" role="img" aria-label="${escapeAttr(identity.name)} source artwork unavailable">${logo}<span class="source-fallback-name">${escapeHtml(identity.name)}</span><span class="source-fallback-note">Source artwork unavailable</span></div>`;
+}
+function replaceWithSourceFallback(img) {
+  const thumb = img && img.closest('.thumb');
+  if (!thumb || thumb.querySelector('.source-fallback-card')) return;
+  img.remove();
+  thumb.insertAdjacentHTML('beforeend', sourceFallbackCard({ source: thumb.dataset.source || 'Publisher' }));
 }
 
 document.addEventListener('error', (event) => {
   const img = event.target;
   if (!img || img.tagName !== 'IMG' || !img.closest('.thumb-frame')) return;
   const source = img.getAttribute('data-fallback-source');
-  if (!source) return;
+  if (!source) {
+    replaceWithSourceFallback(img);
+    return;
+  }
   const current = img.getAttribute('src') || '';
   if (source && current !== source) {
     img.removeAttribute('data-fallback-source');
     img.src = source;
+  } else {
+    replaceWithSourceFallback(img);
   }
 }, true);
 
 function thumb(a) {
   const cat = catMeta(a.category);
   const tint = `color-mix(in srgb, ${cat.c} 22%, var(--surface2))`;
-  const ph = `<div class="ph">${cat.label || a.category}</div>`;
   const source = String(a.source || '').toLowerCase();
   const recoverableSource = source.startsWith('financial times') || source === 'reuters' ||
     ['formula 1','motorsport','autosport','racefans','the race'].includes(source);
@@ -1667,15 +1672,12 @@ function thumb(a) {
     : a.image && (source.startsWith('financial times') || source === 'reuters')
       ? `/card-image?url=${encodeURIComponent(a.image)}`
       : a.image;
-  const fallback = fallbackImage(a);
-  const shownImage = imageURL || fallback;
-  const im = `<img src="${escapeAttr(shownImage)}" alt="" loading="lazy"${imageURL && imageURL !== fallback ? ` data-fallback-source="${escapeAttr(fallback)}"` : ''}>`;
-  const logo = !imageURL ? fallbackLogo(a) : '';
-  const sourceBadge = logo ? `<span class="source-fallback-badge"><img src="${escapeAttr(logo)}" alt="">${escapeHtml(a.source || 'Publisher')}</span>` : '';
+  const im = imageURL ? `<img src="${escapeAttr(imageURL)}" alt="" loading="lazy">` : sourceFallbackCard(a);
   // Count badge when this card rolls up duplicates — clearly visible on the image.
   const others = (a._clusterOthers || []).length;
   const badge = others > 0 ? `<span class="thumb-badge">＋${others}</span>` : '';
-  return `<div class="thumb" style="background:${tint}">${ph}${im}${sourceBadge}${badge}</div>`;
+  const result = `<div class="thumb" data-source="${escapeAttr(a.source || 'Publisher')}" style="background:${tint}">${im}${badge}</div>`;
+  return result;
 }
 
 // Category kicker (colored dot + label). Rollups are signalled by the "＋N"

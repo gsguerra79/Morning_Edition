@@ -139,19 +139,22 @@ class BaselineRegressionTests(unittest.TestCase):
         self.assertIn("member?.category !== 'comics'", html)
         self.assertIn("article.category !== 'comics' && sharedState.viewState.hideReadOnOpen", html)
 
-    def test_missing_publisher_art_uses_story_recovery_not_generic_logos(self):
+    def test_missing_publisher_art_uses_honest_source_card_not_unrelated_photo(self):
         root = Path(__file__).parent
         html = (root / "digest.html").read_text(encoding="utf-8")
         dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
         self.assertIn("`/story-image?policy=publisher-only-v2&source=${encodeURIComponent", html)
-        self.assertNotIn('/ft-card.svg', html)
-        self.assertNotIn('/reuters-card.svg', html)
+        self.assertIn('source-fallback-card', html)
+        self.assertIn('Source artwork unavailable', html)
+        self.assertIn('function sourceFallbackCard(a)', html)
+        self.assertIn('replaceWithSourceFallback(img)', html)
+        self.assertNotIn('SOURCE_FALLBACK_ART', html)
+        self.assertNotIn('DESK_FALLBACK_ART', html)
+        self.assertNotIn('/stock-', html)
         self.assertNotIn('ft-card.svg', server.ICON_FILES)
         self.assertNotIn('reuters-card.svg', server.ICON_FILES)
         self.assertNotIn('ft-card.svg', dockerfile)
         self.assertNotIn('reuters-card.svg', dockerfile)
-        self.assertIn('.thumb-frame.image-missing { display: none; }', html)
-        self.assertIn("this.closest('.thumb-frame').classList.add('image-missing')", html)
 
     def test_weather_desk_and_masthead_timestamp_are_present(self):
         html = (Path(__file__).parent / "digest.html").read_text(encoding="utf-8")
