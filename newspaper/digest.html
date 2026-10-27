@@ -4250,7 +4250,11 @@ function applyDigestData(data) {
     return ds !== 0 ? ds : b.score - a.score;
   });
   coverageGaps = Array.isArray(data.coverage_gaps) ? data.coverage_gaps : [];
-  currentIssueIsArchive = data.kind !== 'today';
+  // The live digest endpoint predates the optional `kind` field and omits it
+  // for the current issue. Missing kind therefore means "today", not archive;
+  // treating undefined as an archive silently discarded the live F1 desk and
+  // rendered stale F1 articles from digest.json instead.
+  currentIssueIsArchive = Boolean(data.kind && data.kind !== 'today');
   loadedGeneratedAt = data.generated_at || null;
   const issueUpdatedAt = data.generated_at || data.published_at;
   const genDate = issueUpdatedAt ? new Date(issueUpdatedAt) : new Date();
