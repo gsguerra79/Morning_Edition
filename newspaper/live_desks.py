@@ -22,6 +22,15 @@ STATE_FILE = os.environ.get('LIVE_DESKS_FILE', '/data/live-desks.json')
 F1_FRONT_SIZE = 6
 SCHEMA_VERSION = 6
 COMIC_REFRESH_SECONDS = 15 * 60
+F1_LIVE_WINDOW_HOURS = 36
+F1_FEEDS = (
+    ('Formula 1', 'https://www.formula1.com/en/latest/all.xml'),
+    ('Motorsport', 'https://www.motorsport.com/rss/f1/news/'),
+    ('RaceFans', 'https://www.racefans.net/feed/'),
+    ('The Race', 'https://www.the-race.com/rss/'),
+    ('Autosport', 'https://www.autosport.com/rss/f1/news/'),
+    ('BBC Formula 1', 'https://feeds.bbci.co.uk/sport/formula1/rss.xml'),
+)
 _lock = threading.Lock()
 COMIC_FEEDS = (
     ('GiantITP', 'https://www.giantitp.com/comics/oots.rss'),
@@ -128,6 +137,85 @@ def _f1_session_priority(article):
 def _f1_sort_key(article):
     return (_published_timestamp(article), _f1_session_priority(article),
             float(article.get('score') or 0))
+
+
+def _f1_live_kind(title, summary):
+    text = f'{title} {summary}'.casefold()
+    if re.search(r'\b(result|results|classification|standings|qualifying|grid|penalt|winner|wins?|victory|podium)\b', text):
+        return 'results_updates'
+    if re.search(r'\b(engine|power unit|aero|technical|technology|upgrade|regulation|rule|tyre|tire|battery|chassis|floor|wing)\b', text):
+        return 'technical'
+    if re.search(r'\b(preview|forecast|weather|weekend|schedule|what to expect|grand prix)\b', text):
+        return 'preview_forecast'
+    if re.search(r'\b(interview|reveals?|admits?|warns?|says|why |future|contract)\b', text):
+        return 'rumor_interview'
+    return 'news'
+
+
+def _strip_markup(value):
+    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', unescape(str(value or '')))).strip()
+
+
+def _url_key(value):
+    return unescape(str(value or '')).strip()
+
+
+def _fetch_current_f1(fallback):
+    """Fetch the live F1 slate independently of the finite digest retention pool."""
+    fallback_by_url = {_url_key(a.get('url')): a for a in fallback}
+    now = datetime.now(timezone.utc)
+    found, seen = [], set()
+    for source, feed_url in F1_FEEDS:
+        try:
+            root = ET.fromstring(_fetch(feed_url))
+        except Exception:
+            continue
+        entries = root.findall('.//item')
+        if not entries:
+            entries = root.findall('.//{http://www.w3.org/2005/Atom}entry')
+        for item in entries[:12]:
+            title = _strip_markup(item.findtext('title') or item.findtext('{http://www.w3.org/2005/Atom}title'))
+            link = (item.findtext('link') or item.findtext('{http://www.w3.org/2005/Atom}link') or '').strip()
+            if not link:
+                atom_link = item.find('{http://www.w3.org/2005/Atom}link')
+                link = (atom_link.get('href') if atom_link is not None else '') or ''
+            link = _url_key(link)
+            if not title or not link or link in seen:
+                continue
+            pub_text = (item.findtext('pubDate') or item.findtext('published')
+                        or item.findtext('{http://www.w3.org/2005/Atom}published') or '')
+            try:
+                published = parsedate_to_datetime(pub_text).astimezone(timezone.utc).isoformat() if pub_text else now.isoformat()
+            except (TypeError, ValueError, OverflowError):
+                published = now.isoformat()
+            try:
+                age = (now - datetime.fromisoformat(published)).total_seconds() / 3600
+            except ValueError:
+                age = 0
+            if age > F1_LIVE_WINDOW_HOURS or age < -2:
+                continue
+            summary = _strip_markup(item.findtext('description') or item.findtext('{http://www.w3.org/2005/Atom}summary'))
+            existing = fallback_by_url.get(link)
+            if existing:
+                article = dict(existing)
+                article['published_at'] = published
+            else:
+                article = {
+                    'id': sha1(link.encode('utf-8')).hexdigest()[:8],
+                    'cluster_id': sha1(link.encode('utf-8')).hexdigest()[:8],
+                    'cluster_rep': True, 'title': title, 'url': link,
+                    'source': source, 'category': 'formula1', 'score': 6,
+                    'summary': summary[:500], 'image': None,
+                    'published_at': published,
+                }
+            article['f1_kind'] = article.get('f1_kind') or _f1_live_kind(title, summary)
+            found.append(article)
+            seen.add(link)
+    # Preserve digest stories only when the live feed did not return them.
+    live_urls = {_url_key(a.get('url')) for a in found}
+    found.extend(a for a in fallback if _url_key(a.get('url')) not in live_urls
+                 and _within_home_window(a, now))
+    return found
 
 
 def _f1_target(items):
@@ -278,6 +366,9 @@ def build(digest, path=None, fetch_current_comics=False):
     f1_articles = sorted(
         (a for a in articles if a.get('category') == 'formula1'),
         key=_f1_sort_key, reverse=True)
+    if fetch_current_comics:
+        f1_articles = sorted(_fetch_current_f1(f1_articles),
+                             key=_f1_sort_key, reverse=True)
     comics = _latest_comics(articles)
 
     with _lock:
@@ -292,7 +383,7 @@ def build(digest, path=None, fetch_current_comics=False):
         cache_current = len(cached_comics) == 2 and all(a.get('subscription_current') for a in cached_comics)
         same_digest = (previous.get('schema_version') == SCHEMA_VERSION
                        and previous.get('source_generated_at') == generated_at)
-        if same_digest and (not fetch_current_comics or (cache_current and comics_fresh)):
+        if same_digest and not fetch_current_comics:
             return previous
         if fetch_current_comics:
             comics = _fetch_current_comics(comics, generated_at)

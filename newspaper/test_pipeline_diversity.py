@@ -135,6 +135,27 @@ class PipelineDiversityTests(unittest.TestCase):
         self.assertTrue({"results_updates", "technical", "preview_forecast", "news"} <= kinds)
         self.assertLessEqual(sum(item["source"] == "Formula 1" for item in selected), 3)
 
+    def test_f1_selection_prefers_new_stories_over_high_score_carry_forward(self):
+        now = datetime.now(timezone.utc)
+        old = (now - timedelta(hours=18)).isoformat()
+        fresh = (now - timedelta(minutes=10)).isoformat()
+        sources = ["Formula 1", "Motorsport", "Autosport", "RaceFans", "The Race"]
+        rows = []
+        for i in range(12):
+            rows.append({"id": f"old-{i}", "cluster_id": f"old-{i}",
+                         "cluster_rep": True, "source": sources[i % len(sources)],
+                         "category": "formula1", "title": f"Old carried analysis {i}",
+                         "score": 10, "published_at": old})
+        for i in range(12):
+            rows.append({"id": f"fresh-{i}", "cluster_id": f"fresh-{i}",
+                         "cluster_rep": True, "source": sources[i % len(sources)],
+                         "category": "formula1", "title": f"Fresh race update {i}",
+                         "score": 6, "published_at": fresh})
+        selected, _ = pipeline.select_balanced_issue(rows)
+        selected_ids = {item["id"] for item in selected}
+        self.assertTrue(any(item_id.startswith("fresh-") for item_id in selected_ids))
+        self.assertLessEqual(sum(item_id.startswith("old-") for item_id in selected_ids), 6)
+
     def test_balanced_issue_reports_missing_sports_subtopic(self):
         now = datetime.now(timezone.utc).isoformat()
         football = [{"id": f"f{i}", "cluster_id": f"f{i}", "cluster_rep": True,

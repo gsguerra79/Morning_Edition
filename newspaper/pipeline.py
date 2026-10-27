@@ -1614,6 +1614,10 @@ def select_balanced_issue(articles):
             sports_counts[topic] = sports_counts.get(topic, 0) + 1
 
     f1 = [a for a in reps if a.get('category') == 'formula1']
+    # F1 is a live desk: a carried story with a historically high score must
+    # not crowd out newly published race coverage. Keep the existing source
+    # and reporting-kind quotas, but make recency the first ordering key.
+    f1.sort(key=lambda a: (published_rank(a), editorial_rank(a)), reverse=True)
     f1_counts = {}
     f1_source_counts = {}
     for article in selected:
