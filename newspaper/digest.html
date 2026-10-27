@@ -1034,6 +1034,8 @@ let liveComicsArticles = [];
 let liveF1FrontIds = [];
 let liveDeskUpdatedAt = {};
 let liveDesksLoading = false;
+let liveDesksFetchedAt = 0;
+const LIVE_DESKS_REFRESH_MS = 5 * 60 * 1000;
 let currentIssueIsArchive = false;
 let sharedState = {
   readIds: new Set(),
@@ -2208,12 +2210,14 @@ function applyLiveDesks(payload) {
 }
 
 async function loadLiveDesks(force = false) {
-  if (liveDesksLoading || ((liveF1Articles.length || liveComicsArticles.length) && !force)) return;
+  const recentlyFetched = liveDesksFetchedAt && (Date.now() - liveDesksFetchedAt) < LIVE_DESKS_REFRESH_MS;
+  if (liveDesksLoading || (recentlyFetched && !force)) return;
   liveDesksLoading = true;
   try {
     const response = await fetch(LIVE_DESKS_URL, {cache:'no-store'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     applyLiveDesks(await response.json());
+    liveDesksFetchedAt = Date.now();
     if (currentView === 'digest' && !currentIssueIsArchive) {
       buildCatNav();
       render();
@@ -2224,6 +2228,15 @@ async function loadLiveDesks(force = false) {
     liveDesksLoading = false;
   }
 }
+
+// Keep an open Home/F1 tab from freezing the first live payload it received.
+// The server remains the source of truth; this only revalidates the small
+// current-desks payload, without rebuilding the full digest in the browser.
+setInterval(() => {
+  if (!currentIssueIsArchive && (currentCat === 'formula1' || currentCat === 'all')) {
+    loadLiveDesks(true);
+  }
+}, LIVE_DESKS_REFRESH_MS);
 
 // Compatibility alias for the F1 desk refresh call sites.
 const loadLiveF1Articles = loadLiveDesks;
