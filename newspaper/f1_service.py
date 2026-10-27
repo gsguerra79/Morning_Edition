@@ -388,12 +388,36 @@ def _jolpica_weekend(now):
         next_start = _iso(f"{next_race.get('date')}T{next_race.get('time') or '00:00:00Z'}")
         if next_start:
             next_session = {"name": "Race", "type": "Race", "start": next_start.isoformat()}
+    latest_session = None
+    if last_race:
+        results = []
+        for item in (last_race.get("Results") or []):
+            driver = item.get("Driver") or {}
+            constructor = item.get("Constructor") or {}
+            time_value = (item.get("Time") or {}).get("time") or item.get("status") or ""
+            results.append({
+                "position": int(item.get("position") or 999),
+                "number": str(item.get("number") or ""),
+                "code": driver.get("code"),
+                "name": f"{driver.get('givenName', '')} {driver.get('familyName', '')}".strip(),
+                "team": constructor.get("name"),
+                "team_colour": "888888", "time": time_value,
+                "gap": "" if int(item.get("position") or 999) == 1 else time_value,
+                "laps": int(item.get("laps") or 0), "status": item.get("status") or "classified",
+            })
+        latest_session = {
+            "meeting": last_race.get("raceName"),
+            "session": "Race", "type": "Race",
+            "end": f"{last_race.get('date')}T{last_race.get('time') or '00:00:00Z'}",
+            "rows": results, "source": "Jolpica F1", "source_url": "https://jolpi.ca/",
+        }
     return {
         "active": False,
         "meeting": race.get("raceName"),
         "country": location.get("country"),
         "circuit": circuit.get("circuitName"),
-        "latest_session": None,
+        "latest_session": latest_session,
+        "latest_meeting": last_race.get("raceName") if last_race else None,
         "current_session": None,
         "next_session": next_session,
     }
