@@ -38,14 +38,17 @@ class LiveDeskTests(unittest.TestCase):
         self.assertEqual(6, len(desk['front_page_ids']))
         self.assertTrue(set(desk['front_page_ids']).issubset({a['id'] for a in desk['articles']}))
 
-    def test_normal_f1_refresh_replaces_at_most_two_retained_cards(self):
+    def test_f1_refresh_rebuilds_all_current_home_cards(self):
         first = [article(f'n{i}', kind='news', source=f'S{i}') for i in range(8)]
         before = live_desks.build({'generated_at': 'one', 'articles': first}, self.path)
-        second = [article(f'new{i}', kind='technical', source=f'N{i}') for i in range(6)] + first
+        kinds = ('results_updates', 'results_updates', 'technical',
+                 'preview_forecast', 'news', 'news')
+        second = [article(f'new{i}', kind=kinds[i], source=f'N{i}')
+                  for i in range(6)] + first
         after = live_desks.build({'generated_at': 'two', 'articles': second}, self.path)
         old_ids = set(before['desks']['formula1']['front_page_ids'])
         new_ids = set(after['desks']['formula1']['front_page_ids'])
-        self.assertLessEqual(len(new_ids - old_ids), 2)
+        self.assertEqual(6, len(new_ids - old_ids))
 
     def test_new_result_updates_bypass_normal_churn_cap(self):
         first = [article(f'n{i}', kind='news', source=f'S{i}') for i in range(8)]

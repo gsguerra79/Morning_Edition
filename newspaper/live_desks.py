@@ -20,7 +20,6 @@ from urllib.parse import urljoin
 
 STATE_FILE = os.environ.get('LIVE_DESKS_FILE', '/data/live-desks.json')
 F1_FRONT_SIZE = 6
-F1_NORMAL_REPLACEMENTS = 2
 SCHEMA_VERSION = 6
 COMIC_REFRESH_SECONDS = 15 * 60
 _lock = threading.Lock()
@@ -88,6 +87,25 @@ def _published_timestamp(article):
         ).timestamp()
     except (TypeError, ValueError):
         return 0.0
+
+
+def _within_home_window(article, now=None):
+    """Reject aged live-desk cards when the reader requests the payload.
+
+    The production reader applies this request-time guard independently of
+    ingestion. F1 uses its 36-hour live contract; serial comics are exempt.
+    """
+    if str(article.get('category') or '').casefold() == 'comics':
+        return True
+    published = _published_timestamp(article)
+    if not published:
+        return False
+    now = now or datetime.now(timezone.utc)
+    age_hours = (now.timestamp() - published) / 3600.0
+    ceiling = float(os.environ.get('CURRENT_MAX_AGE_HOURS', '12'))
+    if str(article.get('category') or '').casefold() == 'formula1':
+        ceiling = max(ceiling, 36.0)
+    return age_hours <= ceiling
 
 
 def _f1_session_priority(article):
@@ -163,44 +181,9 @@ def _urgent(article):
 
 
 def _stable_front(items, previous_ids):
+    """Return the current F1 target without retaining prior card IDs."""
     target = _f1_target(items)
-    if not previous_ids:
-        return [a.get('id') for a in target]
-
-    available = {a.get('id'): a for a in items}
-    target_ids = [a.get('id') for a in target]
-    kept = [item_id for item_id in previous_ids if item_id in available]
-
-    # Completed-session and other results updates are allowed through
-    # immediately. Ordinary editorial churn is capped at two cards per ingest.
-    urgent_ids = [item_id for item_id in target_ids
-                  if item_id not in kept and _urgent(available[item_id])]
-    normal_ids = [item_id for item_id in target_ids
-                  if item_id not in kept and item_id not in urgent_ids]
-    desired = urgent_ids + normal_ids[:F1_NORMAL_REPLACEMENTS]
-
-    for item_id in desired:
-        if item_id in kept:
-            continue
-        if len(kept) >= F1_FRONT_SIZE:
-            removable = next((old for old in reversed(kept)
-                              if old not in target_ids or not _urgent(available[old])),
-                             kept[-1])
-            kept.remove(removable)
-        kept.append(item_id)
-
-    # Missing old stories must be backfilled even when the normal churn budget
-    # has been consumed, otherwise Home would show fewer than six.
-    for item_id in target_ids:
-        if len(kept) >= F1_FRONT_SIZE:
-            break
-        if item_id not in kept:
-            kept.append(item_id)
-
-    # Present the stable set in current editorial order.
-    order = {article.get('id'): index for index, article in
-             enumerate(sorted(items, key=_f1_sort_key, reverse=True))}
-    return sorted(kept[:F1_FRONT_SIZE], key=lambda item_id: order.get(item_id, 9999))
+    return [a.get('id') for a in target]
 
 
 def _latest_comics(articles):

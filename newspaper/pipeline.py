@@ -102,7 +102,7 @@ _stop = threading.Event()
 PAGE_LOOKBACK_HOURS = {
     'ideas': 24 * 21, 'sports': 24 * 7, 'comics': 24 * 365 * 10,
     'technology': 24 * 5, 'technologythings': 24 * 5,
-    'brazilnews': 72, 'usnews': 48, 'formula1': 72,
+    'brazilnews': 72, 'usnews': 48, 'formula1': 36,
     'worldnews': 48, 'world': 48,
 }
 
@@ -186,6 +186,14 @@ def _page_window_hours(category, default):
 def _source_window_hours(source, category, default):
     return max(_page_window_hours(category, default),
                SOURCE_LOOKBACK_HOURS.get(str(source or '').casefold(), default))
+
+
+def _retention_hard_max(category, hard_max):
+    """Keep live F1 stories inside the live desk's age contract."""
+    category = str(category or '').casefold()
+    if category == 'formula1':
+        return min(hard_max, PAGE_LOOKBACK_HOURS['formula1'])
+    return _page_window_hours(category, hard_max)
 
 # Live run status, polled by the UI via GET /status. Updated as run_once moves
 # through its phases so the frontend can show an "Updating…" indicator and
@@ -1398,7 +1406,7 @@ def apply_retention(scored, cfg, now=None):
             'age': min(ages) if ages else None,        # freshest coverage = story age
             'rank': max(boosted(m) for m in members),
             'source': str(max(members, key=boosted).get('source') or 'Unknown'),
-            'hard_max': max(_page_window_hours(m.get('category'), hard_max)
+            'hard_max': max(_retention_hard_max(m.get('category'), hard_max)
                             for m in members),
             'ttl_floor': max(_page_window_hours(m.get('category'), base_ttl)
                              for m in members),
@@ -1830,7 +1838,12 @@ def run_once():
             if not apply_source_scope(a, source_rules) or not apply_news_desk_scope(a):
                 continue
             age = _age_hours(a.get('published_at'))
-            article_hard_max = _page_window_hours(a.get('category'), hard_max)
+            category = str(a.get('category') or '').casefold()
+            # Formula 1 is a live desk, not a general specialist archive.
+            # Its current-window ceiling must also govern unread carry-forward;
+            # otherwise the global retention ceiling can resurrect five-day-old
+            # race coverage after the feed has rotated it out.
+            article_hard_max = _retention_hard_max(category, hard_max)
             if age is not None and age >= article_hard_max:
                 continue
             carried.append(a)

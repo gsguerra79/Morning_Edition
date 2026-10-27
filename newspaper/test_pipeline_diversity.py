@@ -291,6 +291,15 @@ class PipelineDiversityTests(unittest.TestCase):
                "retain_hard_max_age_hours": 120}
         self.assertEqual([item], pipeline.apply_retention([item], cfg))
 
+    def test_f1_story_cannot_survive_live_window_inside_global_retention(self):
+        published = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+        item = {"id": "old-f1", "cluster_id": "old-f1", "source": "Autosport",
+                "category": "formula1", "score": 10, "published_at": published}
+        cfg = {"retain_ceiling": 20, "retain_floor": 0,
+               "retain_base_ttl_hours": 24, "retain_max_ttl_hours": 72,
+               "retain_hard_max_age_hours": 120}
+        self.assertEqual([], pipeline.apply_retention([item], cfg))
+
 
 if __name__ == "__main__":
     unittest.main()
