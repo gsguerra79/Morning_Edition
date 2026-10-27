@@ -370,14 +370,53 @@ def _race_weekend(index, now):
     }
 
 
+def _jolpica_weekend(now):
+    """Build a current/upcoming race card when the F1 timing archive is down."""
+    last_payload = _json(f"{JOLPICA}/last/results/")
+    next_payload = _json(f"{JOLPICA}/next/")
+    last_race = ((last_payload.get("MRData") or {}).get("RaceTable") or {}).get("Races", [])
+    next_race = ((next_payload.get("MRData") or {}).get("RaceTable") or {}).get("Races", [])
+    last_race = last_race[0] if last_race else None
+    next_race = next_race[0] if next_race else None
+    race = next_race or last_race
+    if not race:
+        return None
+    circuit = race.get("Circuit") or {}
+    location = circuit.get("Location") or {}
+    next_session = None
+    if next_race:
+        next_start = _iso(f"{next_race.get('date')}T{next_race.get('time') or '00:00:00Z'}")
+        if next_start:
+            next_session = {"name": "Race", "type": "Race", "start": next_start.isoformat()}
+    return {
+        "active": False,
+        "meeting": race.get("raceName"),
+        "country": location.get("country"),
+        "circuit": circuit.get("circuitName"),
+        "latest_session": None,
+        "current_session": None,
+        "next_session": next_session,
+    }
+
+
 def _build(now=None):
     now = now or datetime.now(timezone.utc)
     drivers = _standings_rows(_json(f"{JOLPICA}/driverstandings/"), "drivers")
     teams = _standings_rows(_json(f"{JOLPICA}/constructorstandings/"), "teams")
-    index = _json(f"{F1_ARCHIVE}/{now.year}/Index.json")
-    weekend = _race_weekend(index, now)
     errors = []
-    if weekend and _openf1_enabled():
+    try:
+        index = _json(f"{F1_ARCHIVE}/{now.year}/Index.json")
+        weekend = _race_weekend(index, now)
+    except Exception as exc:
+        # Formula 1's static archive occasionally returns 401 even while the
+        # public Jolpica schedule is current. Never revive an old cached race
+        # card in that case; use the current/upcoming Jolpica race instead.
+        weekend = _jolpica_weekend(now)
+        errors.append(f"Formula 1 timing archive: {exc}")
+    # OpenF1's `latest` endpoint can return the previous race while the next
+    # weekend is only scheduled. Do not attach that old session to the next
+    # meeting's panel.
+    if weekend and weekend.get("active") and _openf1_enabled():
         try:
             weekend["live_session"] = _openf1_snapshot(now)
         except Exception as exc:
