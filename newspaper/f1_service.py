@@ -378,16 +378,33 @@ def _jolpica_weekend(now):
     next_race = ((next_payload.get("MRData") or {}).get("RaceTable") or {}).get("Races", [])
     last_race = last_race[0] if last_race else None
     next_race = next_race[0] if next_race else None
-    race = next_race or last_race
+    def race_start(race_item):
+        if not race_item:
+            return None
+        starts = []
+        for key, value in race_item.items():
+            if key in ("date", "time") or not isinstance(value, dict) or "date" not in value:
+                continue
+            start = _iso(f"{value.get('date')}T{value.get('time') or '00:00:00Z'}")
+            if start:
+                starts.append(start)
+        date_start = _iso(f"{race_item.get('date')}T{race_item.get('time') or '00:00:00Z'}")
+        return min(starts or ([date_start] if date_start else []), default=None)
+
+    # Keep the completed race as the desk identity until the next session
+    # actually begins. The upcoming race belongs in the schedule, never above
+    # the results it has not produced yet.
+    next_start = race_start(next_race)
+    race = next_race if next_race and next_start and now >= next_start else last_race
     if not race:
         return None
     circuit = race.get("Circuit") or {}
     location = circuit.get("Location") or {}
     next_session = None
     if next_race:
-        next_start = _iso(f"{next_race.get('date')}T{next_race.get('time') or '00:00:00Z'}")
-        if next_start:
-            next_session = {"name": "Race", "type": "Race", "start": next_start.isoformat()}
+        race_start_date = _iso(f"{next_race.get('date')}T{next_race.get('time') or '00:00:00Z'}")
+        if race_start_date:
+            next_session = {"name": f"{next_race.get('raceName')} — Race", "type": "Race", "start": race_start_date.isoformat()}
     latest_session = None
     if last_race:
         results = []
@@ -417,7 +434,7 @@ def _jolpica_weekend(now):
         "country": location.get("country"),
         "circuit": circuit.get("circuitName"),
         "latest_session": latest_session,
-        "latest_meeting": last_race.get("raceName") if last_race else None,
+        "latest_meeting": last_race.get("raceName") if last_race and race is not last_race else None,
         "current_session": None,
         "next_session": next_session,
     }
