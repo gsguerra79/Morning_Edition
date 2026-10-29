@@ -1,7 +1,7 @@
 import os
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import editions
@@ -88,6 +88,23 @@ class EditionTests(unittest.TestCase):
         self.assertEqual(2, issue['article_count'])
         self.assertEqual(2, issue['selection_report']['selected_stories'])
         self.assertTrue(all(item['why_selected'] for item in issue['articles']))
+
+    def test_current_issue_excludes_news_older_than_two_days(self):
+        old = (self.now.replace(tzinfo=ZoneInfo('America/Chicago'))
+               .astimezone(ZoneInfo('UTC'))
+               .replace(hour=16, minute=30) - timedelta(hours=50)).isoformat()
+        fresh = (self.now.replace(tzinfo=ZoneInfo('America/Chicago'))
+                 .astimezone(ZoneInfo('UTC'))
+                 .replace(hour=16, minute=30) - timedelta(hours=1)).isoformat()
+        issue = editions.publish({'articles': [
+            {'id': 'old', 'cluster_id': 'old', 'title': 'Old wire story',
+             'url': 'https://example.com/old', 'source': 'Reuters',
+             'category': 'worldnews', 'published_at': old, 'score': 10},
+            {'id': 'fresh', 'cluster_id': 'fresh', 'title': 'Fresh wire story',
+             'url': 'https://example.com/fresh', 'source': 'Reuters',
+             'category': 'worldnews', 'published_at': fresh, 'score': 8},
+        ]}, 'morning', self.now)
+        self.assertEqual(['fresh'], [item['id'] for item in issue['articles']])
 
     def test_publish_preserves_article_level_us_world_routing(self):
         original_registry = editions.EDITORIAL_REGISTRY_FILE

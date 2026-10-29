@@ -4,7 +4,7 @@ import os
 import re
 import tempfile
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from editorial_selection import select_issue
@@ -14,6 +14,38 @@ EDITIONS_DIR = os.environ.get('EDITIONS_DIR', '/data/editions')
 TIMEZONE = os.environ.get('TZ', 'America/Chicago')
 EDITORIAL_REGISTRY_FILE = os.environ.get('EDITORIAL_REGISTRY_FILE', '/data/editorial-registry.json')
 SELECTION_RULES_FILE = os.environ.get('SELECTION_RULES_FILE', '/data/selection-rules.json')
+CURRENT_ISSUE_MAX_AGE_HOURS = float(os.environ.get('CURRENT_ISSUE_MAX_AGE_HOURS', '48'))
+CURRENT_ISSUE_EXEMPT_CATEGORIES = {'comics', 'ideas'}
+
+
+def _current_issue_articles(articles, now):
+    """Keep current news current; never let an old high-score card fill Home.
+
+    Comics and Ideas are serial/subscription-style desks with their own age
+    contracts. Legacy records without a timestamp are retained here so an old
+    archive remains readable; newly ingested news is timestamped and therefore
+    fails closed at this boundary when it is too old.
+    """
+    cutoff = now.astimezone(timezone.utc) - timedelta(hours=CURRENT_ISSUE_MAX_AGE_HOURS)
+    kept = []
+    for article in articles:
+        category = str(article.get('category') or '').casefold()
+        if category in CURRENT_ISSUE_EXEMPT_CATEGORIES:
+            kept.append(article)
+            continue
+        raw = article.get('published_at')
+        if not raw:
+            kept.append(article)
+            continue
+        try:
+            published = datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            continue
+        if published.astimezone(timezone.utc) >= cutoff:
+            kept.append(article)
+    return kept
 
 
 def _atomic(path, payload):
@@ -46,7 +78,8 @@ def publish(digest, kind, now=None, force=False):
     path = os.path.join(EDITIONS_DIR, eid + '.json')
     if os.path.exists(path) and not force:
         return load(eid)
-    articles = [annotate(article) for article in (digest.get('articles') or [])]
+    articles = _current_issue_articles(
+        [annotate(article) for article in (digest.get('articles') or [])], now)
     candidate_story_index = [{key: article.get(key) for key in (
         'id', 'cluster_id', 'title', 'canonical_url', 'story_fingerprint', 'material_facts')}
         for article in articles if article.get('cluster_rep') is not False]
@@ -188,9 +221,9 @@ def today(now=None):
         return result
 
     morning_articles = [dict(article, edition_part='morning')
-                        for article in morning.get('articles', [])]
+                        for article in _current_issue_articles(morning.get('articles', []), now)]
     additions = [dict(article, edition_part='afternoon')
-                 for article in (afternoon or {}).get('articles', [])]
+                 for article in _current_issue_articles((afternoon or {}).get('articles', []), now)]
     seen = {article.get('story_fingerprint') or article.get('cluster_id') or article.get('id')
             for article in morning_articles}
     additions = [article for article in additions
