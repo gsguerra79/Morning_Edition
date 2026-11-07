@@ -2194,6 +2194,9 @@ window.setCategory = function(cat) {
   buildCatNav();
   if (currentView === 'digest') {
     render();
+    // F1 is a live data desk. Do not reuse the first championship payload
+    // forever when the owner leaves and reopens the category.
+    if (cat === 'formula1') renderF1Desk(true);
     if (cat === 'formula1' || cat === 'comics') loadLiveDesks(true);
   }
   if (currentView === 'later')   renderLater();

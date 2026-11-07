@@ -67,6 +67,31 @@ class F1ServiceTests(unittest.TestCase):
         self.assertFalse(weekend["active"])
         self.assertEqual("Race", weekend["latest_session"]["session"])
 
+    def test_jolpica_fallback_keeps_completed_race_as_identity_before_next_event(self):
+        payloads = {
+            "last/results/": {"MRData": {"RaceTable": {"Races": [{
+                "raceName": "Mexico City Grand Prix", "date": "2026-11-01",
+                "time": "20:00:00Z", "Circuit": {"Location": {"country": "Mexico"},
+                "circuitName": "Autodromo Hermanos Rodriguez"},
+                "Results": [{"position": "1", "number": "3",
+                              "Driver": {"code": "VER", "givenName": "Max",
+                                         "familyName": "Verstappen"},
+                              "Constructor": {"name": "Red Bull"},
+                              "laps": "71", "status": "Finished"}]
+            }]}}},
+            "next/": {"MRData": {"RaceTable": {"Races": [{
+                "raceName": "Brazilian Grand Prix", "date": "2026-11-08",
+                "time": "17:00:00Z", "Circuit": {"Location": {"country": "Brazil"},
+                "circuitName": "Interlagos"}
+            }]}}}
+        }
+        now = datetime(2026, 11, 6, 21, 0, tzinfo=timezone.utc)
+        with patch.object(f1_service, "_json", side_effect=lambda url: payloads[url.rsplit("/ergast/f1/current/", 1)[-1]]):
+            weekend = f1_service._jolpica_weekend(now)
+        self.assertEqual("Mexico City Grand Prix", weekend["meeting"])
+        self.assertEqual("Mexico City Grand Prix", weekend["latest_session"]["meeting"])
+        self.assertEqual("Brazilian Grand Prix — Race", weekend["next_session"]["name"])
+
     def test_failed_refresh_serves_stale_cache(self):
         cached = {"updated_at": "2026-09-04T00:00:00+00:00", "standings": {}}
         Path(f1_service.CACHE_FILE).write_text(json.dumps(cached), encoding="utf-8")
